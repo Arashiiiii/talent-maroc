@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { Suspense } from 'react';
-import { Search, MapPin, Briefcase, Globe, Clock } from 'lucide-react';
+import { Search, MapPin, Briefcase, Globe, Clock, PlusCircle } from 'lucide-react';
 
-// 1. Data Fetching Component with Filter Logic
+// 1. JobList Component: Handles the Supabase filtering and data display
 async function JobList({ searchParams }: { searchParams: any }) {
   const params = await searchParams;
   const query = params.q || '';
@@ -11,7 +11,7 @@ async function JobList({ searchParams }: { searchParams: any }) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
   
-  // Manual client to ensure environment variables are read correctly at runtime
+  // Direct client creation to avoid middleware/config caching issues
   const supabase = createClient(url, key);
 
   let supabaseQuery = supabase
@@ -19,7 +19,7 @@ async function JobList({ searchParams }: { searchParams: any }) {
     .select('*')
     .order('created_at', { ascending: false });
 
-  // Apply Search Filters
+  // Apply Search Logic
   if (query) {
     supabaseQuery = supabaseQuery.or(`title.ilike.%${query}%,company.ilike.%${query}%`);
   }
@@ -44,7 +44,7 @@ async function JobList({ searchParams }: { searchParams: any }) {
           <div key={job.id} className="group bg-white border border-slate-200 p-5 rounded-xl shadow-sm hover:shadow-md hover:border-blue-500 transition-all">
             <div className="flex flex-col md:flex-row gap-5">
               
-              {/* Logo Section */}
+              {/* Company Logo Section */}
               <div className="flex-shrink-0">
                 {job.logo_url ? (
                   <img 
@@ -56,13 +56,13 @@ async function JobList({ searchParams }: { searchParams: any }) {
                     }}
                   />
                 ) : (
-                  <div className="w-14 h-14 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-xl border border-blue-100">
+                  <div className="w-14 h-14 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-xl border border-blue-100 uppercase">
                     {job.company?.charAt(0) || 'J'}
                   </div>
                 )}
               </div>
 
-              {/* Content Section */}
+              {/* Job Details Section */}
               <div className="flex-1">
                 <h2 className="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
                   {job.title}
@@ -83,7 +83,7 @@ async function JobList({ searchParams }: { searchParams: any }) {
                 </div>
               </div>
 
-              {/* Action Section */}
+              {/* Apply Button */}
               <div className="flex items-center justify-end">
                 <a 
                   href={job.original_url} 
@@ -99,7 +99,7 @@ async function JobList({ searchParams }: { searchParams: any }) {
         ))
       ) : (
         <div className="text-center py-20 bg-white border border-dashed border-slate-200 rounded-2xl">
-          <p className="text-slate-500 font-medium italic">Aucune offre trouvée pour votre recherche.</p>
+          <p className="text-slate-500 font-medium italic">Aucune offre trouvée pour cette recherche.</p>
           <a href="/" className="text-blue-600 font-bold mt-2 inline-block hover:underline">Voir toutes les offres</a>
         </div>
       )}
@@ -107,84 +107,47 @@ async function JobList({ searchParams }: { searchParams: any }) {
   );
 }
 
-// 2. Main Page Layout Component
+// 2. Main Page Layout
 export default function Index({ searchParams }: { searchParams: any }) {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      {/* Search Header */}
-      <header className="bg-white border-b border-slate-200 pt-12 pb-14 px-4 shadow-sm">
+      
+      {/* Professional Navbar */}
+      <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <a href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-black">T</div>
+              <span className="text-xl font-black text-slate-900 tracking-tight">Talent<span className="text-blue-600">Maroc</span></span>
+            </a>
+            <div className="hidden md:flex items-center gap-6 text-sm font-semibold text-slate-600">
+              <a href="/" className="hover:text-blue-600 transition-colors">Emplois</a>
+              <a href="/employers" className="hover:text-blue-600 transition-colors">Pour les recruteurs</a>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <a href="/auth/login" className="hidden sm:block text-sm font-bold text-slate-600 hover:text-blue-600">Connexion</a>
+            <a 
+              href="/employers" 
+              className="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all flex items-center gap-2"
+            >
+              <PlusCircle size={16} />
+              Publier une offre
+            </a>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero / Search Section */}
+      <header className="bg-white border-b border-slate-200 pt-12 pb-16 px-4">
         <div className="max-w-5xl mx-auto">
-          <div className="flex items-center gap-2 mb-10 justify-center">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-200">T</div>
-            <h1 className="text-3xl font-black tracking-tight">Talent<span className="text-blue-600">Maroc</span></h1>
+          <div className="text-center mb-10">
+            <h1 className="text-4xl font-black mb-3">Le job de vos rêves vous attend au Maroc.</h1>
+            <p className="text-slate-500">Recherchez parmi les meilleures offres d'emploi actualisées en temps réel.</p>
           </div>
           
           <form action="/" method="GET" className="bg-white p-2 rounded-2xl shadow-2xl border border-slate-200 flex flex-col md:flex-row gap-2">
             <div className="flex-1 flex items-center px-4 py-3 gap-3 border-b md:border-b-0 md:border-r border-slate-100">
               <Search size={20} className="text-slate-400" />
-              <input name="q" type="text" placeholder="Poste ou mot-clé" className="w-full outline-none font-medium placeholder:text-slate-300" />
-            </div>
-            <div className="flex-1 flex items-center px-4 py-3 gap-3">
-              <MapPin size={20} className="text-slate-400" />
-              <input name="l" type="text" placeholder="Ville (ex: Tanger)" className="w-full outline-none font-medium placeholder:text-slate-300" />
-            </div>
-            <button type="submit" className="bg-blue-600 text-white px-10 py-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95">
-              Rechercher
-            </button>
-          </form>
-        </div>
-      </header>
-
-      {/* Main Content Grid */}
-      <div className="max-w-5xl mx-auto px-4 py-12 flex flex-col md:flex-row gap-10">
-        
-        {/* Left Sidebar Filters */}
-        <aside className="w-full md:w-56 space-y-10">
-          <div>
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-5">Villes Populaires</h3>
-            <div className="flex flex-wrap md:flex-col gap-2 md:gap-4">
-              {['Casablanca', 'Tanger', 'Rabat', 'Marrakech', 'Agadir'].map(city => (
-                <a 
-                  key={city} 
-                  href={`/?l=${city}`} 
-                  className="text-[15px] font-semibold text-slate-600 hover:text-blue-600 hover:translate-x-1 transition-all inline-block"
-                >
-                  {city}
-                </a>
-              ))}
-            </div>
-          </div>
-          <div className="p-5 bg-blue-600 rounded-2xl text-white shadow-xl shadow-blue-100">
-            <h4 className="font-bold mb-2">Alerte Emploi</h4>
-            <p className="text-xs text-blue-100 mb-4 leading-relaxed">Recevez les nouveaux jobs par email dès qu'ils arrivent.</p>
-            <button className="w-full bg-white text-blue-600 py-2 rounded-lg text-sm font-bold">Activer</button>
-          </div>
-        </aside>
-
-        {/* Results Section */}
-        <section className="flex-1">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-bold">Offres d'emploi au Maroc</h2>
-            <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest border border-slate-200 px-2 py-1 rounded">
-              <Globe size={12} /> Actualisé Directement
-            </div>
-          </div>
-
-          <Suspense fallback={
-  <div className="space-y-4">
-    {[1, 2, 3].map(i => (
-      <div key={i} className="h-32 w-full bg-white rounded-xl border border-slate-100 animate-pulse" />
-    ))}
-  </div>
-}>
-  <JobList searchParams={searchParams} />
-</Suspense>
-        </section>
-      </div>
-
-      <footer className="border-t border-slate-200 py-16 text-center">
-        <p className="text-slate-400 text-sm">© 2026 Talent Maroc — La plateforme de recrutement n°1</p>
-      </footer>
-    </div>
-  );
-}
+              <input name="q" type="text" placeholder="Poste, entreprise..." className="w-full outline-
