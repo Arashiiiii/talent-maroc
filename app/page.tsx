@@ -1,5 +1,3 @@
-export const revalidate = 0;
-
 import { createClient } from '@/lib/supabase/server';
 
 interface Job {
@@ -16,6 +14,8 @@ export default async function Index() {
   try {
     const supabase = await createClient();
 
+    // The presence of this dynamic data fetch will 
+    // naturally make the page dynamic in Next.js 16
     const { data, error } = await supabase
       .from('jobs')
       .select('*')
