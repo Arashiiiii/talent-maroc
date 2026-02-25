@@ -170,15 +170,15 @@ export default function Index({ searchParams }: { searchParams: any }) {
             </div>
           </div>
 
-          <Suspense key={Math.random()} fallback={
-            <div className="space-y-4">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-32 w-full bg-white rounded-xl border border-slate-100 animate-pulse" />
-              ))}
-            </div>
-          }>
-            <JobList searchParams={searchParams} />
-          </Suspense>
+          <Suspense fallback={
+  <div className="space-y-4">
+    {[1, 2, 3].map(i => (
+      <div key={i} className="h-32 w-full bg-white rounded-xl border border-slate-100 animate-pulse" />
+    ))}
+  </div>
+}>
+  <JobList searchParams={searchParams} />
+</Suspense>
         </section>
       </div>
 
