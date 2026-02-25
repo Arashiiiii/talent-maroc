@@ -1,24 +1,88 @@
-export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { createClient } from '@/lib/supabase/server';
 
-export default async function Index() {
-  const supabase = await createClient();
-  const { data: jobs } = await supabase.from('jobs').select('*');
+interface Job {
+  id: string;
+  title: string;
+  company: string;
+  city: string;
+  description: string;
+  original_url: string;
+  created_at: string;
+}
 
-  return (
-    <div className="flex flex-col items-center p-10">
-      <h1 className="text-5xl font-black mb-10">Talent Maroc</h1>
-      <div className="w-full max-w-3xl">
-        {jobs?.map((job: any) => (
-          <div key={job.id} className="p-6 border rounded-xl mb-4 bg-white shadow-sm">
-            <h2 className="text-2xl font-bold text-orange-600">{job.title}</h2>
-            <p className="text-gray-700 font-semibold">{job.company} — {job.city}</p>
-          </div>
-        ))}
-        {(!jobs || jobs.length === 0) && (
-          <p className="text-center text-gray-500 italic">No jobs found in the database yet.</p>
-        )}
+export default async function Index() {
+  try {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from('jobs')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const jobs = data as Job[];
+
+    return (
+      <main className="max-w-4xl mx-auto p-6">
+        <div className="flex justify-between items-center mb-10 border-b pb-6">
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+            Talent Maroc
+          </h1>
+          <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-sm font-bold">
+            {jobs?.length || 0} Offres d'emploi
+          </span>
+        </div>
+
+        <div className="grid gap-6">
+          {jobs && jobs.length > 0 ? (
+            jobs.map((job: Job) => (
+              <div
+                key={job.id}
+                className="group p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-orange-500 hover:shadow-md transition-all"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h2 className="text-2xl font-bold text-slate-800 group-hover:text-orange-600 transition-colors">
+                    {job.title}
+                  </h2>
+                  <span className="text-sm font-semibold text-slate-400 uppercase tracking-widest">
+                    {job.city}
+                  </span>
+                </div>
+                <p className="text-lg font-medium text-slate-600 mb-4">
+                  {job.company}
+                </p>
+                <p className="text-slate-500 leading-relaxed mb-6 line-clamp-3">
+                  {job.description}
+                </p>
+                <a
+                  href={job.original_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-slate-900 hover:bg-orange-600 transition-colors"
+                >
+                  Postuler maintenant
+                </a>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+              <p className="text-slate-500 font-medium italic">
+                Aucun job trouvé. Lancez le scraper n8n !
+              </p>
+            </div>
+          )}
+        </div>
+      </main>
+    );
+  } catch (err: any) {
+    return (
+      <div className="p-10 text-red-600 font-mono">
+        <h1 className="text-xl font-bold mb-4">Server error</h1>
+        <pre>{err?.message ?? 'Unknown error'}</pre>
       </div>
-    </div>
-  );
+    );
+  }
 }
