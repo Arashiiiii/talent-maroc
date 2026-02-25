@@ -9,8 +9,8 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Next.js and Supabase Starter Kit",
-  description: "The fastest way to build apps with Next.js and Supabase",
+  title: "Talent Maroc | Emplois et Recrutement au Maroc",
+  description: "La plateforme nationale pour trouver les meilleures opportunités de carrière au Maroc.",
 };
 
 const geistSans = Geist({
