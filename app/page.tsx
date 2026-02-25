@@ -133,9 +133,9 @@ export default function Index({ searchParams }: { searchParams: any }) {
             </div>
           </div>
 
-          <Suspense key={Math.random()} fallback={<div className="animate-pulse space-y-4"><div className="h-32 bg-slate-200 rounded-xl"/><div className="h-32 bg-slate-200 rounded-xl"/></div>}>
-            <JobList searchParams={searchParams} />
-          </Suspense>
+          <Suspense fallback={<div className="animate-pulse space-y-4"><div className="h-32 bg-slate-200 rounded-xl"/><div className="h-32 bg-slate-200 rounded-xl"/></div>}>
+  <JobList searchParams={searchParams} />
+</Suspense>
         </section>
       </div>
     </div>
