@@ -1,70 +1,11 @@
-import { createClient } from '@/lib/supabase/server';
-import { Suspense } from 'react';
-
-interface Job {
-  id: string;
-  title: string;
-  company: string;
-  city: string;
-  description: string;
-  original_url: string;
-  created_at: string;
-}
-
-// 1. We move the database logic into its own small component
-async function JobList() {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('jobs')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  const jobs = data as Job[];
-
+export default function DebugPage() {
   return (
-    <div className="grid gap-6">
-      {jobs && jobs.length > 0 ? (
-        jobs.map((job: Job) => (
-          <div key={job.id} className="group p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:border-orange-500 hover:shadow-md transition-all">
-            <div className="flex justify-between items-start mb-2">
-              <h2 className="text-2xl font-bold text-slate-800 group-hover:text-orange-600 transition-colors">
-                {job.title}
-              </h2>
-              <span className="text-sm font-semibold text-slate-400 uppercase tracking-widest">{job.city}</span>
-            </div>
-            <p className="text-lg font-medium text-slate-600 mb-4">{job.company}</p>
-            <p className="text-slate-500 leading-relaxed mb-6 line-clamp-3">{job.description}</p>
-            <a 
-              href={job.original_url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-slate-900 hover:bg-orange-600 transition-colors"
-            >
-              Postuler maintenant
-            </a>
-          </div>
-        ))
-      ) : (
-        <div className="text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-          <p className="text-slate-500 font-medium italic">Aucun job trouvé. Lancez le scraper n8n !</p>
-        </div>
-      )}
+    <div className="p-20 font-mono">
+      <h1>Debug Info:</h1>
+      <p>URL exists: {process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ YES' : '❌ MISSING'}</p>
+      <p>KEY exists: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ YES' : '❌ MISSING'}</p>
+      <hr className="my-4" />
+      <p>Vercel Env: {process.env.VERCEL_ENV || 'unknown'}</p>
     </div>
-  );
-}
-
-// 2. The main page now uses <Suspense> to prevent the build error
-export default function Index() {
-  return (
-    <main className="max-w-4xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-10 border-b pb-6">
-        <h1 className="text-4xl font-black text-slate-900 tracking-tight">Talent Maroc</h1>
-      </div>
-
-      <Suspense fallback={<p className="text-center text-gray-500">Chargement des offres d'emploi...</p>}>
-        <JobList />
-      </Suspense>
-    </main>
-  );
+  )
 }
