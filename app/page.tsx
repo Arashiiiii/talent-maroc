@@ -1,7 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 import { Suspense } from 'react';
-import { Search, MapPin, Briefcase, Globe, Clock, PlusCircle } from 'lucide-react';
-import CompanyLogo from '@/components/CompanyLogo'; // Import the new fix
+import { Search, MapPin, Briefcase, Globe, Clock, PlusCircle, LayoutGrid } from 'lucide-react';
+import CompanyLogo from '@/components/CompanyLogo';
+
+// SEO Metadata for the Homepage
+export const metadata = {
+  title: 'Talent Maroc | Trouvez votre prochain job au Maroc',
+  description: 'Recherchez parmi les dernières offres d\'emploi à Casablanca, Tanger, Rabat et Agadir. Postulez directement aux meilleures opportunités.',
+};
 
 async function JobList({ searchParams }: { searchParams: any }) {
   const params = await searchParams;
@@ -26,7 +32,7 @@ async function JobList({ searchParams }: { searchParams: any }) {
 
   const { data: jobs, error } = await supabaseQuery;
 
-  if (error) return <div className="p-6 text-red-600">Erreur: {error.message}</div>;
+  if (error) return <div className="p-6 text-red-600">Erreur de connexion: {error.message}</div>;
 
   return (
     <div className="space-y-4">
@@ -35,7 +41,6 @@ async function JobList({ searchParams }: { searchParams: any }) {
           <div key={job.id} className="group bg-white border border-slate-200 p-5 rounded-xl shadow-sm hover:shadow-md hover:border-blue-500 transition-all">
             <div className="flex flex-col md:flex-row gap-5">
               
-              {/* FIXED LOGO SECTION USING THE CLIENT COMPONENT */}
               <div className="flex-shrink-0">
                 <CompanyLogo logoUrl={job.logo_url} companyName={job.company} />
               </div>
@@ -55,7 +60,7 @@ async function JobList({ searchParams }: { searchParams: any }) {
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-400">
                     <Clock size={16} />
-                    {new Date(job.created_at).toLocaleDateString('fr-FR')}
+                    {job.posted_at || new Date(job.created_at).toLocaleDateString('fr-FR')}
                   </div>
                 </div>
               </div>
@@ -65,7 +70,7 @@ async function JobList({ searchParams }: { searchParams: any }) {
                   href={job.original_url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="w-full md:w-auto text-center px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                  className="w-full md:w-auto text-center px-6 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   Postuler
                 </a>
@@ -75,7 +80,8 @@ async function JobList({ searchParams }: { searchParams: any }) {
         ))
       ) : (
         <div className="text-center py-20 bg-white border border-dashed border-slate-200 rounded-2xl">
-          <p className="text-slate-500 font-medium italic">Aucune offre trouvée.</p>
+          <p className="text-slate-500 font-medium italic">Aucune offre trouvée pour votre recherche.</p>
+          <a href="/" className="text-blue-600 font-bold mt-2 inline-block hover:underline">Voir tout le catalogue</a>
         </div>
       )}
     </div>
@@ -84,7 +90,9 @@ async function JobList({ searchParams }: { searchParams: any }) {
 
 export default function Index({ searchParams }: { searchParams: any }) {
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+    <div className="min-h-screen w-full bg-slate-50 font-sans text-slate-900">
+      
+      {/* Navbar */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
@@ -101,19 +109,20 @@ export default function Index({ searchParams }: { searchParams: any }) {
           <div className="flex items-center gap-4">
             <a href="/auth/login" className="hidden sm:block text-sm font-bold text-slate-600">Connexion</a>
             <a href="/employers" className="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all flex items-center gap-2">
-              <PlusCircle size={16} />
-              Publier
+              <PlusCircle size={16} /> Publier
             </a>
           </div>
         </div>
       </nav>
 
+      {/* Hero Header */}
       <header className="bg-white border-b border-slate-200 pt-12 pb-16 px-4">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-10">
             <h1 className="text-4xl font-black mb-3 leading-tight">Le job de vos rêves vous attend au Maroc.</h1>
-            <p className="text-slate-500">Des milliers d'opportunités actualisées en temps réel.</p>
+            <p className="text-slate-500">Des milliers d'opportunités à Tanger, Casablanca et partout ailleurs.</p>
           </div>
+          
           <form action="/" method="GET" className="bg-white p-2 rounded-2xl shadow-2xl border border-slate-200 flex flex-col md:flex-row gap-2">
             <div className="flex-1 flex items-center px-4 py-3 gap-3 border-b md:border-b-0 md:border-r border-slate-100">
               <Search size={20} className="text-slate-400" />
@@ -130,8 +139,10 @@ export default function Index({ searchParams }: { searchParams: any }) {
         </div>
       </header>
 
+      {/* Main Grid */}
       <div className="max-w-5xl mx-auto px-4 py-12 flex flex-col md:flex-row gap-10">
-        <aside className="w-full md:w-56 space-y-8">
+        
+        <aside className="w-full md:w-56 space-y-10">
           <div>
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Villes</h3>
             <div className="flex flex-wrap md:flex-col gap-2 md:gap-3">
@@ -142,15 +153,40 @@ export default function Index({ searchParams }: { searchParams: any }) {
               ))}
             </div>
           </div>
+
+          <div>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Secteurs</h3>
+            <div className="flex flex-wrap md:flex-col gap-2 md:gap-3">
+              {['Informatique', 'Commercial', 'Logistique', 'Finance', 'Santé'].map(sector => (
+                <a key={sector} href={`/?q=${sector}`} className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">
+                  {sector}
+                </a>
+              ))}
+            </div>
+          </div>
         </aside>
 
         <section className="flex-1">
-          <h2 className="text-xl font-bold mb-6">Dernières Offres</h2>
-          <Suspense fallback={<div className="h-32 w-full bg-white rounded-xl border border-slate-100 animate-pulse" />}>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold">Dernières Offres</h2>
+            <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <Globe size={12} /> Live
+            </div>
+          </div>
+
+          <Suspense fallback={
+            <div className="space-y-4">
+              {[1, 2, 3].map(i => <div key={i} className="h-32 w-full bg-white rounded-xl border border-slate-100 animate-pulse" />)}
+            </div>
+          }>
             <JobList searchParams={searchParams} />
           </Suspense>
         </section>
       </div>
+
+      <footer className="border-t border-slate-200 py-12 text-center text-slate-400 text-xs">
+        © 2026 Talent Maroc — Propulsé par n8n & Supabase
+      </footer>
     </div>
   );
 }
