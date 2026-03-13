@@ -18,8 +18,16 @@ export const metadata = {
     default: "Talent Maroc | Emploi et Recrutement au Maroc",
     template: "%s | Talent Maroc",
   },
-  description: "Le portail n°1 pour trouver un emploi au Maroc. Découvrez des milliers d'offres actualisées à Casablanca, Tanger, Rabat et partout dans le Royaume.",
-  keywords: ["emploi maroc", "recrutement maroc", "offres d'emploi", "travail maroc", "tanger", "casablanca"],
+  description:
+    "Le portail n°1 pour trouver un emploi au Maroc. Découvrez des milliers d'offres actualisées à Casablanca, Tanger, Rabat et partout dans le Royaume.",
+  keywords: [
+    "emploi maroc",
+    "recrutement maroc",
+    "offres d'emploi",
+    "travail maroc",
+    "tanger",
+    "casablanca",
+  ],
   icons: {
     icon: "/favicon.ico",
   },
@@ -31,13 +39,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${geistSans.className} ${inter.variable}`} suppressHydrationWarning>
-      <body className="bg-background text-foreground">
-        <main className="min-h-screen flex flex-col items-center">
-          <div className="flex-1 w-full flex flex-col items-center">
-            {children}
-          </div>
-        </main>
+    <html
+      lang="fr"
+      className={`${geistSans.className} ${inter.variable}`}
+      suppressHydrationWarning
+    >
+      {/*
+        Removed the flex/items-center wrapper that was constraining
+        full-width pages like /cv and /terms.
+        Each page now controls its own layout.
+      */}
+      <body className="bg-background text-foreground min-h-screen">
+        {children}
       </body>
     </html>
   );
