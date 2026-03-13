@@ -1,9 +1,15 @@
-import { Geist } from "next/font/google";
+import { Geist, Inter } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
   display: "swap",
   subsets: ["latin"],
+});
+
+const inter = Inter({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-inter",
 });
 
 export const metadata = {
@@ -25,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={geistSans.className} suppressHydrationWarning>
+    <html lang="fr" className={`${geistSans.className} ${inter.variable}`} suppressHydrationWarning>
       <body className="bg-background text-foreground">
         <main className="min-h-screen flex flex-col items-center">
           <div className="flex-1 w-full flex flex-col items-center">
