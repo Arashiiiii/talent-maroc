@@ -1,20 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { unstable_noStore as noStore } from 'next/cache';
 import { Suspense } from 'react';
-import { Search, MapPin, Briefcase, Clock, PlusCircle, Zap } from 'lucide-react';
+import { Search, MapPin, Briefcase, Clock, ChevronRight, Zap } from 'lucide-react';
 import CompanyLogo from '@/components/CompanyLogo';
 
-// ── SEO ────────────────────────────────────────────────────────────────────
 export const metadata = {
   title: 'Talent Maroc | Trouvez votre prochain job au Maroc',
-  description: "Recherchez parmi les dernières offres d'emploi à Casablanca, Tanger, Rabat et Agadir. Postulez directement aux meilleures opportunités.",
+  description: "Recherchez parmi les dernières offres d'emploi à Casablanca, Tanger, Rabat et Agadir.",
 };
 
 // ── STATIC DATA ────────────────────────────────────────────────────────────
-const CITIES   = ['Casablanca','Tanger','Rabat','Marrakech','Agadir','Fès'];
-const SECTORS  = ['Informatique','Commercial','Logistique','Finance','Santé','Marketing','Ingénierie','RH'];
+const CITIES = ['Casablanca','Tanger','Rabat','Marrakech','Agadir','Fès'];
+const SECTORS = ['Informatique','Commercial','Finance','Logistique','Santé','Marketing','Ingénierie','RH'];
 const TRENDING = ['Développeur','Stage PFE','Télétravail','Finance','Data','Casablanca'];
-
 const CITY_META: Record<string,{icon:string;count:string}> = {
   Casablanca:{ icon:'🏙', count:'2 400+' },
   Rabat:     { icon:'🏛', count:'1 100+' },
@@ -24,9 +22,9 @@ const CITY_META: Record<string,{icon:string;count:string}> = {
   Fès:       { icon:'🕌', count:'290+'   },
 };
 
-// ── JOB LIST (SERVER COMPONENT) ────────────────────────────────────────────
+// ── JOB LIST ───────────────────────────────────────────────────────────────
 async function JobList({ searchParams }: { searchParams: any }) {
-  noStore(); // opt out of caching — always fetch fresh data
+  noStore();
   const params   = await searchParams;
   const query    = params.q || '';
   const location = params.l || '';
@@ -43,47 +41,43 @@ async function JobList({ searchParams }: { searchParams: any }) {
   const { data: jobs, error } = await q;
 
   if (error) return (
-    <div style={{ padding:'20px', color:'#f87171', fontSize:14, background:'rgba(220,38,38,0.08)', border:'1px solid rgba(220,38,38,0.2)', borderRadius:10 }}>
-      Erreur de connexion : {error.message}
+    <div style={{ padding:20, color:'#dc2626', fontSize:14, background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10 }}>
+      Erreur : {error.message}
     </div>
   );
 
   if (!jobs || jobs.length === 0) return (
-    <div style={{ textAlign:'center', padding:'56px 24px', background:'rgba(255,255,255,0.02)', border:'1px dashed rgba(255,255,255,0.08)', borderRadius:14 }}>
-      <div style={{ fontSize:34, marginBottom:10 }}>🔍</div>
-      <p style={{ color:'rgba(255,255,255,0.4)', fontSize:14, fontWeight:500 }}>Aucune offre trouvée pour votre recherche.</p>
-      <a href="/" style={{ color:'#60a5fa', fontSize:13, fontWeight:600, textDecoration:'none', display:'inline-block', marginTop:10 }}>Voir tout le catalogue →</a>
+    <div style={{ textAlign:'center', padding:'56px 24px', background:'#f9fafb', border:'2px dashed #e5e7eb', borderRadius:14 }}>
+      <div style={{ fontSize:36, marginBottom:12 }}>🔍</div>
+      <p style={{ color:'#6b7280', fontSize:15, fontWeight:500 }}>Aucune offre trouvée.</p>
+      <a href="/" style={{ color:'#16a34a', fontSize:14, fontWeight:600, textDecoration:'none', display:'inline-block', marginTop:8 }}>Voir toutes les offres →</a>
     </div>
   );
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:11 }}>
+    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
       {jobs.map((job: any, i: number) => (
         <a key={job.id} href={`/jobs/${job.id}`} className="job-card"
-          style={{ display:'block', textDecoration:'none', background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.065)', borderRadius:13, padding:'18px 20px', transition:'all 0.22s', position:'relative', overflow:'hidden' }}>
-          {i < 3 && <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:'linear-gradient(90deg,#1a56db,#60a5fa)' }}/>}
-
-          <div style={{ display:'flex', gap:13, alignItems:'center' }}>
+          style={{ display:'block', textDecoration:'none', background:'white', border:'1.5px solid #f0f0f0', borderRadius:14, padding:'18px 20px', transition:'all 0.2s', position:'relative', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ display:'flex', gap:14, alignItems:'center' }}>
             <div style={{ flexShrink:0 }}>
-              <CompanyLogo logoUrl={job.logo_url} companyName={job.company} />
+              <CompanyLogo logoUrl={job.logo_url} companyName={job.company}/>
             </div>
             <div style={{ flex:1, minWidth:0 }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:'white', lineHeight:1.35, marginBottom:5 }}>{job.title}</h2>
-              <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:'4px 14px', fontSize:12, color:'rgba(255,255,255,0.38)' }}>
-                <span style={{ display:'flex', alignItems:'center', gap:4, color:'rgba(255,255,255,0.6)', fontWeight:600 }}>
-                  <Briefcase size={12} style={{ opacity:0.5 }}/> {job.company}
+              <h2 style={{ fontSize:14, fontWeight:700, color:'#111827', lineHeight:1.35, marginBottom:4 }}>{job.title}</h2>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:'3px 14px', fontSize:12, color:'#6b7280' }}>
+                <span style={{ display:'flex', alignItems:'center', gap:4, fontWeight:600, color:'#374151' }}>
+                  <Briefcase size={11}/> {job.company}
                 </span>
                 <span style={{ display:'flex', alignItems:'center', gap:4 }}>
-                  <MapPin size={12} style={{ opacity:0.5 }}/> {job.city}
+                  <MapPin size={11}/> {job.city}
                 </span>
                 <span style={{ display:'flex', alignItems:'center', gap:4 }}>
-                  <Clock size={12} style={{ opacity:0.5 }}/> {job.posted_at || new Date(job.created_at).toLocaleDateString('fr-FR')}
+                  <Clock size={11}/> {job.posted_at || new Date(job.created_at).toLocaleDateString('fr-FR')}
                 </span>
               </div>
             </div>
-            {/* Visual "Voir l'offre" — clicking the whole card goes to /jobs/[id] */}
-            <span className="apply-btn"
-              style={{ flexShrink:0, background:'#1a56db', color:'white', padding:'9px 20px', borderRadius:8, fontSize:12, fontWeight:700, whiteSpace:'nowrap', transition:'all 0.2s', alignSelf:'center' }}>
+            <span className="apply-btn" style={{ flexShrink:0, background:'#f0fdf4', color:'#16a34a', border:'1.5px solid #bbf7d0', padding:'8px 16px', borderRadius:8, fontSize:12, fontWeight:700, whiteSpace:'nowrap', transition:'all 0.2s' }}>
               Voir l'offre →
             </span>
           </div>
@@ -98,143 +92,138 @@ export default function Index({ searchParams }: { searchParams: any }) {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
         *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
         html, body { width:100%; overflow-x:hidden; }
-        body { font-family:'DM Sans',sans-serif; background:#060d1a; color:#e2e8f0; }
+        body { font-family:'Plus Jakarta Sans',sans-serif; background:#f8fafc; color:#111827; }
 
-        @keyframes fadeUp   { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes pulseDot { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:0.5} }
-        @keyframes float    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-        @keyframes pulse    { 0%,100%{opacity:.04} 50%{opacity:.08} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
-        .au{animation:fadeUp .65s cubic-bezier(.16,1,.3,1) both}
-        .d1{animation-delay:.05s}.d2{animation-delay:.15s}.d3{animation-delay:.25s}.d4{animation-delay:.36s}.d5{animation-delay:.48s}
+        .au{animation:fadeUp .55s cubic-bezier(.16,1,.3,1) both}
+        .d1{animation-delay:.04s}.d2{animation-delay:.12s}.d3{animation-delay:.2s}.d4{animation-delay:.28s}.d5{animation-delay:.36s}
 
         /* Nav */
-        .nl{color:rgba(255,255,255,.55);text-decoration:none;font-size:14px;font-weight:500;padding:7px 12px;border-radius:8px;transition:all .2s}
-        .nl:hover{color:white;background:rgba(255,255,255,.06)}
+        .nl { color:#4b5563; text-decoration:none; font-size:14px; font-weight:600; padding:7px 13px; border-radius:8px; transition:all .18s; }
+        .nl:hover { color:#111827; background:#f3f4f6; }
+        .nl.active { color:#16a34a; }
 
         /* Search */
-        .sw{display:flex;background:rgba(15,29,54,.95);border:1.5px solid rgba(255,255,255,.1);border-radius:14px;overflow:hidden;transition:border-color .3s,box-shadow .3s}
-        .sw:focus-within{border-color:rgba(26,86,219,.65);box-shadow:0 0 0 4px rgba(26,86,219,.12)}
-        .si{flex:1;background:transparent;border:none;outline:none;color:#f1f5f9;font-size:15px;font-family:'DM Sans',sans-serif;padding:18px 16px}
-        .si::placeholder{color:rgba(255,255,255,.28)}
-        .sdiv{width:1px;background:rgba(255,255,255,.07);margin:14px 0;flex-shrink:0}
-        .sb{background:#1a56db;color:white;border:none;padding:0 26px;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .2s;white-space:nowrap;display:flex;align-items:center;gap:7px}
-        .sb:hover{background:#1e40af}
+        .sw { display:flex; background:white; border:2px solid #e5e7eb; border-radius:14px; overflow:hidden; transition:border-color .2s, box-shadow .2s; box-shadow:0 2px 12px rgba(0,0,0,0.06); }
+        .sw:focus-within { border-color:#16a34a; box-shadow:0 0 0 4px rgba(22,163,74,0.1); }
+        .si { flex:1; background:transparent; border:none; outline:none; color:#111827; font-size:15px; font-family:'Plus Jakarta Sans',sans-serif; padding:16px 18px; }
+        .si::placeholder { color:#9ca3af; }
+        .sdiv { width:1.5px; background:#f3f4f6; margin:12px 0; flex-shrink:0; }
+        .sb { background:#16a34a; color:white; border:none; padding:0 28px; font-size:14px; font-weight:700; font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; transition:background .18s; white-space:nowrap; display:flex; align-items:center; gap:7px; }
+        .sb:hover { background:#15803d; }
 
         /* Chips */
-        .chip{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:100px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);cursor:pointer;font-size:12px;font-weight:500;color:rgba(255,255,255,.5);white-space:nowrap;transition:all .2s;text-decoration:none;font-family:'DM Sans',sans-serif}
-        .chip:hover{background:rgba(26,86,219,.1);border-color:rgba(26,86,219,.35);color:#93c5fd}
-
-        /* Sidebar */
-        .sl{display:block;font-size:13px;font-weight:500;color:rgba(255,255,255,.38);text-decoration:none;padding:6px 11px;border-radius:7px;transition:all .2s;margin-bottom:2px}
-        .sl:hover{color:white;background:rgba(26,86,219,.1);padding-left:15px}
+        .chip { display:inline-flex; align-items:center; padding:6px 13px; border-radius:100px; border:1.5px solid #e5e7eb; background:white; cursor:pointer; font-size:12px; font-weight:600; color:#374151; white-space:nowrap; transition:all .18s; text-decoration:none; font-family:'Plus Jakarta Sans',sans-serif; }
+        .chip:hover { border-color:#16a34a; color:#16a34a; background:#f0fdf4; }
 
         /* Job card */
-        .job-card:hover{background:rgba(255,255,255,.045)!important;border-color:rgba(26,86,219,.42)!important;transform:translateY(-1px);box-shadow:0 8px 26px rgba(0,0,0,.4)}
-        .apply-btn:hover{background:#1e40af!important;box-shadow:0 5px 18px rgba(26,86,219,.35)}
+        .job-card:hover { border-color:#16a34a !important; box-shadow:0 4px 20px rgba(22,163,74,0.1) !important; transform:translateY(-1px); }
+        .apply-btn:hover { background:#dcfce7 !important; }
+
+        /* Sidebar links */
+        .sl { display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:600; color:#374151; text-decoration:none; padding:8px 12px; border-radius:8px; transition:all .18s; margin-bottom:2px; }
+        .sl:hover { color:#16a34a; background:#f0fdf4; }
+        .sl-count { font-size:11px; color:#9ca3af; font-weight:500; background:#f3f4f6; padding:2px 7px; border-radius:100px; }
 
         /* City card */
-        .cc{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.065);border-radius:11px;padding:18px 14px;text-align:center;transition:all .2s;text-decoration:none;display:block}
-        .cc:hover{background:rgba(26,86,219,.08);border-color:rgba(26,86,219,.3);transform:translateY(-2px)}
+        .cc { background:white; border:1.5px solid #f0f0f0; border-radius:12px; padding:18px 14px; text-align:center; transition:all .18s; text-decoration:none; display:block; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+        .cc:hover { border-color:#16a34a; box-shadow:0 4px 16px rgba(22,163,74,0.1); transform:translateY(-2px); }
 
         /* Buttons */
-        .btn-b{display:inline-flex;align-items:center;gap:7px;background:#1a56db;color:white;padding:11px 22px;border-radius:9px;font-size:14px;font-weight:600;text-decoration:none;font-family:'DM Sans',sans-serif;border:none;cursor:pointer;transition:all .2s}
-        .btn-b:hover{background:#1e40af;transform:translateY(-1px);box-shadow:0 7px 22px rgba(26,86,219,.35)}
-        .btn-g{display:inline-flex;align-items:center;gap:7px;background:transparent;color:rgba(255,255,255,.5);padding:11px 22px;border-radius:9px;font-size:14px;font-weight:500;text-decoration:none;font-family:'DM Sans',sans-serif;border:1px solid rgba(255,255,255,.11);cursor:pointer;transition:all .2s}
-        .btn-g:hover{color:white;border-color:rgba(255,255,255,.26)}
+        .btn-green { display:inline-flex; align-items:center; gap:7px; background:#16a34a; color:white; padding:12px 22px; border-radius:10px; font-size:14px; font-weight:700; text-decoration:none; font-family:'Plus Jakarta Sans',sans-serif; border:none; cursor:pointer; transition:all .18s; }
+        .btn-green:hover { background:#15803d; transform:translateY(-1px); box-shadow:0 6px 20px rgba(22,163,74,0.3); }
+        .btn-outline { display:inline-flex; align-items:center; gap:7px; background:white; color:#374151; padding:12px 22px; border-radius:10px; font-size:14px; font-weight:600; text-decoration:none; font-family:'Plus Jakarta Sans',sans-serif; border:1.5px solid #e5e7eb; cursor:pointer; transition:all .18s; }
+        .btn-outline:hover { border-color:#16a34a; color:#16a34a; }
 
-        /* Blobs / layout */
-        .blob{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none}
-        .divider{height:1px;background:linear-gradient(to right,transparent,rgba(255,255,255,.07),transparent);margin:48px 0}
-        .live-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulseDot 1.8s ease-in-out infinite;flex-shrink:0}
-        .skeleton{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.05);border-radius:13px;height:72px}
-        .footer-link{font-size:12px;color:rgba(255,255,255,.3);text-decoration:none;transition:color .2s;display:block;margin-bottom:8px}
-        .footer-link:hover{color:rgba(255,255,255,.65)}
+        /* Stat card */
+        .stat-card { background:white; border:1.5px solid #f0f0f0; border-radius:14px; padding:22px 20px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,0.04); }
 
-        @media(max-width:768px){
-          .main-grid{flex-direction:column!important}
-          .sidebar{width:100%!important;display:grid;grid-template-columns:1fr 1fr;gap:20px}
-          .cv-mini-cards{display:none!important}
+        /* Divider */
+        .divider { height:1px; background:#f0f0f0; margin:48px 0; }
+
+        /* Skeleton */
+        .skel { background:#f3f4f6; border-radius:8px; animation:fadeIn .8s ease both; }
+
+        /* Footer */
+        .footer-link { font-size:13px; color:#6b7280; text-decoration:none; transition:color .18s; display:block; margin-bottom:9px; }
+        .footer-link:hover { color:#16a34a; }
+
+        @media(max-width:768px) {
+          .main-grid { flex-direction:column !important; }
+          .sidebar { width:100% !important; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+          .cv-cards { display:none !important; }
         }
-        @media(max-width:640px){
-          .sw{flex-direction:column;border-radius:12px}
-          .sdiv{width:auto;height:1px;margin:0 14px}
-          .sb{padding:14px;justify-content:center}
-          .hide-sm{display:none!important}
-          .footer-grid{grid-template-columns:1fr 1fr!important}
+        @media(max-width:640px) {
+          .sw { flex-direction:column; border-radius:12px; }
+          .sdiv { width:auto; height:1.5px; margin:0 14px; }
+          .sb { padding:14px; justify-content:center; }
+          .hide-sm { display:none !important; }
+          .footer-grid { grid-template-columns:1fr 1fr !important; }
         }
       `}</style>
 
-      <div style={{ background:'#060d1a', minHeight:'100vh', width:'100%' }}>
+      <div style={{ background:'#f8fafc', minHeight:'100vh', width:'100%' }}>
 
         {/* ══ NAVBAR ════════════════════════════════════════════════════ */}
-        <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(6,13,26,0.88)', backdropFilter:'blur(18px)', borderBottom:'1px solid rgba(255,255,255,0.055)', padding:'0 24px', height:62, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:28 }}>
+        <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(255,255,255,0.95)', backdropFilter:'blur(12px)', borderBottom:'1.5px solid #f0f0f0', padding:'0 24px', height:62, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:32 }}>
             <a href="/" style={{ display:'flex', alignItems:'center', gap:9, textDecoration:'none' }}>
-              <div style={{ width:34, height:34, background:'#1a56db', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:16, color:'white', fontFamily:"'Syne',sans-serif", boxShadow:'0 0 16px rgba(26,86,219,0.5)' }}>T</div>
-              <span style={{ color:'white', fontWeight:700, fontSize:15, fontFamily:"'Syne',sans-serif" }}>TalentMaroc</span>
+              <div style={{ width:34, height:34, background:'#16a34a', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:16, color:'white', fontFamily:"'Plus Jakarta Sans',sans-serif" }}>T</div>
+              <span style={{ color:'#111827', fontWeight:800, fontSize:16, fontFamily:"'Plus Jakarta Sans',sans-serif" }}>TalentMaroc</span>
             </a>
             <div className="hide-sm" style={{ display:'flex', gap:2 }}>
-              <a href="/"          className="nl" style={{ color:'white' }}>Emplois</a>
+              <a href="/"          className="nl active">Emplois</a>
               <a href="/employers" className="nl">Recruteurs</a>
-              <a href="/cv"        className="nl" style={{ color:'#93c5fd' }}>Mon CV ✦</a>
+              <a href="/cv"        className="nl" style={{ color:'#16a34a' }}>Mon CV ✦</a>
             </div>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <a href="/auth/login"    className="nl hide-sm">Connexion</a>
-            <a href="/employers/new" className="btn-b" style={{ padding:'8px 15px', fontSize:13 }}>
-              <PlusCircle size={14}/> Publier
-            </a>
+            <a href="/employers/new" className="btn-green" style={{ padding:'8px 18px', fontSize:13 }}>Publier une offre</a>
           </div>
         </nav>
 
         {/* ══ HERO ══════════════════════════════════════════════════════ */}
-        <header style={{ position:'relative', overflow:'hidden', padding:'76px 24px 84px', display:'flex', alignItems:'center', justifyContent:'center' }}>
-          <div className="blob" style={{ width:580, height:420, background:'rgba(26,86,219,0.19)', top:-160, left:'50%', transform:'translateX(-12%)' }}/>
-          <div className="blob" style={{ width:300, height:240, background:'rgba(5,122,85,0.1)', bottom:-70, right:'7%' }}/>
-          <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px)', backgroundSize:'52px 52px', pointerEvents:'none' }}/>
+        <header style={{ background:'white', borderBottom:'1.5px solid #f0f0f0', padding:'64px 24px 72px' }}>
+          <div style={{ maxWidth:700, margin:'0 auto', textAlign:'center' }}>
 
-          <div style={{ position:'relative', maxWidth:700, width:'100%', textAlign:'center' }}>
-
-            <div className="au d1" style={{ display:'inline-flex', alignItems:'center', gap:8, background:'rgba(26,86,219,0.1)', border:'1px solid rgba(26,86,219,0.22)', borderRadius:100, padding:'5px 15px 5px 9px', marginBottom:22 }}>
-              <span className="live-dot"/>
-              <span style={{ fontSize:12, fontWeight:500, color:'#93c5fd' }}>18 400+ offres actives aujourd'hui au Maroc</span>
+            <div className="au d1" style={{ display:'inline-flex', alignItems:'center', gap:7, background:'#f0fdf4', border:'1.5px solid #bbf7d0', borderRadius:100, padding:'5px 14px', marginBottom:22 }}>
+              <span style={{ width:7, height:7, borderRadius:'50%', background:'#16a34a', display:'inline-block', flexShrink:0 }}/>
+              <span style={{ fontSize:12, fontWeight:700, color:'#15803d' }}>18 400+ offres actives au Maroc</span>
             </div>
 
-            <h1 className="au d2" style={{ fontFamily:"'Syne',sans-serif", fontSize:'clamp(30px,6vw,58px)', fontWeight:800, color:'white', lineHeight:1.1, letterSpacing:'-0.03em', marginBottom:16 }}>
-              Le job de vos rêves{' '}
-              <span style={{ WebkitBackgroundClip:'text', backgroundClip:'text', color:'transparent', backgroundImage:'linear-gradient(135deg,#60a5fa 0%,#a78bfa 100%)' }}>vous attend</span>
-              <br/>au Maroc
+            <h1 className="au d2" style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:'clamp(28px,5.5vw,52px)', fontWeight:800, color:'#0f172a', lineHeight:1.12, letterSpacing:'-0.02em', marginBottom:16 }}>
+              Le job de vos rêves<br/>
+              <span style={{ color:'#16a34a' }}>vous attend au Maroc</span>
             </h1>
 
-            <p className="au d3" style={{ fontSize:'clamp(14px,2vw,16px)', color:'rgba(255,255,255,0.44)', lineHeight:1.7, maxWidth:440, margin:'0 auto 30px' }}>
-              Des milliers d'opportunités vérifiées à Tanger, Casablanca et partout ailleurs.
+            <p className="au d3" style={{ fontSize:'clamp(14px,2vw,17px)', color:'#6b7280', lineHeight:1.7, maxWidth:460, margin:'0 auto 30px' }}>
+              Des milliers d'opportunités vérifiées à Casablanca, Tanger, Rabat et partout ailleurs.
             </p>
 
-            {/* Real GET form — server-side filtering preserved */}
             <form action="/" method="GET" className="au d4" style={{ maxWidth:620, margin:'0 auto 18px' }}>
               <div className="sw">
                 <div style={{ display:'flex', alignItems:'center', gap:9, padding:'0 16px', flex:1 }}>
-                  <Search size={16} style={{ color:'rgba(255,255,255,0.26)', flexShrink:0 }}/>
-                  <input name="q" type="text" placeholder="Poste, entreprise, compétence…" className="si" style={{ padding:'18px 0' }}/>
+                  <Search size={16} style={{ color:'#9ca3af', flexShrink:0 }}/>
+                  <input name="q" type="text" placeholder="Poste, entreprise, compétence…" className="si" style={{ padding:'16px 0' }}/>
                 </div>
                 <div className="sdiv"/>
-                <div style={{ display:'flex', alignItems:'center', gap:9, padding:'0 16px', flex:'0 0 180px' }}>
-                  <MapPin size={15} style={{ color:'rgba(255,255,255,0.26)', flexShrink:0 }}/>
-                  <input name="l" type="text" placeholder="Ville (ex: Tanger)" className="si" style={{ padding:'18px 0' }}/>
+                <div style={{ display:'flex', alignItems:'center', gap:9, padding:'0 16px', flex:'0 0 185px' }}>
+                  <MapPin size={15} style={{ color:'#9ca3af', flexShrink:0 }}/>
+                  <input name="l" type="text" placeholder="Ville" className="si" style={{ padding:'16px 0' }}/>
                 </div>
-                <button type="submit" className="sb">
-                  <Search size={14}/> Rechercher
-                </button>
+                <button type="submit" className="sb"><Search size={14}/> Rechercher</button>
               </div>
             </form>
 
             <div className="au d5" style={{ display:'flex', gap:7, flexWrap:'wrap', justifyContent:'center', alignItems:'center' }}>
-              <span style={{ fontSize:12, color:'rgba(255,255,255,0.26)' }}>Tendances :</span>
+              <span style={{ fontSize:12, color:'#9ca3af', fontWeight:600 }}>Tendances :</span>
               {TRENDING.map(t => (
                 <a key={t} href={`/?q=${encodeURIComponent(t)}`} className="chip">{t}</a>
               ))}
@@ -242,65 +231,77 @@ export default function Index({ searchParams }: { searchParams: any }) {
           </div>
         </header>
 
-        {/* ══ STATS BAR ═════════════════════════════════════════════════ */}
-        <div style={{ borderTop:'1px solid rgba(255,255,255,0.05)', borderBottom:'1px solid rgba(255,255,255,0.05)', background:'rgba(255,255,255,0.012)', padding:'26px 24px' }}>
-          <div style={{ maxWidth:860, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:14, textAlign:'center' }}>
+        {/* ══ STATS ═════════════════════════════════════════════════════ */}
+        <div style={{ background:'white', borderBottom:'1.5px solid #f0f0f0', padding:'24px' }}>
+          <div style={{ maxWidth:860, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12 }}>
             {[['18 400+','Offres actives'],['4 200+','Entreprises'],['320K+','Candidats'],['94%','Satisfaction']].map(([v,l])=>(
-              <div key={l}>
-                <div style={{ fontFamily:"'Syne',sans-serif", fontSize:'clamp(20px,3vw,28px)', fontWeight:800, color:'white', lineHeight:1 }}>{v}</div>
-                <div style={{ fontSize:11, color:'rgba(255,255,255,0.33)', marginTop:5 }}>{l}</div>
+              <div key={l} className="stat-card">
+                <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:'clamp(20px,3vw,28px)', fontWeight:800, color:'#0f172a', lineHeight:1 }}>{v}</div>
+                <div style={{ fontSize:12, color:'#9ca3af', marginTop:5, fontWeight:500 }}>{l}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ══ MAIN GRID ═════════════════════════════════════════════════ */}
-        <div style={{ maxWidth:1060, margin:'0 auto', padding:'52px 24px 72px', display:'flex', gap:32 }} className="main-grid">
+        {/* ══ MAIN ══════════════════════════════════════════════════════ */}
+        <div style={{ maxWidth:1060, margin:'0 auto', padding:'44px 24px 72px', display:'flex', gap:28 }} className="main-grid">
 
           {/* ── SIDEBAR ──────────────────────────────────────────────── */}
-          <aside className="sidebar" style={{ width:196, flexShrink:0 }}>
+          <aside className="sidebar" style={{ width:200, flexShrink:0 }}>
 
-            <div style={{ marginBottom:32 }}>
-              <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:12, fontFamily:"'Syne',sans-serif", padding:'0 11px' }}>Villes</div>
+            <div style={{ marginBottom:28 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:10, padding:'0 12px' }}>Villes</div>
               {CITIES.map(city => (
                 <a key={city} href={`/?l=${city}`} className="sl">
-                  <span style={{ marginRight:5 }}>{CITY_META[city]?.icon}</span>{city}
-                  <span style={{ float:'right', fontSize:10, color:'rgba(255,255,255,0.2)' }}>{CITY_META[city]?.count}</span>
+                  <span><span style={{ marginRight:6 }}>{CITY_META[city]?.icon}</span>{city}</span>
+                  <span className="sl-count">{CITY_META[city]?.count}</span>
                 </a>
               ))}
             </div>
 
-            <div style={{ marginBottom:32 }}>
-              <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.3)', textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:12, fontFamily:"'Syne',sans-serif", padding:'0 11px' }}>Secteurs</div>
+            <div style={{ marginBottom:28 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:10, padding:'0 12px' }}>Secteurs</div>
               {SECTORS.map(s => (
-                <a key={s} href={`/?q=${s}`} className="sl">{s}</a>
+                <a key={s} href={`/?q=${s}`} className="sl">{s}<ChevronRight size={13} style={{ opacity:0.3 }}/></a>
               ))}
             </div>
 
             {/* CV mini card */}
-            <div style={{ background:'linear-gradient(135deg,rgba(26,86,219,0.15),rgba(10,20,40,0.85))', border:'1px solid rgba(26,86,219,0.22)', borderRadius:11, padding:'16px 14px' }}>
-              <div style={{ fontSize:10, fontWeight:700, color:'#93c5fd', marginBottom:7, textTransform:'uppercase', letterSpacing:'0.08em' }}>✦ Nouveau</div>
-              <div style={{ fontFamily:"'Syne',sans-serif", fontSize:13, fontWeight:700, color:'white', marginBottom:5, lineHeight:1.35 }}>Créez votre CV IA</div>
-              <p style={{ fontSize:11, color:'rgba(255,255,255,0.35)', lineHeight:1.6, marginBottom:12 }}>Gratuit pour importer, 1,99 € pour générer.</p>
-              <a href="/cv" className="btn-b" style={{ padding:'8px 14px', fontSize:12, width:'100%', justifyContent:'center' }}>Créer mon CV →</a>
+            <div style={{ background:'linear-gradient(135deg,#f0fdf4,#dcfce7)', border:'1.5px solid #bbf7d0', borderRadius:12, padding:'16px 14px' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
+                <Zap size={13} style={{ color:'#16a34a' }}/>
+                <span style={{ fontSize:10, fontWeight:700, color:'#15803d', textTransform:'uppercase', letterSpacing:'0.08em' }}>Nouveau</span>
+              </div>
+              <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:13, fontWeight:700, color:'#0f172a', marginBottom:5, lineHeight:1.35 }}>Créez votre CV IA</div>
+              <p style={{ fontSize:11, color:'#4b7c59', lineHeight:1.6, marginBottom:12 }}>Gratuit pour importer, 1,99 € pour générer.</p>
+              <a href="/cv" className="btn-green" style={{ padding:'8px 14px', fontSize:12, width:'100%', justifyContent:'center' }}>Créer mon CV →</a>
             </div>
           </aside>
 
           {/* ── JOB LIST ─────────────────────────────────────────────── */}
           <section style={{ flex:1, minWidth:0 }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:18 }}>
               <div>
-                <h2 style={{ fontFamily:"'Syne',sans-serif", fontSize:19, fontWeight:700, color:'white' }}>Dernières Offres</h2>
-                <p style={{ fontSize:12, color:'rgba(255,255,255,0.32)', marginTop:3 }}>Actualisées en temps réel via n8n & SerpAPI</p>
+                <h2 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:18, fontWeight:800, color:'#0f172a' }}>Dernières Offres</h2>
+                <p style={{ fontSize:12, color:'#9ca3af', marginTop:3, fontWeight:500 }}>Actualisées en temps réel via n8n & SerpAPI</p>
               </div>
-              <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, fontWeight:700, color:'#22c55e', textTransform:'uppercase', letterSpacing:'0.08em' }}>
-                <span className="live-dot" style={{ width:6, height:6 }}/>Live
+              <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, fontWeight:700, color:'#16a34a', textTransform:'uppercase', letterSpacing:'0.08em' }}>
+                <span style={{ width:6, height:6, borderRadius:'50%', background:'#16a34a', display:'inline-block', animation:'fadeIn 1s ease infinite alternate' }}/>
+                Live
               </div>
             </div>
 
             <Suspense fallback={
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-                {[1,2,3].map(i => <div key={i} className="skeleton" style={{ animationDelay:`${i*0.1}s` }}/>)}
+                {[1,2,3].map(i=>(
+                  <div key={i} style={{ background:'white', border:'1.5px solid #f0f0f0', borderRadius:14, padding:'18px 20px', boxShadow:'0 1px 4px rgba(0,0,0,0.04)', display:'flex', gap:14, alignItems:'center' }}>
+                    <div className="skel" style={{ width:44, height:44, borderRadius:10, flexShrink:0 }}/>
+                    <div style={{ flex:1 }}>
+                      <div className="skel" style={{ height:14, width:'55%', marginBottom:8 }}/>
+                      <div className="skel" style={{ height:12, width:'38%' }}/>
+                    </div>
+                  </div>
+                ))}
               </div>
             }>
               <JobList searchParams={searchParams}/>
@@ -309,90 +310,124 @@ export default function Index({ searchParams }: { searchParams: any }) {
         </div>
 
         {/* ══ CITY GRID ═════════════════════════════════════════════════ */}
-        <div style={{ maxWidth:1060, margin:'0 auto 64px', padding:'0 24px' }}>
+        <div style={{ maxWidth:1060, margin:'0 auto 60px', padding:'0 24px' }}>
           <div className="divider"/>
-          <div style={{ marginBottom:22 }}>
-            <h2 style={{ fontFamily:"'Syne',sans-serif", fontSize:'clamp(17px,3vw,22px)', fontWeight:700, color:'white' }}>Explorer par ville</h2>
-            <p style={{ fontSize:12, color:'rgba(255,255,255,0.33)', marginTop:4 }}>Les marchés de l'emploi les plus actifs</p>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:10 }}>
+            <div>
+              <h2 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:'clamp(16px,3vw,21px)', fontWeight:800, color:'#0f172a' }}>Explorer par ville</h2>
+              <p style={{ fontSize:12, color:'#9ca3af', marginTop:4, fontWeight:500 }}>Les marchés de l'emploi les plus actifs</p>
+            </div>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(148px,1fr))', gap:10 }}>
-            {CITIES.map(city => (
+            {CITIES.map(city=>(
               <a key={city} href={`/?l=${city}`} className="cc">
-                <div style={{ fontSize:22, marginBottom:8 }}>{CITY_META[city]?.icon}</div>
-                <div style={{ fontFamily:"'Syne',sans-serif", fontSize:13, fontWeight:700, color:'white', marginBottom:3 }}>{city}</div>
-                <div style={{ fontSize:11, color:'rgba(255,255,255,0.28)' }}>{CITY_META[city]?.count} offres</div>
+                <div style={{ fontSize:24, marginBottom:8 }}>{CITY_META[city]?.icon}</div>
+                <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:13, fontWeight:700, color:'#0f172a', marginBottom:3 }}>{city}</div>
+                <div style={{ fontSize:11, color:'#9ca3af', fontWeight:500 }}>{CITY_META[city]?.count} offres</div>
               </a>
             ))}
           </div>
         </div>
 
         {/* ══ CV BANNER ═════════════════════════════════════════════════ */}
-        <div style={{ maxWidth:1060, margin:'0 auto 64px', padding:'0 24px' }}>
-          <div style={{ position:'relative', overflow:'hidden', background:'linear-gradient(135deg,rgba(26,86,219,0.13) 0%,rgba(8,16,36,0.97) 100%)', border:'1px solid rgba(26,86,219,0.22)', borderRadius:16, padding:'40px 36px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:24, flexWrap:'wrap' }}>
-            <div className="blob" style={{ width:260, height:240, background:'rgba(26,86,219,0.18)', top:-50, right:70, filter:'blur(52px)' }}/>
+        <div style={{ maxWidth:1060, margin:'0 auto 60px', padding:'0 24px' }}>
+          <div style={{ background:'linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%)', borderRadius:18, padding:'44px 40px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:28, flexWrap:'wrap', overflow:'hidden', position:'relative' }}>
+            {/* Subtle pattern */}
+            <div style={{ position:'absolute', inset:0, backgroundImage:'radial-gradient(circle at 70% 50%, rgba(22,163,74,0.15) 0%, transparent 60%)', pointerEvents:'none' }}/>
             <div style={{ position:'relative' }}>
-              <div style={{ display:'inline-flex', alignItems:'center', gap:5, background:'rgba(26,86,219,0.18)', border:'1px solid rgba(26,86,219,0.28)', borderRadius:100, padding:'3px 11px', marginBottom:12 }}>
-                <Zap size={10} style={{ color:'#93c5fd' }}/>
-                <span style={{ color:'#93c5fd', fontSize:11, fontWeight:600 }}>Nouveau — Générateur de CV IA</span>
+              <div style={{ display:'inline-flex', alignItems:'center', gap:6, background:'rgba(22,163,74,0.2)', border:'1px solid rgba(22,163,74,0.35)', borderRadius:100, padding:'4px 12px', marginBottom:14 }}>
+                <Zap size={11} style={{ color:'#4ade80' }}/>
+                <span style={{ color:'#4ade80', fontSize:11, fontWeight:700 }}>Nouveau — Générateur de CV IA</span>
               </div>
-              <h3 style={{ fontFamily:"'Syne',sans-serif", fontSize:'clamp(16px,3vw,22px)', fontWeight:700, color:'white', lineHeight:1.25, marginBottom:9 }}>
+              <h3 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:'clamp(17px,3vw,23px)', fontWeight:800, color:'white', lineHeight:1.25, marginBottom:10 }}>
                 Un CV qui se démarque, en 3 minutes
               </h3>
-              <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', maxWidth:380, lineHeight:1.65 }}>
-                Importez votre CV existant gratuitement, ou laissez l'IA le créer de A à Z à partir de 1,99 €.
+              <p style={{ fontSize:14, color:'rgba(255,255,255,0.55)', maxWidth:400, lineHeight:1.65 }}>
+                Importez votre CV existant gratuitement, ou laissez l'IA le créer à partir de 1,99 €.
               </p>
-              <div style={{ display:'flex', gap:10, marginTop:20, flexWrap:'wrap' }}>
-                <a href="/cv" className="btn-b">Créer mon CV IA →</a>
-                <a href="/cv" className="btn-g">Voir les modèles</a>
+              <div style={{ display:'flex', gap:10, marginTop:22, flexWrap:'wrap' }}>
+                <a href="/cv" className="btn-green">Créer mon CV IA →</a>
+                <a href="/cv" style={{ display:'inline-flex', alignItems:'center', gap:7, background:'rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.7)', padding:'12px 22px', borderRadius:10, fontSize:14, fontWeight:600, textDecoration:'none', border:'1px solid rgba(255,255,255,0.15)', transition:'all .18s' }}>
+                  Voir les modèles
+                </a>
               </div>
             </div>
-            {/* Floating mini CV previews */}
-            <div className="cv-mini-cards" style={{ display:'flex', gap:9, animation:'float 5s ease-in-out infinite', flexShrink:0 }}>
-              {[{bg:'#0f172a',acc:'#3b82f6'},{bg:'#042f2e',acc:'#2dd4bf'},{bg:'#1e1b4b',acc:'#818cf8'}].map((t,i) => (
-                <div key={i} style={{ width:68, height:90, background:t.bg, border:`1px solid ${t.acc}30`, borderRadius:7, padding:6, flexShrink:0, opacity:i===1?1:0.6, transform:`rotate(${[-5,0,5][i]}deg) translateY(${[6,0,6][i]}px)` }}>
+            <div className="cv-cards" style={{ display:'flex', gap:10, flexShrink:0, opacity:0.9 }}>
+              {[{bg:'#1e293b',acc:'#3b82f6'},{bg:'#042f2e',acc:'#2dd4bf'},{bg:'#1e1b4b',acc:'#818cf8'}].map((t,i)=>(
+                <div key={i} style={{ width:70, height:94, background:t.bg, border:`1px solid ${t.acc}30`, borderRadius:8, padding:7, flexShrink:0, opacity:i===1?1:0.6, transform:`rotate(${[-5,0,5][i]}deg) translateY(${[6,0,6][i]}px)` }}>
                   <div style={{ height:6, background:t.acc, borderRadius:2, width:'55%', marginBottom:3 }}/>
                   <div style={{ height:2, background:`${t.acc}50`, borderRadius:2, width:'36%', marginBottom:6 }}/>
-                  {[100,80,65].map((w,j) => <div key={j} style={{ height:2, background:'rgba(255,255,255,0.09)', borderRadius:2, width:`${w}%`, marginBottom:2 }}/>)}
+                  {[100,80,65].map((w,j)=><div key={j} style={{ height:2, background:'rgba(255,255,255,0.12)', borderRadius:2, width:`${w}%`, marginBottom:2 }}/>)}
                   <div style={{ height:2, background:t.acc, borderRadius:2, width:'44%', marginTop:4, marginBottom:2 }}/>
-                  {[100,72].map((w,j) => <div key={j} style={{ height:2, background:'rgba(255,255,255,0.09)', borderRadius:2, width:`${w}%`, marginBottom:2 }}/>)}
+                  {[100,72].map((w,j)=><div key={j} style={{ height:2, background:'rgba(255,255,255,0.12)', borderRadius:2, width:`${w}%`, marginBottom:2 }}/>)}
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* ══ FOOTER ════════════════════════════════════════════════════ */}
-        <footer style={{ borderTop:'1px solid rgba(255,255,255,0.05)', background:'rgba(0,0,0,0.22)', padding:'40px 24px 24px' }}>
-          <div style={{ maxWidth:1060, margin:'0 auto' }}>
-            <div className="footer-grid" style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:22, marginBottom:32 }}>
-              <div>
-                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
-                  <div style={{ width:28, height:28, background:'#1a56db', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:13, color:'white', fontFamily:"'Syne',sans-serif" }}>T</div>
-                  <span style={{ color:'white', fontWeight:700, fontSize:13, fontFamily:"'Syne',sans-serif" }}>TalentMaroc</span>
+        {/* ══ EMPLOYER CARDS ════════════════════════════════════════════ */}
+        <div style={{ maxWidth:1060, margin:'0 auto 72px', padding:'0 24px' }}>
+          <div style={{ marginBottom:20 }}>
+            <h2 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:'clamp(16px,3vw,21px)', fontWeight:800, color:'#0f172a' }}>Vous recrutez ?</h2>
+            <p style={{ fontSize:12, color:'#9ca3af', marginTop:4, fontWeight:500 }}>Accédez à une base de 320 000+ candidats qualifiés</p>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(270px,1fr))', gap:12 }}>
+            {[
+              { icon:'🎯', title:'320 000+ candidats actifs', desc:'Filtrés par secteur, ville et niveau d\'expérience.', href:'/employers' },
+              { icon:'⚡', title:'Publiez en 5 minutes', desc:'Interface simple. Diffusion immédiate sur tous nos canaux.', href:'/employers/new' },
+              { icon:'📊', title:'Tableau de bord complet', desc:'Suivez vos candidatures et performances en temps réel.', href:'/employers' },
+            ].map(card=>(
+              <a key={card.title} href={card.href} style={{ textDecoration:'none' }}>
+                <div style={{ background:'white', border:'1.5px solid #f0f0f0', borderRadius:14, padding:'22px', boxShadow:'0 1px 4px rgba(0,0,0,0.04)', transition:'all .2s', cursor:'pointer' }} className="emp-card">
+                  <div style={{ fontSize:26, marginBottom:12 }}>{card.icon}</div>
+                  <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:14, fontWeight:700, color:'#0f172a', marginBottom:6, lineHeight:1.3 }}>{card.title}</div>
+                  <div style={{ fontSize:13, color:'#6b7280', lineHeight:1.6 }}>{card.desc}</div>
+                  <div style={{ marginTop:14, fontSize:13, color:'#16a34a', fontWeight:700, display:'flex', alignItems:'center', gap:4 }}>
+                    En savoir plus <ChevronRight size={13}/>
+                  </div>
                 </div>
-                <p style={{ fontSize:12, color:'rgba(255,255,255,0.26)', lineHeight:1.7, maxWidth:190 }}>La plateforme de référence pour l'emploi au Maroc. Propulsé par n8n & Supabase.</p>
+              </a>
+            ))}
+          </div>
+        </div>
+
+        {/* ══ FOOTER ════════════════════════════════════════════════════ */}
+        <footer style={{ background:'#0f172a', padding:'48px 24px 28px' }}>
+          <div style={{ maxWidth:1060, margin:'0 auto' }}>
+            <div className="footer-grid" style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:24, marginBottom:36 }}>
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+                  <div style={{ width:30, height:30, background:'#16a34a', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:14, color:'white' }}>T</div>
+                  <span style={{ color:'white', fontWeight:800, fontSize:15 }}>TalentMaroc</span>
+                </div>
+                <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', lineHeight:1.7, maxWidth:200 }}>La plateforme de référence pour l'emploi au Maroc. Propulsé par n8n & Supabase.</p>
               </div>
               {[
                 { title:'Candidats',  links:[['Chercher un emploi','/'],['Créer mon CV','/cv'],['Connexion','/auth/login']] },
                 { title:'Recruteurs', links:[['Publier une offre','/employers/new'],['Dashboard','/employers'],['Tarifs','/pricing']] },
-                { title:'Légal',      links:[['Politique de conf.','#'],['CGU','/terms'],['Contact','mailto:contact@talentmaroc.shop']] },
-              ].map(col => (
+                { title:'Légal',      links:[['Confidentialité','#'],['CGU','/terms'],['Contact','mailto:contact@talentmaroc.shop']] },
+              ].map(col=>(
                 <div key={col.title}>
-                  <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.35)', marginBottom:11, textTransform:'uppercase', letterSpacing:'0.12em', fontFamily:"'Syne',sans-serif" }}>{col.title}</div>
-                  {col.links.map(([label,href]) => (
+                  <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.4)', marginBottom:12, textTransform:'uppercase', letterSpacing:'0.1em' }}>{col.title}</div>
+                  {col.links.map(([label,href])=>(
                     <a key={label} href={href} className="footer-link">{label}</a>
                   ))}
                 </div>
               ))}
             </div>
-            <div style={{ borderTop:'1px solid rgba(255,255,255,0.05)', paddingTop:18, display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
-              <span style={{ fontSize:11, color:'rgba(255,255,255,0.16)' }}>© 2026 Talent Maroc — Propulsé par n8n & Supabase</span>
-              <span style={{ fontSize:11, color:'rgba(255,255,255,0.12)' }}>🇲🇦 Fait avec ❤️ au Maroc</span>
+            <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', paddingTop:20, display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
+              <span style={{ fontSize:12, color:'rgba(255,255,255,0.25)' }}>© 2026 Talent Maroc — Propulsé par n8n & Supabase</span>
+              <span style={{ fontSize:12, color:'rgba(255,255,255,0.18)' }}>🇲🇦 Fait avec ❤️ au Maroc</span>
             </div>
           </div>
         </footer>
 
       </div>
+
+      <style>{`
+        .emp-card:hover { border-color:#16a34a !important; box-shadow:0 4px 20px rgba(22,163,74,0.1) !important; transform:translateY(-2px); }
+      `}</style>
     </>
   );
 }
