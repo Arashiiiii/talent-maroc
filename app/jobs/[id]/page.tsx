@@ -21,18 +21,11 @@ function getSupabase() {
   );
 }
 
-// ── DYNAMIC SEO ────────────────────────────────────────────────────────────
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-  noStore();
-  const { id } = await params;
-  const { data: job } = await getSupabase()
-    .from('jobs').select('title,company,city').eq('id', id).single();
-  if (!job) return { title: 'Offre introuvable | Talent Maroc' };
-  return {
-    title: `${job.title} chez ${job.company} — ${job.city} | Talent Maroc`,
-    description: `Postulez pour ${job.title} chez ${job.company} à ${job.city}. Offre d'emploi sur Talent Maroc.`,
-  };
-}
+// ── SEO ───────────────────────────────────────────────────────────────────
+export const metadata = {
+  title: "Offre d'emploi | Talent Maroc",
+  description: "Consultez cette offre d'emploi et postulez directement sur Talent Maroc.",
+};
 
 // ── SKELETON (shown while JobDetail loads) ─────────────────────────────────
 function JobDetailSkeleton() {
