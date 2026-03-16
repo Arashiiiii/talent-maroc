@@ -104,7 +104,10 @@ export default function CVPage() {
 
   // Upload state
   const [uploadedFile,    setUploadedFile]    = useState<string|null>(null);
+  const [uploadedFileObj, setUploadedFileObj] = useState<File|null>(null);
   const [uploadedContent, setUploadedContent] = useState<string>("");
+  const [uploadedBase64,  setUploadedBase64]  = useState<string|null>(null);
+  const [uploadedMime,    setUploadedMime]    = useState<string|null>(null);
   const [enhanceType,     setEnhanceType]     = useState("Optimisation ATS — Compatible logiciels de recrutement");
   const [uploadError,     setUploadError]     = useState<string|null>(null);
 
@@ -153,13 +156,35 @@ export default function CVPage() {
   const handleFileUpload = (file: File) => {
     setUploadError(null);
     setUploadedFile(file.name);
+    setUploadedFileObj(file);
+
     if (file.type === "text/plain" || file.name.endsWith(".txt")) {
       const reader = new FileReader();
-      reader.onload = (e) => setUploadedContent(e.target?.result as string ?? "");
+      reader.onload = (e) => {
+        setUploadedContent(e.target?.result as string ?? "");
+        setUploadedBase64(null);
+        setUploadedMime(null);
+      };
       reader.readAsText(file);
+    } else if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+      // Read PDF as base64 — Claude API can read it natively
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = (e.target?.result as string).split(",")[1];
+        setUploadedBase64(base64);
+        setUploadedMime("application/pdf");
+        setUploadedContent("");
+      };
+      reader.readAsDataURL(file);
     } else {
-      // For PDF/DOC we can't read client-side easily — store file name, send to AI with note
-      setUploadedContent(`[Fichier: ${file.name}] — L'utilisateur a téléchargé ce CV. Améliorez-le selon le type demandé.`);
+      // DOC/DOCX — read as text best effort
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setUploadedContent(e.target?.result as string ?? "");
+        setUploadedBase64(null);
+        setUploadedMime(null);
+      };
+      reader.readAsText(file);
     }
   };
 
@@ -215,48 +240,84 @@ export default function CVPage() {
   // ── GENERATE: UPLOAD/ENHANCE (FREE) ───────────────────────────────────
   const generateUploadCV = useCallback(async () => {
     setCvHtml(null);
-    const prompt = `Tu es un expert en rédaction de CV professionnels pour le marché marocain.
 
-L'utilisateur a importé son CV existant et souhaite l'améliorer avec le mode suivant : "${enhanceType}".
+    const instructions = `Tu es un expert en rédaction de CV professionnels pour le marché marocain.
 
-Contenu du CV importé :
-${uploadedContent || "[Contenu non disponible — fais de ton mieux avec les informations disponibles]"}
+L'utilisateur souhaite améliorer son CV avec le mode : "${enhanceType}".
 
-Améliore ce CV en français selon le mode choisi. Format texte structuré clair (sans symboles markdown ** ou #).
-Structurer ainsi (titres de section en MAJUSCULES) :
+IMPORTANT : Utilise UNIQUEMENT les informations présentes dans le CV fourni. Ne génère AUCUNE information fictive. Conserve tous les faits : noms, entreprises, dates, diplômes, compétences réelles.
+
+Retourne le CV amélioré en français, format texte structuré clair (sans symboles markdown ** ou #).
+Structure obligatoire (titres en MAJUSCULES) :
 
 NOM COMPLET
 Titre du poste | Email | Téléphone
 
 PROFIL PROFESSIONNEL
-[2-3 phrases percutantes]
+[2-3 phrases percutantes basées sur l'expérience réelle]
 
 EXPÉRIENCES PROFESSIONNELLES
-[Chaque poste]
+[Chaque poste avec dates et réalisations concrètes tirées du CV original]
 
 FORMATION
-[Diplôme, établissement, année]
+[Diplômes et formations exactement comme dans le CV original]
 
 COMPÉTENCES
-[Catégorisées]
+[Compétences réelles du candidat, bien organisées]
 
 LANGUES
-[Liste]
+[Langues exactement comme dans le CV original]
 
-Utilise des verbes d'action, améliore la formulation, adapte au marché marocain.`;
+Applique le mode "${enhanceType}" : améliore uniquement la formulation, le style et l'impact. Ne change pas les faits.`;
 
     try {
-      const res  = await fetch("/api/generate-cv", {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1000, messages:[{role:"user",content:prompt}] }),
+      let messages: any[];
+
+      if (uploadedBase64 && uploadedMime === "application/pdf") {
+        // PDF — send as native document so Claude reads it directly
+        messages = [{
+          role: "user",
+          content: [
+            {
+              type: "document",
+              source: { type: "base64", media_type: "application/pdf", data: uploadedBase64 },
+            },
+            { type: "text", text: instructions },
+          ],
+        }];
+      } else {
+        // Plain text / DOC
+        const cvText = uploadedContent || "[Contenu du CV non disponible]";
+        messages = [{
+          role: "user",
+          content: `Voici le CV à améliorer :
+
+${cvText}
+
+${instructions}`,
+        }];
+      }
+
+      const res = await fetch("/api/generate-cv", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 4000,
+          messages,
+        }),
       });
       const data = await res.json();
-      const text: string = data.content?.map((c:{text?:string})=>c.text??"").join("") ?? "";
-      setCvHtml(renderCVHtml(text));
-    } catch {
+      const text: string = data.content?.map((c:{text?:string}) => c.text ?? "").join("") ?? "";
+      if (!text.trim()) {
+        setCvHtml(`<div style="color:#dc2626;text-align:center;padding:40px;">Aucun contenu retourné. Vérifiez votre fichier et réessayez.</div>`);
+      } else {
+        setCvHtml(renderCVHtml(text));
+      }
+    } catch (err) {
       setCvHtml(`<div style="color:#6b7280;text-align:center;padding:40px;">Erreur de connexion. Vérifiez votre configuration.</div>`);
     }
-  }, [uploadedContent, enhanceType]);
+  }, [uploadedContent, uploadedBase64, uploadedMime, enhanceType]);
 
   // ── GENERATE: AI FROM FORM (PAID) ─────────────────────────────────────
   const generateAICV = useCallback(async () => {
@@ -299,7 +360,7 @@ Utiliser des verbes d'action, quantifier les réalisations, ton professionnel ad
     try {
       const res  = await fetch("/api/generate-cv", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1000, messages:[{role:"user",content:prompt}] }),
+        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:4000, messages:[{role:"user",content:prompt}] }),
       });
       const data = await res.json();
       const text: string = data.content?.map((c:{text?:string})=>c.text??"").join("") ?? "";
@@ -471,7 +532,7 @@ Utiliser des verbes d'action, quantifier les réalisations, ton professionnel ad
                         <div style={{fontSize:13,fontWeight:600,color:"#065f46"}}>{uploadedFile}</div>
                         <div style={{fontSize:11,color:"#6b7280",marginTop:2}}>Fichier prêt à être amélioré</div>
                       </div>
-                      <button onClick={()=>{setUploadedFile(null);setUploadedContent("");}}
+                      <button onClick={()=>{setUploadedFile(null);setUploadedContent("");setUploadedBase64(null);setUploadedMime(null);setUploadedFileObj(null);}}
                         style={{marginLeft:"auto",background:"none",border:"none",color:"#9ca3af",cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
                     </div>
                   )}
