@@ -1,10 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
+import { unstable_noStore as noStore } from 'next/cache';
 import { notFound } from 'next/navigation';
 import { MapPin, Briefcase, Clock, ArrowLeft, ExternalLink, Building2, Globe, Calendar } from 'lucide-react';
 import CompanyLogo from '@/components/CompanyLogo';
-
-// Tell Next.js to always render this page dynamically (data comes from Supabase at request time)
-export const dynamic = 'force-dynamic';
 
 // ── TYPES ─────────────────────────────────────────────────────────────────
 interface Job {
@@ -40,6 +38,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 
 // ── PAGE ───────────────────────────────────────────────────────────────────
 export default async function JobPage({ params }: { params: { id: string } }) {
+  noStore(); // always fetch fresh — job data changes at request time
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

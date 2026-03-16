@@ -1,10 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
+import { unstable_noStore as noStore } from 'next/cache';
 import { Suspense } from 'react';
 import { Search, MapPin, Briefcase, Clock, PlusCircle, Zap } from 'lucide-react';
 import CompanyLogo from '@/components/CompanyLogo';
-
-// Tell Next.js to always render dynamically (job listings change in real time)
-export const dynamic = 'force-dynamic';
 
 // ── SEO ────────────────────────────────────────────────────────────────────
 export const metadata = {
@@ -28,6 +26,7 @@ const CITY_META: Record<string,{icon:string;count:string}> = {
 
 // ── JOB LIST (SERVER COMPONENT) ────────────────────────────────────────────
 async function JobList({ searchParams }: { searchParams: any }) {
+  noStore(); // opt out of caching — always fetch fresh data
   const params   = await searchParams;
   const query    = params.q || '';
   const location = params.l || '';
