@@ -22,10 +22,11 @@ function getSupabase() {
 }
 
 // ── DYNAMIC SEO ────────────────────────────────────────────────────────────
-export async function generateMetadata({ params }: { params: { id: string } }) {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   noStore();
+  const { id } = await params;
   const { data: job } = await getSupabase()
-    .from('jobs').select('title,company,city').eq('id', params.id).single();
+    .from('jobs').select('title,company,city').eq('id', id).single();
   if (!job) return { title: 'Offre introuvable | Talent Maroc' };
   return {
     title: `${job.title} chez ${job.company} — ${job.city} | Talent Maroc`,
@@ -241,7 +242,8 @@ async function JobDetail({ id }: { id: string }) {
 }
 
 // ── SHELL PAGE (static — just nav + layout, no data fetching) ─────────────
-export default function JobPage({ params }: { params: { id: string } }) {
+export default async function JobPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   return (
     <>
       <style>{`
@@ -326,7 +328,7 @@ export default function JobPage({ params }: { params: { id: string } }) {
         {/* MAIN — shell is static, JobDetail inside Suspense does all the fetching */}
         <div className="main-row" style={{ maxWidth:1060, margin:'0 auto', padding:'20px 24px 72px', display:'flex', gap:26, alignItems:'flex-start' }}>
           <Suspense fallback={<JobDetailSkeleton/>}>
-            <JobDetail id={params.id}/>
+            <JobDetail id={id}/>
           </Suspense>
         </div>
 
