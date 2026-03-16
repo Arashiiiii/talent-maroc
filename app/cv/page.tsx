@@ -95,6 +95,7 @@ export default function CVPage() {
   const [tab2,        setTab2]        = useState<Tab2>("upload"); // default = free upload tab
   const [catFilter,   setCatFilter]   = useState<FilterCat>("all");
   const [selectedTpl, setSelectedTpl] = useState<number|null>(null);
+  const [previewTpl,  setPreviewTpl]  = useState<number|null>(null);
 
   const [form, setForm] = useState({
     name:"", title:"", email:"", phone:"",
@@ -631,7 +632,7 @@ Utiliser des verbes d'action, quantifier les réalisations, ton professionnel ad
                     <div style={{padding:"20px 24px",borderBottom:"1px solid #e5e7eb",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
                       <div>
                         <h3 style={{fontSize:15,fontWeight:700}}>📋 Choisissez votre modèle</h3>
-                        <p style={{fontSize:12,color:"#6b7280",marginTop:2}}>Le style visuel de votre CV généré par l'IA.</p>
+                        <p style={{fontSize:12,color:"#6b7280",marginTop:2}}>Cliquez sur un modèle pour voir l'aperçu complet.</p>
                       </div>
                       {selectedTpl && <span style={{fontSize:13,color:"#6b7280"}}>Sélectionné : <strong>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong></span>}
                     </div>
@@ -646,31 +647,76 @@ Utiliser des verbes d'action, quantifier les réalisations, ton professionnel ad
                       ))}
                     </div>
 
-                    <div style={{padding:"20px 24px 24px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(185px,1fr))",gap:14}}>
+                    {/* Template grid */}
+                    <div style={{padding:"20px 24px 24px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>
                       {filteredTpls.map((t,i)=>{
-                        const tc  = t.light?"rgba(30,30,30,0.55)":"rgba(255,255,255,0.55)";
+                        const isLight = t.light;
+                        const txtColor = isLight ? "rgba(30,30,30,0.6)" : "rgba(255,255,255,0.6)";
                         const bs  = BADGE_STYLES[t.badge];
                         const sel = selectedTpl===t.id;
                         return (
-                          <div key={t.id} className="tpl-card" onClick={()=>setSelectedTpl(t.id)}
-                            style={{border:`2px solid ${sel?"#1a56db":"#e5e7eb"}`,borderRadius:10,overflow:"hidden",cursor:"pointer",background:"white",position:"relative",boxShadow:sel?"0 0 0 3px rgba(26,86,219,0.15)":undefined,animationDelay:`${i*0.03}s`,transition:"border-color 0.2s,box-shadow 0.2s"}}>
-                            {sel && <div style={{position:"absolute",top:8,right:8,width:22,height:22,background:"#1a56db",borderRadius:"50%",color:"white",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,zIndex:2}}>✓</div>}
-                            <span style={{position:"absolute",top:8,left:8,fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:100,background:bs.bg,color:bs.color,zIndex:2}}>
+                          <div key={t.id} className="tpl-card"
+                            style={{border:`2px solid ${sel?"#1a56db":"#e5e7eb"}`,borderRadius:12,overflow:"hidden",cursor:"pointer",
+                              background:"white",position:"relative",
+                              boxShadow:sel?"0 0 0 4px rgba(26,86,219,0.12), 0 4px 16px rgba(0,0,0,0.1)":"0 1px 4px rgba(0,0,0,0.06)",
+                              animationDelay:`${i*0.025}s`,transition:"all 0.2s"}}>
+
+                            {sel && (
+                              <div style={{position:"absolute",top:8,right:8,width:22,height:22,background:"#1a56db",
+                                borderRadius:"50%",color:"white",fontSize:11,display:"flex",alignItems:"center",
+                                justifyContent:"center",fontWeight:700,zIndex:3}}>✓</div>
+                            )}
+                            <span style={{position:"absolute",top:8,left:8,fontSize:10,fontWeight:700,padding:"3px 8px",
+                              borderRadius:100,background:bs.bg,color:bs.color,zIndex:3,letterSpacing:"0.04em"}}>
                               {{gratuit:"Gratuit",pro:"Pro",nouveau:"Nouveau"}[t.badge]}
                             </span>
-                            <div style={{height:148,background:t.bg,padding:12,display:"flex",flexDirection:"column",gap:5}}>
-                              <div style={{height:14,borderRadius:2,background:t.acc,width:"50%"}}/>
-                              <div style={{height:4,borderRadius:2,background:tc,width:"35%",marginTop:2}}/>
-                              <div style={{height:1,background:t.acc,opacity:0.4,margin:"6px 0"}}/>
-                              <div style={{height:3,borderRadius:2,background:t.acc,width:"30%",opacity:0.8}}/>
-                              {[100,80,60].map((w,j)=><div key={j} style={{height:3,borderRadius:2,background:tc,width:`${w}%`,marginTop:3}}/>)}
-                              <div style={{height:3,borderRadius:2,background:t.acc,width:"30%",opacity:0.8,marginTop:6}}/>
-                              {[100,75,90].map((w,j)=><div key={j} style={{height:3,borderRadius:2,background:tc,width:`${w}%`,marginTop:3}}/>)}
+
+                            {/* CV PREVIEW THUMBNAIL */}
+                            <div style={{height:200,background:t.bg,padding:"28px 16px 12px",display:"flex",flexDirection:"column",position:"relative",overflow:"hidden"}}>
+                              {/* Header area */}
+                              <div style={{marginBottom:10}}>
+                                <div style={{height:11,background:t.acc,borderRadius:2,width:"55%",marginBottom:5}}/>
+                                <div style={{height:7,background:t.acc,borderRadius:2,width:"38%",opacity:0.6,marginBottom:4}}/>
+                                <div style={{height:5,background:txtColor,borderRadius:2,width:"70%",opacity:0.5}}/>
+                              </div>
+                              {/* Divider */}
+                              <div style={{height:"1.5px",background:t.acc,opacity:0.5,marginBottom:8}}/>
+                              {/* Section: Profile */}
+                              <div style={{height:6,background:t.acc,borderRadius:1,width:"38%",marginBottom:5,opacity:0.9}}/>
+                              <div style={{height:4,background:txtColor,borderRadius:2,width:"100%",marginBottom:3,opacity:0.4}}/>
+                              <div style={{height:4,background:txtColor,borderRadius:2,width:"88%",marginBottom:3,opacity:0.4}}/>
+                              <div style={{height:4,background:txtColor,borderRadius:2,width:"76%",marginBottom:8,opacity:0.4}}/>
+                              {/* Section: Experience */}
+                              <div style={{height:6,background:t.acc,borderRadius:1,width:"50%",marginBottom:5,opacity:0.9}}/>
+                              <div style={{height:4,background:txtColor,borderRadius:2,width:"65%",marginBottom:3,opacity:0.55}}/>
+                              <div style={{height:3,background:txtColor,borderRadius:2,width:"100%",marginBottom:2,opacity:0.35}}/>
+                              <div style={{height:3,background:txtColor,borderRadius:2,width:"90%",marginBottom:2,opacity:0.35}}/>
+                              <div style={{height:3,background:txtColor,borderRadius:2,width:"80%",marginBottom:6,opacity:0.35}}/>
+                              {/* Subtle bottom gradient fade */}
+                              <div style={{position:"absolute",bottom:0,left:0,right:0,height:40,
+                                background:`linear-gradient(to bottom, transparent, ${t.bg})`}}/>
                             </div>
-                            <div style={{padding:"10px 12px 12px",borderTop:"1px solid #e5e7eb"}}>
-                              <div style={{fontSize:13,fontWeight:700}}>{t.name}</div>
-                              <div style={{fontSize:11,color:"#6b7280"}}>{t.role}</div>
+
+                            {/* Card footer */}
+                            <div style={{padding:"10px 14px 12px",borderTop:"1px solid #e5e7eb",display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
+                              <div>
+                                <div style={{fontSize:13,fontWeight:700,color:"#111827"}}>{t.name}</div>
+                                <div style={{fontSize:10,color:"#6b7280",marginTop:1}}>{t.role}</div>
+                              </div>
+                              <button
+                                onClick={(e)=>{e.stopPropagation();setPreviewTpl(t.id);}}
+                                style={{background:"#f3f4f6",border:"1px solid #e5e7eb",borderRadius:6,padding:"4px 9px",
+                                  fontSize:10,fontWeight:600,color:"#374151",cursor:"pointer",whiteSpace:"nowrap",
+                                  transition:"all 0.15s",flexShrink:0}}
+                                onMouseEnter={e=>(e.currentTarget.style.background="#e5e7eb")}
+                                onMouseLeave={e=>(e.currentTarget.style.background="#f3f4f6")}>
+                                Aperçu
+                              </button>
                             </div>
+
+                            {/* Click whole card to select */}
+                            <div onClick={()=>setSelectedTpl(t.id)}
+                              style={{position:"absolute",inset:0,zIndex:1}}/>
                           </div>
                         );
                       })}
@@ -678,7 +724,8 @@ Utiliser des verbes d'action, quantifier les réalisations, ton professionnel ad
                   </div>
                   <div style={{display:"flex",justifyContent:"flex-end"}}>
                     <button onClick={()=>goStep(2)} disabled={!selectedTpl}
-                      style={{background:selectedTpl?"#1a56db":"#d1d5db",color:"white",border:"none",padding:"14px 28px",borderRadius:8,fontSize:15,fontWeight:600,cursor:selectedTpl?"pointer":"not-allowed",transition:"background 0.2s"}}>
+                      style={{background:selectedTpl?"#1a56db":"#d1d5db",color:"white",border:"none",padding:"14px 28px",
+                        borderRadius:8,fontSize:15,fontWeight:600,cursor:selectedTpl?"pointer":"not-allowed",transition:"background 0.2s"}}>
                       Continuer →
                     </button>
                   </div>
@@ -857,6 +904,114 @@ Utiliser des verbes d'action, quantifier les réalisations, ton professionnel ad
           <a href="#" style={{color:"rgba(255,255,255,0.55)",textDecoration:"none"}}>Contact</a>
         </footer>
       </div>
+
+      {/* ── TEMPLATE PREVIEW MODAL ── */}
+      {previewTpl !== null && (() => {
+        const t = TEMPLATES.find(tpl => tpl.id === previewTpl)!;
+        const isLight = t.light;
+        const headColor = isLight ? "#0f172a" : "#ffffff";
+        const subColor  = isLight ? "#374151" : "rgba(255,255,255,0.75)";
+        const bodyColor = isLight ? "#4b5563" : "rgba(255,255,255,0.6)";
+        const bs = BADGE_STYLES[t.badge];
+        return (
+          <div className="overlay-backdrop" onClick={()=>setPreviewTpl(null)} style={{alignItems:"flex-start",paddingTop:40,paddingBottom:40,overflowY:"auto"}}>
+            <div className="modal-anim" onClick={e=>e.stopPropagation()}
+              style={{background:"white",borderRadius:16,width:"100%",maxWidth:720,
+                boxShadow:"0 32px 80px rgba(0,0,0,0.35)",overflow:"hidden",position:"relative"}}>
+
+              {/* Modal header */}
+              <div style={{background:"#0f1d36",padding:"16px 24px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{background:bs.bg,color:bs.color,fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:100,letterSpacing:"0.04em"}}>
+                    {{gratuit:"Gratuit",pro:"Pro",nouveau:"Nouveau"}[t.badge]}
+                  </span>
+                  <span style={{color:"white",fontWeight:700,fontSize:15}}>{t.name}</span>
+                  <span style={{color:"rgba(255,255,255,0.4)",fontSize:13}}>— {t.role}</span>
+                </div>
+                <button onClick={()=>setPreviewTpl(null)}
+                  style={{background:"rgba(255,255,255,0.08)",border:"none",color:"rgba(255,255,255,0.7)",
+                    fontSize:18,width:32,height:32,borderRadius:8,cursor:"pointer",
+                    display:"flex",alignItems:"center",justifyContent:"center"}}>x</button>
+              </div>
+
+              {/* Full CV preview */}
+              <div style={{background:t.bg,padding:"48px 52px",fontFamily:"Georgia,serif",minHeight:540}}>
+                <div style={{marginBottom:20}}>
+                  <div style={{fontSize:26,fontWeight:800,color:headColor,letterSpacing:"-0.02em",lineHeight:1.1,marginBottom:4,fontFamily:"Inter,sans-serif"}}>
+                    Youssef Benali
+                  </div>
+                  <div style={{fontSize:14,fontWeight:600,color:t.acc,marginBottom:6,fontFamily:"Inter,sans-serif"}}>
+                    Développeur Full Stack Senior
+                  </div>
+                  <div style={{fontSize:12,color:subColor,display:"flex",gap:16,flexWrap:"wrap",fontFamily:"Inter,sans-serif"}}>
+                    <span>youssef@email.ma</span><span>+212 6 00 00 00 00</span><span>Casablanca, Maroc</span>
+                  </div>
+                </div>
+                <div style={{height:2,background:t.acc,opacity:0.7,marginBottom:20}}/>
+                <div style={{marginBottom:18}}>
+                  <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:t.acc,marginBottom:8,fontFamily:"Inter,sans-serif"}}>Profil Professionnel</div>
+                  <div style={{fontSize:13,color:bodyColor,lineHeight:1.7}}>
+                    Ingénieur Full Stack avec 5 ans d expérience dans le développement d applications web performantes.
+                    Expert React et Node.js, passionné par l optimisation des systèmes et la qualité du code.
+                  </div>
+                </div>
+                <div style={{marginBottom:18}}>
+                  <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:t.acc,marginBottom:10,fontFamily:"Inter,sans-serif"}}>Expériences Professionnelles</div>
+                  {[
+                    {title:"Lead Developer",company:"Capgemini Maroc",period:"2021 – Présent",desc:"Pilotage d une équipe de 6 développeurs. Architecture microservices, CI/CD, React, Node.js."},
+                    {title:"Développeur Full Stack",company:"OCP Digital",period:"2019 – 2021",desc:"Développement de portails internes. PostgreSQL, GraphQL, TypeScript."},
+                  ].map(exp=>(
+                    <div key={exp.title} style={{marginBottom:12}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:2}}>
+                        <div style={{fontSize:13,fontWeight:700,color:headColor,fontFamily:"Inter,sans-serif"}}>{exp.title} — <span style={{color:t.acc}}>{exp.company}</span></div>
+                        <div style={{fontSize:11,color:subColor,flexShrink:0,marginLeft:8,fontFamily:"Inter,sans-serif"}}>{exp.period}</div>
+                      </div>
+                      <div style={{fontSize:12,color:bodyColor,lineHeight:1.6}}>{exp.desc}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}}>
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:t.acc,marginBottom:8,fontFamily:"Inter,sans-serif"}}>Compétences</div>
+                    {["React · Next.js · TypeScript","Node.js · Python · SQL","AWS · Docker · CI/CD","Agile · Scrum · Git"].map(sk=>(
+                      <div key={sk} style={{fontSize:12,color:bodyColor,marginBottom:5,display:"flex",alignItems:"center",gap:6}}>
+                        <div style={{width:5,height:5,borderRadius:"50%",background:t.acc,flexShrink:0}}/>{sk}
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:t.acc,marginBottom:8,fontFamily:"Inter,sans-serif"}}>Formation</div>
+                    <div style={{fontSize:12,fontWeight:600,color:headColor,marginBottom:2,fontFamily:"Inter,sans-serif"}}>Master Génie Informatique</div>
+                    <div style={{fontSize:11,color:subColor,fontFamily:"Inter,sans-serif"}}>ENSA Rabat · 2019</div>
+                    <div style={{marginTop:10,fontSize:12,fontWeight:600,color:headColor,marginBottom:3,fontFamily:"Inter,sans-serif"}}>Langues</div>
+                    <div style={{fontSize:11,color:bodyColor,lineHeight:1.7,fontFamily:"Inter,sans-serif"}}>Arabe (natif) · Français · Anglais</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div style={{background:"white",borderTop:"1px solid #e5e7eb",padding:"16px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                <div style={{fontSize:13,color:"#6b7280"}}>
+                  {selectedTpl===t.id
+                    ? <span style={{color:"#057a55",fontWeight:600}}>checkmark Modèle sélectionné</span>
+                    : "Aperçu avec données fictives"}
+                </div>
+                <div style={{display:"flex",gap:10}}>
+                  <button onClick={()=>setPreviewTpl(null)}
+                    style={{background:"#f3f4f6",color:"#374151",border:"1px solid #e5e7eb",padding:"9px 18px",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                    Fermer
+                  </button>
+                  <button onClick={()=>{setSelectedTpl(t.id);setPreviewTpl(null);}}
+                    style={{background:selectedTpl===t.id?"#057a55":"#1a56db",color:"white",border:"none",
+                      padding:"9px 20px",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                    {selectedTpl===t.id ? "Selectionne" : "Choisir ce modele"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── GENERATING MODAL ── */}
       {showGenModal && (
