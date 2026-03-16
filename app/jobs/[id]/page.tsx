@@ -54,9 +54,10 @@ function JobDetailSkeleton() {
 }
 
 // ── JOB DETAIL (async server component — all data fetching lives here) ─────
-async function JobDetail({ id }: { id: string }) {
+async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
   noStore(); // opt out of caching so this runs fresh on every request
 
+  const { id } = await params;
   const supabase = getSupabase();
 
   const { data: job, error } = await supabase
@@ -235,8 +236,7 @@ async function JobDetail({ id }: { id: string }) {
 }
 
 // ── SHELL PAGE (static — just nav + layout, no data fetching) ─────────────
-export default async function JobPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default function JobPage({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       <style>{`
@@ -321,7 +321,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
         {/* MAIN — shell is static, JobDetail inside Suspense does all the fetching */}
         <div className="main-row" style={{ maxWidth:1060, margin:'0 auto', padding:'20px 24px 72px', display:'flex', gap:26, alignItems:'flex-start' }}>
           <Suspense fallback={<JobDetailSkeleton/>}>
-            <JobDetail id={id}/>
+            <JobDetail params={params}/>
           </Suspense>
         </div>
 
