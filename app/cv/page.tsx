@@ -671,30 +671,54 @@ Utiliser des verbes d'action, quantifier les réalisations, ton professionnel ad
                               {{gratuit:"Gratuit",pro:"Pro",nouveau:"Nouveau"}[t.badge]}
                             </span>
 
-                            {/* CV PREVIEW THUMBNAIL */}
-                            <div style={{height:200,background:t.bg,padding:"28px 16px 12px",display:"flex",flexDirection:"column",position:"relative",overflow:"hidden"}}>
-                              {/* Header area */}
-                              <div style={{marginBottom:10}}>
-                                <div style={{height:11,background:t.acc,borderRadius:2,width:"55%",marginBottom:5}}/>
-                                <div style={{height:7,background:t.acc,borderRadius:2,width:"38%",opacity:0.6,marginBottom:4}}/>
-                                <div style={{height:5,background:txtColor,borderRadius:2,width:"70%",opacity:0.5}}/>
+                            {/* CV PREVIEW THUMBNAIL — scaled real layout */}
+                            <div style={{height:220,overflow:"hidden",position:"relative",background:t.bg}}>
+                              {/* Outer clip container — card width ~200px, we render at 400px then scale 0.5 */}
+                              <div style={{position:"absolute",top:0,left:0,width:400,transformOrigin:"top left",transform:"scale(0.5)",pointerEvents:"none"}}>
+                                <div style={{background:t.bg,padding:"32px 32px 24px",fontFamily:"Inter,sans-serif",width:400}}>
+                                  {/* Name */}
+                                  <div style={{fontSize:18,fontWeight:800,color:isLight?"#0f172a":"#fff",letterSpacing:"-0.02em",marginBottom:3}}>{t.name} — CV</div>
+                                  <div style={{fontSize:11,fontWeight:600,color:t.acc,marginBottom:3}}>{t.role}</div>
+                                  <div style={{fontSize:10,color:isLight?"#6b7280":"rgba(255,255,255,0.5)",marginBottom:12}}>email@exemple.ma · +212 6 00 00 00 00 · Casablanca</div>
+                                  {/* Divider */}
+                                  <div style={{height:2,background:t.acc,opacity:0.6,marginBottom:12}}/>
+                                  {/* Profile section */}
+                                  <div style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:t.acc,marginBottom:5}}>PROFIL</div>
+                                  <div style={{fontSize:9,color:isLight?"#374151":"rgba(255,255,255,0.6)",lineHeight:1.6,marginBottom:12}}>
+                                    Professionnel expérimenté avec expertise en {t.role.split("·")[0].trim()}. Forte capacité d analyse et de leadership.
+                                  </div>
+                                  {/* Experience section */}
+                                  <div style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:t.acc,marginBottom:6}}>EXPÉRIENCES</div>
+                                  <div style={{marginBottom:8}}>
+                                    <div style={{fontSize:9,fontWeight:700,color:isLight?"#111827":"#fff",marginBottom:1}}>Poste Senior — Entreprise Maroc <span style={{fontWeight:400,color:isLight?"#6b7280":"rgba(255,255,255,0.45)"}}>2021–Présent</span></div>
+                                    <div style={{fontSize:9,color:isLight?"#4b5563":"rgba(255,255,255,0.55)",lineHeight:1.5}}>Direction de projets stratégiques. Résultats mesurables et impact fort.</div>
+                                  </div>
+                                  <div style={{marginBottom:12}}>
+                                    <div style={{fontSize:9,fontWeight:700,color:isLight?"#111827":"#fff",marginBottom:1}}>Consultant — Groupe International <span style={{fontWeight:400,color:isLight?"#6b7280":"rgba(255,255,255,0.45)"}}>2018–2021</span></div>
+                                    <div style={{fontSize:9,color:isLight?"#4b5563":"rgba(255,255,255,0.55)",lineHeight:1.5}}>Accompagnement clients grands comptes. Technologies innovantes.</div>
+                                  </div>
+                                  {/* Two-col: Skills + Education */}
+                                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+                                    <div>
+                                      <div style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:t.acc,marginBottom:5}}>COMPÉTENCES</div>
+                                      {["Expertise technique","Management","Communication","Analyse & Stratégie"].map(sk=>(
+                                        <div key={sk} style={{fontSize:8,color:isLight?"#374151":"rgba(255,255,255,0.55)",marginBottom:3,display:"flex",alignItems:"center",gap:4}}>
+                                          <div style={{width:4,height:4,borderRadius:"50%",background:t.acc,flexShrink:0}}/>{sk}
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div>
+                                      <div style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:t.acc,marginBottom:5}}>FORMATION</div>
+                                      <div style={{fontSize:9,fontWeight:600,color:isLight?"#111827":"#fff",marginBottom:1}}>Master Ingénierie</div>
+                                      <div style={{fontSize:8,color:isLight?"#6b7280":"rgba(255,255,255,0.45)"}}>Université Maroc · 2018</div>
+                                      <div style={{marginTop:8,fontSize:8,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:t.acc,marginBottom:4}}>LANGUES</div>
+                                      <div style={{fontSize:8,color:isLight?"#374151":"rgba(255,255,255,0.55)",lineHeight:1.6}}>Arabe · Français · Anglais</div>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                              {/* Divider */}
-                              <div style={{height:"1.5px",background:t.acc,opacity:0.5,marginBottom:8}}/>
-                              {/* Section: Profile */}
-                              <div style={{height:6,background:t.acc,borderRadius:1,width:"38%",marginBottom:5,opacity:0.9}}/>
-                              <div style={{height:4,background:txtColor,borderRadius:2,width:"100%",marginBottom:3,opacity:0.4}}/>
-                              <div style={{height:4,background:txtColor,borderRadius:2,width:"88%",marginBottom:3,opacity:0.4}}/>
-                              <div style={{height:4,background:txtColor,borderRadius:2,width:"76%",marginBottom:8,opacity:0.4}}/>
-                              {/* Section: Experience */}
-                              <div style={{height:6,background:t.acc,borderRadius:1,width:"50%",marginBottom:5,opacity:0.9}}/>
-                              <div style={{height:4,background:txtColor,borderRadius:2,width:"65%",marginBottom:3,opacity:0.55}}/>
-                              <div style={{height:3,background:txtColor,borderRadius:2,width:"100%",marginBottom:2,opacity:0.35}}/>
-                              <div style={{height:3,background:txtColor,borderRadius:2,width:"90%",marginBottom:2,opacity:0.35}}/>
-                              <div style={{height:3,background:txtColor,borderRadius:2,width:"80%",marginBottom:6,opacity:0.35}}/>
-                              {/* Subtle bottom gradient fade */}
-                              <div style={{position:"absolute",bottom:0,left:0,right:0,height:40,
-                                background:`linear-gradient(to bottom, transparent, ${t.bg})`}}/>
+                              {/* Bottom fade */}
+                              <div style={{position:"absolute",bottom:0,left:0,right:0,height:50,background:`linear-gradient(to bottom,transparent,${t.bg})`,pointerEvents:"none"}}/>
                             </div>
 
                             {/* Card footer */}
