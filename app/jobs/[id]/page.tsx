@@ -3,6 +3,9 @@ import { notFound } from 'next/navigation';
 import { MapPin, Briefcase, Clock, ArrowLeft, ExternalLink, Building2, Globe, Calendar } from 'lucide-react';
 import CompanyLogo from '@/components/CompanyLogo';
 
+// Tell Next.js to always render this page dynamically (data comes from Supabase at request time)
+export const dynamic = 'force-dynamic';
+
 // ── TYPES ─────────────────────────────────────────────────────────────────
 interface Job {
   id: string;

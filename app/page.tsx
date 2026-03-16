@@ -3,6 +3,9 @@ import { Suspense } from 'react';
 import { Search, MapPin, Briefcase, Clock, PlusCircle, Zap } from 'lucide-react';
 import CompanyLogo from '@/components/CompanyLogo';
 
+// Tell Next.js to always render dynamically (job listings change in real time)
+export const dynamic = 'force-dynamic';
+
 // ── SEO ────────────────────────────────────────────────────────────────────
 export const metadata = {
   title: 'Talent Maroc | Trouvez votre prochain job au Maroc',
@@ -57,8 +60,8 @@ async function JobList({ searchParams }: { searchParams: any }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:11 }}>
       {jobs.map((job: any, i: number) => (
-        <div key={job.id} className="job-card" style={{ background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.065)', borderRadius:13, padding:'18px 20px', transition:'all 0.22s', position:'relative', overflow:'hidden' }}>
-          {/* Accent line for first 3 */}
+        <a key={job.id} href={`/jobs/${job.id}`} className="job-card"
+          style={{ display:'block', textDecoration:'none', background:'rgba(255,255,255,0.025)', border:'1px solid rgba(255,255,255,0.065)', borderRadius:13, padding:'18px 20px', transition:'all 0.22s', position:'relative', overflow:'hidden' }}>
           {i < 3 && <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:'linear-gradient(90deg,#1a56db,#60a5fa)' }}/>}
 
           <div style={{ display:'flex', gap:13, alignItems:'center' }}>
@@ -79,12 +82,13 @@ async function JobList({ searchParams }: { searchParams: any }) {
                 </span>
               </div>
             </div>
-            <a href={job.original_url} target="_blank" rel="noopener noreferrer" className="apply-btn"
-              style={{ flexShrink:0, background:'#1a56db', color:'white', padding:'9px 20px', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none', whiteSpace:'nowrap', transition:'all 0.2s', alignSelf:'center' }}>
-              Postuler →
-            </a>
+            {/* Visual "Voir l'offre" — clicking the whole card goes to /jobs/[id] */}
+            <span className="apply-btn"
+              style={{ flexShrink:0, background:'#1a56db', color:'white', padding:'9px 20px', borderRadius:8, fontSize:12, fontWeight:700, whiteSpace:'nowrap', transition:'all 0.2s', alignSelf:'center' }}>
+              Voir l'offre →
+            </span>
           </div>
-        </div>
+        </a>
       ))}
     </div>
   );
