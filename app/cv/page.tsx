@@ -1,70 +1,80 @@
 "use client";
+import { useState, useCallback, useEffect, useRef } from "react";
 
-import { useState, useRef, useCallback, useEffect } from "react";
-
-// ── TYPES ──────────────────────────────────────────────────────────────────
-interface Template {
-  id: number; name: string; cat: string; role: string;
-  bg: string; acc: string; badge: "gratuit" | "pro" | "nouveau"; light?: boolean;
-}
-interface Plan { name: string; price: string; paddlePriceId: string; }
-type Step = 1 | 2 | 3 | 4;
-type Tab2 = "ai" | "upload";
-type FilterCat = "all"|"tech"|"business"|"creative"|"entry"|"executive"|"academic";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 🔑  REPLACE THESE WITH YOUR REAL VALUES FROM paddle.com
-// ─────────────────────────────────────────────────────────────────────────────
+// ── PADDLE CONFIG ──────────────────────────────────────────────────────────
 const PADDLE_CLIENT_TOKEN = "live_REPLACE_YOUR_CLIENT_TOKEN";
-const PADDLE_SANDBOX      = false; // true while testing
-
-const PADDLE_PRICE_IDS = {
+const PADDLE_SANDBOX      = false;
+const PADDLE_PRICE_IDS    = {
   starter:       "pri_REPLACE_STARTER",
   professionnel: "pri_REPLACE_PROFESSIONNEL",
   cadre:         "pri_REPLACE_CADRE",
 };
-// ─────────────────────────────────────────────────────────────────────────────
 
+// ── TYPES ──────────────────────────────────────────────────────────────────
+interface CVData {
+  name:        string;
+  title:       string;
+  email:       string;
+  phone:       string;
+  location:    string;
+  profile:     string;
+  experiences: { company: string; role: string; period: string; bullets: string[] }[];
+  education:   { school: string; degree: string; year: string }[];
+  skills:      string[];
+  languages:   { lang: string; level: string }[];
+  certifications?: string[];
+}
+
+interface Template {
+  id:    number;
+  name:  string;
+  cat:   "classic"|"modern"|"minimal"|"executive"|"creative";
+  desc:  string;
+  badge: "gratuit"|"pro"|"nouveau";
+}
+
+interface Plan { name: string; price: string; paddlePriceId: string; }
+type Step = 1|2|3|4;
+type Mode = "upload"|"ai";
+
+// ── SAMPLE CV DATA (used in previews) ──────────────────────────────────────
+const SAMPLE: CVData = {
+  name:     "Youssef Benali",
+  title:    "Développeur Full Stack Senior",
+  email:    "youssef@email.ma",
+  phone:    "+212 6 00 00 00 00",
+  location: "Casablanca, Maroc",
+  profile:  "Ingénieur Full Stack avec 5 ans d'expérience dans le développement d'applications web et mobiles à fort trafic. Expert React, Node.js et architectures cloud. Passionné par la qualité du code et les performances système.",
+  experiences: [
+    { company:"Capgemini Maroc", role:"Lead Developer", period:"2021 – Présent",
+      bullets:["Pilotage d'une équipe de 6 développeurs sur des projets clients grands comptes","Architecture microservices, CI/CD GitHub Actions, déploiement AWS","Réduction de 40% du temps de chargement sur l'application principale"] },
+    { company:"OCP Digital", role:"Développeur Full Stack", period:"2019 – 2021",
+      bullets:["Développement de portails RH internes avec React et Node.js","Intégration GraphQL et migration base de données PostgreSQL","Accompagnement des équipes métier dans l'adoption des nouveaux outils"] },
+  ],
+  education: [
+    { school:"ENSA Rabat", degree:"Master Génie Informatique", year:"2019" },
+    { school:"CPGE Casablanca", degree:"Classes Préparatoires MP", year:"2016" },
+  ],
+  skills: ["React","Next.js","TypeScript","Node.js","Python","PostgreSQL","AWS","Docker","Git"],
+  languages: [
+    { lang:"Arabe",   level:"Natif"    },
+    { lang:"Français",level:"Courant"  },
+    { lang:"Anglais", level:"Courant"  },
+  ],
+  certifications: ["AWS Certified Developer (2023)","PMP Project Management (2022)"],
+};
+
+// ── TEMPLATES REGISTRY ─────────────────────────────────────────────────────
 const TEMPLATES: Template[] = [
-  { id:1,  name:"Architecte",   cat:"tech",      role:"Développeur · Senior",        bg:"#0f172a", acc:"#3b82f6", badge:"pro"     },
-  { id:2,  name:"Circuit",      cat:"tech",      role:"Ingénieur · DevOps",          bg:"#042f2e", acc:"#2dd4bf", badge:"pro"     },
-  { id:3,  name:"Nexus",        cat:"tech",      role:"Data Science · IA",           bg:"#1e1b4b", acc:"#818cf8", badge:"nouveau" },
-  { id:4,  name:"Console",      cat:"tech",      role:"Full Stack · Mobile",         bg:"#18181b", acc:"#a3e635", badge:"pro"     },
-  { id:5,  name:"Horizon",      cat:"business",  role:"Commerce · Vente",            bg:"#1e3a5f", acc:"#60a5fa", badge:"pro"     },
-  { id:6,  name:"Meridian",     cat:"business",  role:"Finance · Banque",            bg:"#1c1917", acc:"#f59e0b", badge:"pro"     },
-  { id:7,  name:"Stratège",     cat:"business",  role:"Consultant · MBA",            bg:"#0c1445", acc:"#facc15", badge:"nouveau" },
-  { id:8,  name:"Vente+",       cat:"business",  role:"Business Dev · KAM",          bg:"#0a1628", acc:"#f97316", badge:"pro"     },
-  { id:9,  name:"Lumière",      cat:"creative",  role:"Designer · UX/UI",            bg:"#fdf4ff", acc:"#d946ef", badge:"nouveau", light:true },
-  { id:10, name:"Folio",        cat:"creative",  role:"Portfolio · Graphiste",       bg:"#fffbeb", acc:"#f59e0b", badge:"nouveau", light:true },
-  { id:11, name:"Création",     cat:"creative",  role:"Publicité · Contenu",         bg:"#1a0a00", acc:"#fb923c", badge:"pro"     },
-  { id:12, name:"Départ",       cat:"entry",     role:"Débutant · Tous secteurs",    bg:"#f8fafc", acc:"#6366f1", badge:"gratuit", light:true },
-  { id:13, name:"Campus",       cat:"entry",     role:"Étudiant · Alternance",       bg:"#f0fdf4", acc:"#22c55e", badge:"gratuit", light:true },
-  { id:14, name:"Tremplin",     cat:"entry",     role:"Premier emploi · Stage",      bg:"#eff6ff", acc:"#3b82f6", badge:"gratuit", light:true },
-  { id:15, name:"Reconversion", cat:"entry",     role:"Changement de carrière",      bg:"#fef9c3", acc:"#ca8a04", badge:"nouveau", light:true },
-  { id:16, name:"Sommet",       cat:"executive", role:"Cadre supérieur · Directeur", bg:"#0f0f0f", acc:"#d4af37", badge:"pro"     },
-  { id:17, name:"Vanguard",     cat:"executive", role:"Direction · VP",              bg:"#1e0a3c", acc:"#c084fc", badge:"pro"     },
-  { id:18, name:"Prestige",     cat:"executive", role:"PDG · Conseil d'admin.",      bg:"#0c0a09", acc:"#d97706", badge:"pro"     },
-  { id:19, name:"Thèse",        cat:"academic",  role:"Chercheur · Doctorant",       bg:"#1e1b4b", acc:"#818cf8", badge:"pro"     },
-  { id:20, name:"Clinique",     cat:"academic",  role:"Médecin · Pharmacien",        bg:"#fff1f2", acc:"#f43f5e", badge:"nouveau", light:true },
-  { id:21, name:"Prof",         cat:"academic",  role:"Enseignant · Formateur",      bg:"#f0f9ff", acc:"#0ea5e9", badge:"gratuit", light:true },
-  { id:22, name:"Juridique",    cat:"academic",  role:"Avocat · Juriste",            bg:"#1c1917", acc:"#a8a29e", badge:"pro"     },
-  { id:23, name:"RH Talent",    cat:"business",  role:"RH · People Ops",             bg:"#fef3c7", acc:"#d97706", badge:"gratuit", light:true },
-  { id:24, name:"Hôtellerie",   cat:"entry",     role:"Tourisme · Restauration",     bg:"#0c1a2e", acc:"#7dd3fc", badge:"nouveau" },
-  { id:25, name:"Ingénieur",    cat:"tech",      role:"Génie Civil · BTP",           bg:"#14532d", acc:"#86efac", badge:"pro"     },
-];
-
-const CATEGORIES: { key: FilterCat; label: string }[] = [
-  { key:"all",       label:"Tous (25)"  },
-  { key:"tech",      label:"Tech"       },
-  { key:"business",  label:"Business"   },
-  { key:"creative",  label:"Créatif"    },
-  { key:"entry",     label:"Débutant"   },
-  { key:"executive", label:"Cadre"      },
-  { key:"academic",  label:"Académique" },
+  { id:1, name:"Classique",  cat:"classic",   desc:"Sobre et intemporel. Idéal pour finance, juridique, institutions.", badge:"gratuit" },
+  { id:2, name:"Moderne",    cat:"modern",    desc:"Sidebar colorée, typographie soignée. Tech, marketing, startups.",  badge:"gratuit" },
+  { id:3, name:"Minimaliste",cat:"minimal",   desc:"Ultra-épuré, beaucoup d'espace. Design, consulting, créatif.",      badge:"nouveau" },
+  { id:4, name:"Exécutif",   cat:"executive", desc:"Prestige et autorité. Cadres dirigeants, direction générale.",      badge:"pro"     },
+  { id:5, name:"Créatif",    cat:"creative",  desc:"Accrocheur et original. Design, UX, communication, médias.",        badge:"nouveau" },
 ];
 
 const BADGE_STYLES: Record<string,{bg:string;color:string}> = {
-  gratuit:{ bg:"#f0fdf4", color:"#057a55" },
+  gratuit:{ bg:"#f0fdf4", color:"#15803d" },
   pro:    { bg:"#fef3c7", color:"#92400e" },
   nouveau:{ bg:"#eff6ff", color:"#1d4ed8" },
 };
@@ -76,989 +86,924 @@ const PLANS: Plan[] = [
 ];
 
 const PLAN_FEATURES: Record<string,string[]> = {
-  Starter:       ["1 CV généré par IA","5 modèles au choix","Téléchargement PDF","Compatible ATS","Livraison instantanée"],
-  Professionnel: ["3 versions de CV","Tous les 25 modèles","PDF + Word (DOCX)","Lettre de motivation incluse","Résumé LinkedIn","Génération prioritaire"],
-  Cadre:         ["Révisions illimitées","Tous les 25 modèles","PDF + Word + HTML","Lettre de motivation + Bio","Coaching dirigeant","Questions d'entretien IA","Support prioritaire"],
+  Starter:       ["1 CV généré","Téléchargement PDF","Compatible ATS","Livraison instantanée"],
+  Professionnel: ["3 versions","PDF + Word","Lettre de motivation","Résumé LinkedIn","Prioritaire"],
+  Cadre:         ["Révisions illimitées","PDF + Word + HTML","Lettre + Bio","Questions d'entretien IA","Support prioritaire"],
 };
 
-const GEN_STEP_LABELS = [
-  "Analyse de votre expérience",
-  "Application du modèle choisi",
-  "Optimisation ATS",
-  "Rédaction et mise en forme",
-  "Finalisation du document",
-];
+// ═══════════════════════════════════════════════════════════════════════════
+// ── CV TEMPLATE RENDERERS ─────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
 
-// ── COMPONENT ─────────────────────────────────────────────────────────────
+// ── 1. CLASSIQUE ──────────────────────────────────────────────────────────
+function TplClassique({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+  return (
+    <div style={{ width:794, background:"white", fontFamily:"'Georgia',serif", color:"#1a1a1a", padding:"52px 60px", transform:`scale(${scale})`, transformOrigin:"top left" }}>
+      {/* Header */}
+      <div style={{ textAlign:"center", borderBottom:"2px solid #1a1a1a", paddingBottom:18, marginBottom:20 }}>
+        <div style={{ fontSize:28, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:6 }}>{cv.name}</div>
+        <div style={{ fontSize:13, color:"#444", letterSpacing:"0.05em", marginBottom:8 }}>{cv.title}</div>
+        <div style={{ fontSize:11, color:"#666", display:"flex", justifyContent:"center", gap:20, flexWrap:"wrap" }}>
+          <span>{cv.email}</span><span>·</span><span>{cv.phone}</span><span>·</span><span>{cv.location}</span>
+        </div>
+      </div>
+      {/* Profile */}
+      <Section title="Profil Professionnel">
+        <p style={{ fontSize:12, lineHeight:1.8, color:"#333" }}>{cv.profile}</p>
+      </Section>
+      {/* Experience */}
+      <Section title="Expériences Professionnelles">
+        {cv.experiences.map((e,i) => (
+          <div key={i} style={{ marginBottom:14 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+              <div style={{ fontSize:13, fontWeight:700 }}>{e.role} — {e.company}</div>
+              <div style={{ fontSize:11, color:"#666", flexShrink:0, marginLeft:12 }}>{e.period}</div>
+            </div>
+            <ul style={{ paddingLeft:18, margin:0 }}>{e.bullets.map((b,j)=><li key={j} style={{ fontSize:12, lineHeight:1.7, color:"#333" }}>{b}</li>)}</ul>
+          </div>
+        ))}
+      </Section>
+      {/* Education */}
+      <Section title="Formation">
+        {cv.education.map((e,i) => (
+          <div key={i} style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+            <div><span style={{ fontSize:12, fontWeight:700 }}>{e.degree}</span> <span style={{ fontSize:12, color:"#444" }}>— {e.school}</span></div>
+            <div style={{ fontSize:11, color:"#666" }}>{e.year}</div>
+          </div>
+        ))}
+      </Section>
+      {/* Two col */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:32 }}>
+        <Section title="Compétences">
+          <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 12px" }}>
+            {cv.skills.map((s,i)=><span key={i} style={{ fontSize:12, color:"#333" }}>• {s}</span>)}
+          </div>
+        </Section>
+        <Section title="Langues">
+          {cv.languages.map((l,i)=><div key={i} style={{ fontSize:12, marginBottom:4 }}><strong>{l.lang}</strong> — {l.level}</div>)}
+        </Section>
+      </div>
+      {cv.certifications && cv.certifications.length > 0 && (
+        <Section title="Certifications">
+          {cv.certifications.map((c,i)=><div key={i} style={{ fontSize:12, marginBottom:4 }}>• {c}</div>)}
+        </Section>
+      )}
+    </div>
+  );
+}
+
+// ── 2. MODERNE ────────────────────────────────────────────────────────────
+function TplModerne({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+  return (
+    <div style={{ width:794, background:"white", fontFamily:"'Inter',sans-serif", display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600 }}>
+      {/* Sidebar */}
+      <div style={{ width:240, background:"#1e3a5f", padding:"40px 24px", flexShrink:0 }}>
+        {/* Avatar initial */}
+        <div style={{ width:72, height:72, borderRadius:"50%", background:"#3b82f6", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, fontWeight:800, color:"white", marginBottom:20 }}>
+          {cv.name.charAt(0)}
+        </div>
+        <div style={{ fontSize:16, fontWeight:800, color:"white", marginBottom:4, lineHeight:1.2 }}>{cv.name}</div>
+        <div style={{ fontSize:11, color:"#93c5fd", marginBottom:24, lineHeight:1.4 }}>{cv.title}</div>
+        <SideSection title="Contact" light>
+          <div style={{ fontSize:10, color:"rgba(255,255,255,0.7)", lineHeight:2 }}>
+            <div>✉ {cv.email}</div><div>📞 {cv.phone}</div><div>📍 {cv.location}</div>
+          </div>
+        </SideSection>
+        <SideSection title="Compétences" light>
+          {cv.skills.map((s,i)=>(
+            <div key={i} style={{ marginBottom:5 }}>
+              <div style={{ fontSize:10, color:"rgba(255,255,255,0.85)", marginBottom:2 }}>{s}</div>
+              <div style={{ height:3, background:"rgba(255,255,255,0.15)", borderRadius:2 }}>
+                <div style={{ height:3, background:"#3b82f6", borderRadius:2, width:`${75+((i*13)%25)}%` }}/>
+              </div>
+            </div>
+          ))}
+        </SideSection>
+        <SideSection title="Langues" light>
+          {cv.languages.map((l,i)=><div key={i} style={{ fontSize:10, color:"rgba(255,255,255,0.8)", marginBottom:4 }}>{l.lang} <span style={{ color:"#93c5fd" }}>— {l.level}</span></div>)}
+        </SideSection>
+        {cv.certifications && <SideSection title="Certifications" light>{cv.certifications.map((c,i)=><div key={i} style={{ fontSize:10, color:"rgba(255,255,255,0.7)", marginBottom:4, lineHeight:1.5 }}>• {c}</div>)}</SideSection>}
+      </div>
+      {/* Main */}
+      <div style={{ flex:1, padding:"40px 36px" }}>
+        <div style={{ fontSize:12, color:"#374151", lineHeight:1.8, marginBottom:24, paddingBottom:20, borderBottom:"2px solid #e5e7eb" }}>{cv.profile}</div>
+        <MSection title="Expériences" accent="#1e3a5f">
+          {cv.experiences.map((e,i)=>(
+            <div key={i} style={{ marginBottom:16 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</div>
+                <div style={{ fontSize:10, color:"#6b7280", background:"#f3f4f6", padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8 }}>{e.period}</div>
+              </div>
+              <div style={{ fontSize:11, color:"#3b82f6", fontWeight:600, marginBottom:4 }}>{e.company}</div>
+              <ul style={{ paddingLeft:16, margin:0 }}>{e.bullets.map((b,j)=><li key={j} style={{ fontSize:11, lineHeight:1.7, color:"#374151" }}>{b}</li>)}</ul>
+            </div>
+          ))}
+        </MSection>
+        <MSection title="Formation" accent="#1e3a5f">
+          {cv.education.map((e,i)=>(
+            <div key={i} style={{ marginBottom:10 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div>
+              <div style={{ fontSize:11, color:"#6b7280" }}>{e.school} · {e.year}</div>
+            </div>
+          ))}
+        </MSection>
+      </div>
+    </div>
+  );
+}
+
+// ── 3. MINIMALISTE ────────────────────────────────────────────────────────
+function TplMinimal({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+  return (
+    <div style={{ width:794, background:"white", fontFamily:"'Helvetica Neue',Helvetica,sans-serif", padding:"60px 72px", transform:`scale(${scale})`, transformOrigin:"top left" }}>
+      {/* Header */}
+      <div style={{ marginBottom:36 }}>
+        <div style={{ fontSize:32, fontWeight:300, color:"#0f172a", letterSpacing:"-0.02em", marginBottom:4 }}>{cv.name}</div>
+        <div style={{ fontSize:13, color:"#64748b", fontWeight:400, marginBottom:12 }}>{cv.title}</div>
+        <div style={{ display:"flex", gap:24, fontSize:11, color:"#94a3b8" }}>
+          <span>{cv.email}</span><span>{cv.phone}</span><span>{cv.location}</span>
+        </div>
+      </div>
+      {/* Thin rule */}
+      <div style={{ height:1, background:"#e2e8f0", marginBottom:28 }}/>
+      {/* Profile */}
+      <div style={{ marginBottom:28 }}>
+        <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:"#94a3b8", marginBottom:10 }}>À Propos</div>
+        <p style={{ fontSize:12, lineHeight:1.9, color:"#475569", maxWidth:580 }}>{cv.profile}</p>
+      </div>
+      {/* Experience */}
+      <div style={{ marginBottom:28 }}>
+        <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:"#94a3b8", marginBottom:14 }}>Expérience</div>
+        {cv.experiences.map((e,i)=>(
+          <div key={i} style={{ display:"grid", gridTemplateColumns:"140px 1fr", gap:20, marginBottom:18 }}>
+            <div>
+              <div style={{ fontSize:11, color:"#64748b", lineHeight:1.5 }}>{e.period}</div>
+              <div style={{ fontSize:11, color:"#0ea5e9", fontWeight:500 }}>{e.company}</div>
+            </div>
+            <div>
+              <div style={{ fontSize:13, fontWeight:500, color:"#0f172a", marginBottom:6 }}>{e.role}</div>
+              {e.bullets.map((b,j)=><div key={j} style={{ fontSize:11, color:"#475569", lineHeight:1.7, marginBottom:3 }}>— {b}</div>)}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ height:1, background:"#e2e8f0", marginBottom:24 }}/>
+      {/* Three col bottom */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:24 }}>
+        <div>
+          <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:"#94a3b8", marginBottom:10 }}>Formation</div>
+          {cv.education.map((e,i)=><div key={i} style={{ marginBottom:8 }}><div style={{ fontSize:11, fontWeight:500, color:"#0f172a" }}>{e.degree}</div><div style={{ fontSize:10, color:"#64748b" }}>{e.school} · {e.year}</div></div>)}
+        </div>
+        <div>
+          <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:"#94a3b8", marginBottom:10 }}>Compétences</div>
+          {cv.skills.map((s,i)=><div key={i} style={{ fontSize:11, color:"#475569", marginBottom:4 }}>{s}</div>)}
+        </div>
+        <div>
+          <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:"#94a3b8", marginBottom:10 }}>Langues</div>
+          {cv.languages.map((l,i)=><div key={i} style={{ fontSize:11, color:"#475569", marginBottom:4 }}>{l.lang} <span style={{ color:"#94a3b8" }}>/ {l.level}</span></div>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 4. EXÉCUTIF ───────────────────────────────────────────────────────────
+function TplExecutif({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+  return (
+    <div style={{ width:794, background:"#0c0a09", fontFamily:"'Georgia',serif", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600 }}>
+      {/* Gold header */}
+      <div style={{ background:"linear-gradient(135deg,#1c1410,#2d1f0e)", padding:"44px 56px 32px", borderBottom:"2px solid #d4af37" }}>
+        <div style={{ fontSize:30, fontWeight:700, color:"#f5f0e8", letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:6 }}>{cv.name}</div>
+        <div style={{ fontSize:13, color:"#d4af37", letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:14 }}>{cv.title}</div>
+        <div style={{ display:"flex", gap:24, fontSize:11, color:"rgba(255,255,255,0.5)" }}>
+          <span>{cv.email}</span><span>|</span><span>{cv.phone}</span><span>|</span><span>{cv.location}</span>
+        </div>
+      </div>
+      <div style={{ padding:"32px 56px" }}>
+        {/* Profile */}
+        <div style={{ marginBottom:24, paddingBottom:20, borderBottom:"1px solid rgba(212,175,55,0.2)" }}>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:"#d4af37", marginBottom:10 }}>Profil Exécutif</div>
+          <p style={{ fontSize:12, lineHeight:1.9, color:"rgba(255,255,255,0.75)", fontStyle:"italic" }}>{cv.profile}</p>
+        </div>
+        {/* Experience */}
+        <div style={{ marginBottom:24 }}>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:"#d4af37", marginBottom:14 }}>Parcours Professionnel</div>
+          {cv.experiences.map((e,i)=>(
+            <div key={i} style={{ marginBottom:18, paddingLeft:16, borderLeft:"2px solid #d4af37" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#f5f0e8" }}>{e.role}</div>
+                <div style={{ fontSize:11, color:"#d4af37" }}>{e.period}</div>
+              </div>
+              <div style={{ fontSize:12, color:"#d4af37", opacity:0.7, marginBottom:6 }}>{e.company}</div>
+              {e.bullets.map((b,j)=><div key={j} style={{ fontSize:11, color:"rgba(255,255,255,0.65)", lineHeight:1.7, marginBottom:3 }}>◆ {b}</div>)}
+            </div>
+          ))}
+        </div>
+        {/* Two col */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:32 }}>
+          <div>
+            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:"#d4af37", marginBottom:12 }}>Formation</div>
+            {cv.education.map((e,i)=><div key={i} style={{ marginBottom:10 }}><div style={{ fontSize:12, color:"#f5f0e8", fontWeight:600 }}>{e.degree}</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.5)" }}>{e.school} · {e.year}</div></div>)}
+          </div>
+          <div>
+            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:"#d4af37", marginBottom:12 }}>Compétences Clés</div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+              {cv.skills.map((s,i)=><span key={i} style={{ fontSize:10, color:"#d4af37", border:"1px solid rgba(212,175,55,0.35)", padding:"3px 10px", borderRadius:2 }}>{s}</span>)}
+            </div>
+            <div style={{ marginTop:16, fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:"#d4af37", marginBottom:10 }}>Langues</div>
+            {cv.languages.map((l,i)=><div key={i} style={{ fontSize:11, color:"rgba(255,255,255,0.65)", marginBottom:4 }}>{l.lang} — {l.level}</div>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 5. CRÉATIF ────────────────────────────────────────────────────────────
+function TplCreatif({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+  return (
+    <div style={{ width:794, background:"white", fontFamily:"'Inter',sans-serif", transform:`scale(${scale})`, transformOrigin:"top left" }}>
+      {/* Bold top bar */}
+      <div style={{ height:8, background:"linear-gradient(90deg,#7c3aed,#ec4899,#f97316)" }}/>
+      <div style={{ padding:"40px 52px" }}>
+        {/* Header - big name */}
+        <div style={{ marginBottom:28 }}>
+          <div style={{ fontSize:34, fontWeight:900, color:"#0f172a", letterSpacing:"-0.03em", lineHeight:1, marginBottom:6 }}>{cv.name}</div>
+          <div style={{ fontSize:14, fontWeight:600, background:"linear-gradient(90deg,#7c3aed,#ec4899)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:12 }}>{cv.title}</div>
+          <div style={{ display:"flex", gap:20, fontSize:11, color:"#6b7280" }}>
+            <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
+          </div>
+        </div>
+        {/* Profile with left border */}
+        <div style={{ borderLeft:"4px solid #7c3aed", paddingLeft:16, marginBottom:28 }}>
+          <p style={{ fontSize:12, lineHeight:1.8, color:"#374151" }}>{cv.profile}</p>
+        </div>
+        {/* Two col layout */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 280px", gap:36 }}>
+          {/* Left */}
+          <div>
+            <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:"#7c3aed", marginBottom:14 }}>Expériences</div>
+            {cv.experiences.map((e,i)=>(
+              <div key={i} style={{ marginBottom:18, position:"relative", paddingLeft:16 }}>
+                <div style={{ position:"absolute", left:0, top:5, width:6, height:6, borderRadius:"50%", background:"#7c3aed" }}/>
+                <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</div>
+                <div style={{ fontSize:11, color:"#7c3aed", marginBottom:4 }}>{e.company} · <span style={{ color:"#9ca3af" }}>{e.period}</span></div>
+                {e.bullets.map((b,j)=><div key={j} style={{ fontSize:11, color:"#374151", lineHeight:1.7 }}>→ {b}</div>)}
+              </div>
+            ))}
+            <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:"#7c3aed", marginBottom:12, marginTop:20 }}>Formation</div>
+            {cv.education.map((e,i)=>(
+              <div key={i} style={{ marginBottom:10 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div>
+                <div style={{ fontSize:11, color:"#6b7280" }}>{e.school} · {e.year}</div>
+              </div>
+            ))}
+          </div>
+          {/* Right */}
+          <div>
+            <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:"#ec4899", marginBottom:12 }}>Compétences</div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:20 }}>
+              {cv.skills.map((s,i)=>(
+                <span key={i} style={{ fontSize:10, background:i%3===0?"#f3e8ff":i%3===1?"#fce7f3":"#fff7ed", color:i%3===0?"#7c3aed":i%3===1?"#ec4899":"#ea580c", padding:"4px 10px", borderRadius:100, fontWeight:600 }}>{s}</span>
+              ))}
+            </div>
+            <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:"#f97316", marginBottom:12 }}>Langues</div>
+            {cv.languages.map((l,i)=>(
+              <div key={i} style={{ marginBottom:8 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, marginBottom:3 }}>
+                  <span style={{ fontWeight:600, color:"#0f172a" }}>{l.lang}</span>
+                  <span style={{ color:"#6b7280" }}>{l.level}</span>
+                </div>
+                <div style={{ height:4, background:"#f3f4f6", borderRadius:2 }}>
+                  <div style={{ height:4, borderRadius:2, width:l.level==="Natif"?"100%":l.level==="Courant"?"85%":"55%", background:"linear-gradient(90deg,#7c3aed,#ec4899)" }}/>
+                </div>
+              </div>
+            ))}
+            {cv.certifications && cv.certifications.length > 0 && <>
+              <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:"#7c3aed", marginBottom:10, marginTop:16 }}>Certifications</div>
+              {cv.certifications.map((c,i)=><div key={i} style={{ fontSize:11, color:"#374151", marginBottom:5 }}>🏅 {c}</div>)}
+            </>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── HELPER SUB-COMPONENTS ─────────────────────────────────────────────────
+function Section({ title, children }: { title:string; children:React.ReactNode }) {
+  return (
+    <div style={{ marginBottom:18 }}>
+      <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", borderBottom:"1px solid #1a1a1a", paddingBottom:3, marginBottom:10 }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+function SideSection({ title, children, light }: { title:string; children:React.ReactNode; light?:boolean }) {
+  return (
+    <div style={{ marginBottom:20 }}>
+      <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", color:light?"rgba(255,255,255,0.4)":"#666", marginBottom:8 }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+function MSection({ title, children, accent }: { title:string; children:React.ReactNode; accent:string }) {
+  return (
+    <div style={{ marginBottom:20 }}>
+      <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", color:accent, borderBottom:`2px solid ${accent}`, paddingBottom:4, marginBottom:12, display:"inline-block" }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+// ── RENDER CV BY TEMPLATE ID ───────────────────────────────────────────────
+function RenderCV({ id, cv, scale=1 }: { id:number; cv:CVData; scale?:number }) {
+  if (id===1) return <TplClassique  cv={cv} scale={scale}/>;
+  if (id===2) return <TplModerne    cv={cv} scale={scale}/>;
+  if (id===3) return <TplMinimal    cv={cv} scale={scale}/>;
+  if (id===4) return <TplExecutif   cv={cv} scale={scale}/>;
+  if (id===5) return <TplCreatif    cv={cv} scale={scale}/>;
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ── MAIN PAGE COMPONENT ───────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
 export default function CVPage() {
+  const [mode,        setMode]        = useState<Mode>("upload");
   const [step,        setStep]        = useState<Step>(1);
-  const [tab2,        setTab2]        = useState<Tab2>("upload"); // default = free upload tab
-  const [catFilter,   setCatFilter]   = useState<FilterCat>("all");
-  const [selectedTpl, setSelectedTpl] = useState<number|null>(null);
+  const [selectedTpl, setSelectedTpl] = useState<number>(1);
   const [previewTpl,  setPreviewTpl]  = useState<number|null>(null);
-
-  const [form, setForm] = useState({
-    name:"", title:"", email:"", phone:"",
-    industry:"", level:"", experience:"",
-    education:"", skills:"", langs:"", notes:"",
-  });
 
   // Upload state
   const [uploadedFile,    setUploadedFile]    = useState<string|null>(null);
-  const [uploadedFileObj, setUploadedFileObj] = useState<File|null>(null);
   const [uploadedContent, setUploadedContent] = useState<string>("");
   const [uploadedBase64,  setUploadedBase64]  = useState<string|null>(null);
   const [uploadedMime,    setUploadedMime]    = useState<string|null>(null);
-  const [enhanceType,     setEnhanceType]     = useState("Optimisation ATS — Compatible logiciels de recrutement");
+  const [enhanceType,     setEnhanceType]     = useState("Optimisation ATS");
   const [uploadError,     setUploadError]     = useState<string|null>(null);
+
+  // AI form state
+  const [form, setForm] = useState({
+    name:"", title:"", email:"", phone:"", location:"",
+    industry:"", level:"", experience:"", education:"", skills:"", langs:"", notes:"",
+  });
 
   // Paddle
   const [paddleReady, setPaddleReady] = useState(false);
   const [payPending,  setPayPending]  = useState(false);
   const [currentPlan, setCurrentPlan] = useState<Plan>(PLANS[1]);
 
-  // Generating
-  const [showGenModal, setShowGenModal] = useState(false);
-  const [genSteps,     setGenSteps]     = useState<("idle"|"active"|"done")[]>(Array(5).fill("idle"));
-  const [genMode,      setGenMode]      = useState<"ai"|"upload">("upload"); // track which mode triggered generation
+  // Generation
+  const [generating,  setGenerating]  = useState(false);
+  const [genStep,     setGenStep]     = useState(0);
+  const [cvData,      setCvData]      = useState<CVData|null>(null);
+  const [genError,    setGenError]    = useState<string|null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
 
-  // Result
-  const [cvHtml,   setCvHtml]   = useState<string|null>(null);
-  const resultRef               = useRef<HTMLDivElement>(null);
+  const GEN_STEPS = ["Lecture du CV","Extraction des données","Application du modèle","Optimisation ATS","Finalisation"];
 
-  // ── LOAD PADDLE SDK ────────────────────────────────────────────────────
+  // Load Paddle
   useEffect(() => {
     if (document.getElementById("paddle-js")) { setPaddleReady(true); return; }
-    const script  = document.createElement("script");
-    script.id     = "paddle-js";
-    script.src    = "https://cdn.paddle.com/paddle/v2/paddle.js";
-    script.onload = () => {
+    const s = document.createElement("script"); s.id="paddle-js";
+    s.src="https://cdn.paddle.com/paddle/v2/paddle.js";
+    s.onload=()=>{
       // @ts-ignore
-      const P = window.Paddle;
-      if (PADDLE_SANDBOX) P.Environment.set("sandbox");
-      P.Initialize({ token: PADDLE_CLIENT_TOKEN });
+      const P=window.Paddle;
+      if(PADDLE_SANDBOX)P.Environment.set("sandbox");
+      P.Initialize({token:PADDLE_CLIENT_TOKEN});
       setPaddleReady(true);
     };
-    document.body.appendChild(script);
-  }, []);
+    document.body.appendChild(s);
+  },[]);
 
-  // ── DETECT ?payment=success ────────────────────────────────────────────
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("payment") === "success") {
-      window.history.replaceState({}, "", "/cv");
-      setGenMode("ai");
-      startGenerating("ai");
-    }
+  useEffect(()=>{
+    const p=new URLSearchParams(window.location.search);
+    if(p.get("payment")==="success"){window.history.replaceState({},"","/cv");runGeneration("ai");}
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  },[]);
 
-  // ── READ UPLOADED FILE ─────────────────────────────────────────────────
-  const handleFileUpload = (file: File) => {
-    setUploadError(null);
-    setUploadedFile(file.name);
-    setUploadedFileObj(file);
-
-    if (file.type === "text/plain" || file.name.endsWith(".txt")) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setUploadedContent(e.target?.result as string ?? "");
-        setUploadedBase64(null);
-        setUploadedMime(null);
-      };
-      reader.readAsText(file);
-    } else if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-      // Read PDF as base64 — Claude API can read it natively
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64 = (e.target?.result as string).split(",")[1];
-        setUploadedBase64(base64);
-        setUploadedMime("application/pdf");
-        setUploadedContent("");
-      };
-      reader.readAsDataURL(file);
+  // ── FILE UPLOAD ───────────────────────────────────────────────────────────
+  const handleFile = (file: File) => {
+    setUploadError(null); setUploadedFile(file.name);
+    if (file.name.endsWith(".pdf")) {
+      const r=new FileReader(); r.onload=e=>{setUploadedBase64((e.target?.result as string).split(",")[1]);setUploadedMime("application/pdf");setUploadedContent("");};
+      r.readAsDataURL(file);
     } else {
-      // DOC/DOCX — read as text best effort
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setUploadedContent(e.target?.result as string ?? "");
-        setUploadedBase64(null);
-        setUploadedMime(null);
-      };
-      reader.readAsText(file);
+      const r=new FileReader(); r.onload=e=>{setUploadedContent(e.target?.result as string??"");setUploadedBase64(null);setUploadedMime(null);};
+      r.readAsText(file);
     }
   };
 
-  // ── FREE UPLOAD PATH — goes straight to result ─────────────────────────
-  const handleFreeEnhance = () => {
-    if (!uploadedFile) { setUploadError("Veuillez d'abord importer un fichier CV."); return; }
-    setGenMode("upload");
-    startGenerating("upload");
-  };
+  // ── GENERATE ──────────────────────────────────────────────────────────────
+  const runGeneration = useCallback(async (src: Mode) => {
+    setGenerating(true); setGenError(null); setCvData(null); setGenStep(0);
 
-  // ── OPEN PADDLE CHECKOUT (AI path only) ───────────────────────────────
-  const openPaddleCheckout = (plan: Plan) => {
+    const tick = (i:number) => new Promise<void>(r=>setTimeout(()=>{setGenStep(i);r()},600));
+
+    const systemPrompt = `Tu es un expert en rédaction de CV professionnels pour le marché marocain.
+Tu dois TOUJOURS répondre avec UNIQUEMENT un objet JSON valide, sans aucun texte avant ou après.
+Le JSON doit suivre exactement ce schéma :
+{
+  "name": string,
+  "title": string,
+  "email": string,
+  "phone": string,
+  "location": string,
+  "profile": string (2-3 phrases percutantes),
+  "experiences": [{ "company": string, "role": string, "period": string, "bullets": string[] }],
+  "education": [{ "school": string, "degree": string, "year": string }],
+  "skills": string[] (max 10),
+  "languages": [{ "lang": string, "level": string }],
+  "certifications": string[]
+}
+RÈGLES ABSOLUES :
+- Utilise UNIQUEMENT les informations du CV fourni. Ne génère RIEN de fictif.
+- Améliore la formulation et le style selon le mode demandé.
+- Réponds avec UNIQUEMENT le JSON, rien d'autre.`;
+
+    try {
+      await tick(1);
+      let messages: any[];
+      if (src==="upload") {
+        const instructions = `Mode d'amélioration : "${enhanceType}"\nRetourne le JSON du CV amélioré.`;
+        if (uploadedBase64 && uploadedMime==="application/pdf") {
+          messages=[{role:"user",content:[{type:"document",source:{type:"base64",media_type:"application/pdf",data:uploadedBase64}},{type:"text",text:instructions}]}];
+        } else {
+          messages=[{role:"user",content:`CV source :\n${uploadedContent}\n\n${instructions}`}];
+        }
+      } else {
+        messages=[{role:"user",content:`Génère un CV professionnel JSON pour :
+Nom : ${form.name} | Poste : ${form.title} | Email : ${form.email} | Tél : ${form.phone} | Ville : ${form.location||"Maroc"}
+Secteur : ${form.industry} | Niveau : ${form.level}
+Expériences : ${form.experience}
+Formation : ${form.education}
+Compétences : ${form.skills}
+Langues : ${form.langs}
+Notes : ${form.notes}
+Génère un profil percutant et des bullet points impactants. Retourne UNIQUEMENT le JSON.`}];
+      }
+
+      await tick(2);
+      const res = await fetch("/api/generate-cv",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,system:systemPrompt,messages,
+          ...(uploadedBase64?{"anthropic-beta":"pdfs-2024-09-25"}:{})}),
+      });
+      await tick(3);
+      const data = await res.json();
+      const raw  = data.content?.map((c:any)=>c.text??"").join("")??"";
+      const clean = raw.replace(/```json|```/g,"").trim();
+      await tick(4);
+      const parsed: CVData = JSON.parse(clean);
+      await tick(5);
+      setCvData(parsed);
+      setStep(4);
+    } catch(e:any) {
+      setGenError("Erreur lors de la génération. Vérifiez votre fichier et réessayez. "+e.message);
+    } finally {
+      setGenerating(false); setGenStep(0);
+    }
+  },[uploadedBase64,uploadedMime,uploadedContent,enhanceType,form]);
+
+  // ── PADDLE CHECKOUT ───────────────────────────────────────────────────────
+  const openPaddle = (plan: Plan) => {
     // @ts-ignore
-    const P = window.Paddle;
-    if (!P || !paddleReady) { alert("Chargement en cours, réessayez dans un instant."); return; }
-    setCurrentPlan(plan);
-    setPayPending(true);
+    const P=window.Paddle;
+    if(!P||!paddleReady){alert("Chargement…");return;}
+    setCurrentPlan(plan); setPayPending(true);
     P.Checkout.open({
-      items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
-      customer: { email: form.email || undefined },
-      customData: { plan: plan.name, candidateName: form.name, templateId: selectedTpl },
-      settings: { displayModeTheme:"light", locale:"fr", successUrl:`${window.location.origin}/cv?payment=success` },
-      eventCallback: (event: { name:string }) => {
-        if (event.name === "checkout.completed") { setPayPending(false); setGenMode("ai"); startGenerating("ai"); }
-        if (event.name === "checkout.closed")    { setPayPending(false); }
+      items:[{priceId:plan.paddlePriceId,quantity:1}],
+      customer:{email:form.email||undefined},
+      settings:{displayModeTheme:"light",locale:"fr",successUrl:`${window.location.origin}/cv?payment=success`},
+      eventCallback:(ev:{name:string})=>{
+        if(ev.name==="checkout.completed"){setPayPending(false);runGeneration("ai");}
+        if(ev.name==="checkout.closed"){setPayPending(false);}
       },
     });
   };
 
-  // ── GENERATING ANIMATION ───────────────────────────────────────────────
-  const startGenerating = async (mode: "ai"|"upload") => {
-    setShowGenModal(true);
-    setGenSteps(Array(5).fill("idle"));
-    for (let i = 0; i < 5; i++) {
-      await new Promise<void>((res) => setTimeout(() => {
-        setGenSteps((prev) => {
-          const u = [...prev] as ("idle"|"active"|"done")[];
-          if (i > 0) u[i-1] = "done";
-          u[i] = "active";
-          return u;
-        });
-        res();
-      }, i * 800));
-    }
-    await new Promise<void>((res) => setTimeout(res, 500));
-    setGenSteps(Array(5).fill("done") as ("idle"|"active"|"done")[]);
-    setShowGenModal(false);
-    goStep(4);
-    if (mode === "upload") generateUploadCV();
-    else generateAICV();
-  };
-
-  // ── GENERATE: UPLOAD/ENHANCE (FREE) ───────────────────────────────────
-  const generateUploadCV = useCallback(async () => {
-    setCvHtml(null);
-
-    const instructions = `Tu es un expert en rédaction de CV professionnels pour le marché marocain.
-
-L'utilisateur souhaite améliorer son CV avec le mode : "${enhanceType}".
-
-IMPORTANT : Utilise UNIQUEMENT les informations présentes dans le CV fourni. Ne génère AUCUNE information fictive. Conserve tous les faits : noms, entreprises, dates, diplômes, compétences réelles.
-
-Retourne le CV amélioré en français, format texte structuré clair (sans symboles markdown ** ou #).
-Structure obligatoire (titres en MAJUSCULES) :
-
-NOM COMPLET
-Titre du poste | Email | Téléphone
-
-PROFIL PROFESSIONNEL
-[2-3 phrases percutantes basées sur l'expérience réelle]
-
-EXPÉRIENCES PROFESSIONNELLES
-[Chaque poste avec dates et réalisations concrètes tirées du CV original]
-
-FORMATION
-[Diplômes et formations exactement comme dans le CV original]
-
-COMPÉTENCES
-[Compétences réelles du candidat, bien organisées]
-
-LANGUES
-[Langues exactement comme dans le CV original]
-
-Applique le mode "${enhanceType}" : améliore uniquement la formulation, le style et l'impact. Ne change pas les faits.`;
-
-    try {
-      let messages: any[];
-
-      if (uploadedBase64 && uploadedMime === "application/pdf") {
-        // PDF — send as native document so Claude reads it directly
-        messages = [{
-          role: "user",
-          content: [
-            {
-              type: "document",
-              source: { type: "base64", media_type: "application/pdf", data: uploadedBase64 },
-            },
-            { type: "text", text: instructions },
-          ],
-        }];
-      } else {
-        // Plain text / DOC
-        const cvText = uploadedContent || "[Contenu du CV non disponible]";
-        messages = [{
-          role: "user",
-          content: `Voici le CV à améliorer :
-
-${cvText}
-
-${instructions}`,
-        }];
-      }
-
-      const res = await fetch("/api/generate-cv", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 4000,
-          messages,
-        }),
-      });
-      const data = await res.json();
-      const text: string = data.content?.map((c:{text?:string}) => c.text ?? "").join("") ?? "";
-      if (!text.trim()) {
-        setCvHtml(`<div style="color:#dc2626;text-align:center;padding:40px;">Aucun contenu retourné. Vérifiez votre fichier et réessayez.</div>`);
-      } else {
-        setCvHtml(renderCVHtml(text));
-      }
-    } catch (err) {
-      setCvHtml(`<div style="color:#6b7280;text-align:center;padding:40px;">Erreur de connexion. Vérifiez votre configuration.</div>`);
-    }
-  }, [uploadedContent, uploadedBase64, uploadedMime, enhanceType]);
-
-  // ── GENERATE: AI FROM FORM (PAID) ─────────────────────────────────────
-  const generateAICV = useCallback(async () => {
-    setCvHtml(null);
-    const tpl     = TEMPLATES.find((t) => t.id === selectedTpl);
-    const tplName = tpl?.name ?? "Professionnel";
-
-    const prompt = `Rédige un CV professionnel en français, format texte structuré clair (sans symboles markdown ** ou #).
-Candidat : ${form.name||"Prénom Nom"} | Poste visé : ${form.title||"Professionnel"}
-Modèle : ${tplName} | Secteur : ${form.industry||"Général"} | Niveau : ${form.level||"Intermédiaire"}
-Expérience : ${form.experience||"Non fournie"}
-Formation : ${form.education||"Non fournie"}
-Compétences : ${form.skills||"Non fournies"}
-Langues : ${form.langs||"Non fournies"}
-Infos supplémentaires : ${form.notes||"Aucune"}
-Contact : ${form.email} | ${form.phone}
-
-Structurer ainsi (titres de section en MAJUSCULES) :
-
-NOM COMPLET
-Titre du poste | Email | Téléphone
-
-PROFIL PROFESSIONNEL
-[2-3 phrases percutantes]
-
-EXPÉRIENCES PROFESSIONNELLES
-[Chaque poste sur plusieurs lignes]
-
-FORMATION
-[Diplôme, établissement, année]
-
-COMPÉTENCES
-[Catégorisées]
-
-LANGUES
-[Liste]
-
-Utiliser des verbes d'action, quantifier les réalisations, ton professionnel adapté au marché marocain.`;
-
-    try {
-      const res  = await fetch("/api/generate-cv", {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:4000, messages:[{role:"user",content:prompt}] }),
-      });
-      const data = await res.json();
-      const text: string = data.content?.map((c:{text?:string})=>c.text??"").join("") ?? "";
-      setCvHtml(renderCVHtml(text));
-    } catch {
-      setCvHtml(`<div style="color:#6b7280;text-align:center;padding:40px;">Erreur de connexion. Vérifiez votre configuration.</div>`);
-    }
-  }, [form, selectedTpl]);
-
-  const renderCVHtml = (text: string): string =>
-    text.split("\n").map((line,i) => {
-      const t = line.trim();
-      if (!t) return `<div style="height:6px;"></div>`;
-      const isSection = /^[A-ZÉÀÂÙÈÊÎÔ][A-ZÉÀÂÙÈÊÎÔ\s\/&]{2,59}$/.test(t) && i > 0;
-      if (i===0) return `<h1 style="font-size:26px;font-weight:700;margin-bottom:2px;font-family:Inter,sans-serif;">${t}</h1>`;
-      if (i===1) return `<div style="font-size:13px;color:#666;margin-bottom:20px;font-family:Inter,sans-serif;">${t}</div>`;
-      if (isSection) return `<h2 style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;border-bottom:2px solid #1a56db;padding-bottom:5px;margin:24px 0 10px;color:#1a56db;font-family:Inter,sans-serif;">${t}</h2>`;
-      return `<p style="font-size:14px;margin-bottom:6px;">${t}</p>`;
-    }).join("");
-
-  const downloadCV = () => {
-    const content = document.getElementById("cvPreview")?.innerText ?? "";
-    const blob = new Blob([content],{type:"text/plain;charset=utf-8"});
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href=url; a.download="Mon_CV_TalentMaroc.txt"; a.click();
-    URL.revokeObjectURL(url);
+  // ── PRINT / DOWNLOAD ──────────────────────────────────────────────────────
+  const downloadPDF = () => {
+    const style = document.createElement("style");
+    style.innerHTML=`@media print{body *{visibility:hidden}#cv-print,#cv-print *{visibility:visible}#cv-print{position:fixed;left:0;top:0;width:100%}}`;
+    document.head.appendChild(style);
+    window.print();
+    document.head.removeChild(style);
   };
 
   const goStep = (n: Step) => { setStep(n); window.scrollTo({top:0,behavior:"smooth"}); };
 
-  const stepCircleStyle = (n: number) => {
-    if (n < step)   return { background:"#057a55", borderColor:"#057a55", color:"white" };
-    if (n === step) return { background:"#1a56db", borderColor:"#1a56db", color:"white" };
-    return { background:"#f3f4f6", borderColor:"#e5e7eb", color:"#6b7280" };
-  };
-  const stepLabelColor = (n: number) => n<step?"#057a55":n===step?"#1a56db":"#6b7280";
-  const filteredTpls   = catFilter==="all" ? TEMPLATES : TEMPLATES.filter(t=>t.cat===catFilter);
-
-  // Step bar labels change depending on mode
-  const stepLabels = tab2==="upload"
-    ? ["Importer mon CV","Options","—","Télécharger"]
-    : ["Choisir un modèle","Vos informations","Paiement","Télécharger"];
-
-  // ── JSX ────────────────────────────────────────────────────────────────
+  // ── JSX ───────────────────────────────────────────────────────────────────
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
         html,body{width:100%;overflow-x:hidden;}
-        *{box-sizing:border-box;margin:0;padding:0;}
-        body{font-family:'Inter',sans-serif;}
-        @keyframes spin   {to{transform:rotate(360deg);}}
-        @keyframes popIn  {from{opacity:0;transform:scale(0.94) translateY(10px);}to{opacity:1;transform:scale(1) translateY(0);}}
-        @keyframes fadeUp {from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
-        .spinner{width:44px;height:44px;border:3px solid #e5e7eb;border-top-color:#1a56db;border-radius:50%;animation:spin 0.8s linear infinite;}
-        .modal-anim{animation:popIn 0.25s cubic-bezier(0.34,1.56,0.64,1);}
-        .tpl-card{animation:fadeUp 0.3s ease both;}
-        input,select,textarea{font-family:'Inter',sans-serif;font-size:14px;}
-        input:focus,select:focus,textarea:focus{outline:none;border-color:#1a56db!important;box-shadow:0 0 0 3px rgba(26,86,219,0.1);}
-        .pricing-feat li{list-style:none;display:flex;align-items:flex-start;gap:8px;font-size:13px;margin-bottom:10px;}
-        .pricing-feat li::before{content:'✓';color:#057a55;font-weight:700;font-size:12px;flex-shrink:0;margin-top:1px;}
-        .overlay-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);}
-        .tab-btn{padding:14px 22px;font-size:13px;font-weight:600;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;background:transparent;color:#6b7280;}
-        .tab-btn:hover{color:#1a56db;}
-        .tab-active{color:#1a56db!important;border-bottom-color:#1a56db!important;background:white!important;}
-        .pay-btn{transition:opacity 0.2s,transform 0.1s;}
-        .pay-btn:hover:not(:disabled){opacity:0.88;transform:translateY(-1px);}
-        .pay-btn:disabled{opacity:0.5;cursor:not-allowed;}
-        .free-badge{display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;border:1px solid #bbf7d0;color:#057a55;font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;}
-        .paid-badge{display:inline-flex;align-items:center;gap:5px;background:#fef3c7;border:1px solid #fde68a;color:#92400e;font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f8fafc;color:#0f172a;}
+
+        @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+        .au{animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both}
+        .spinner{width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#16a34a;border-radius:50%;animation:spin .7s linear infinite}
+
+        .nl{color:#4b5563;text-decoration:none;font-size:14px;font-weight:600;padding:7px 12px;border-radius:8px;transition:all .18s}
+        .nl:hover{color:#0f172a;background:#f3f4f6}
+
+        .tab-pill{padding:9px 20px;border-radius:9px;border:none;cursor:pointer;font-weight:700;font-size:14px;transition:all .2s;font-family:inherit}
+
+        .tpl-thumb{border:2px solid #e5e7eb;border-radius:14px;overflow:hidden;cursor:pointer;background:white;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        .tpl-thumb:hover{border-color:#16a34a;box-shadow:0 4px 20px rgba(22,163,74,.12);transform:translateY(-2px)}
+        .tpl-thumb.selected{border-color:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.2)}
+
+        .chip{display:inline-flex;align-items:center;padding:6px 14px;border-radius:100px;border:1.5px solid #e5e7eb;background:white;cursor:pointer;font-size:12px;font-weight:600;color:#374151;transition:all .18s;text-decoration:none;font-family:inherit}
+        .chip:hover,.chip.active{border-color:#16a34a;color:#16a34a;background:#f0fdf4}
+
+        input,select,textarea{font-family:inherit;font-size:14px;}
+        input:focus,select:focus,textarea:focus{outline:none;border-color:#16a34a!important;box-shadow:0 0 0 3px rgba(22,163,74,.1)!important;}
+
+        .btn-green{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:#16a34a;color:white;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all .18s}
+        .btn-green:hover{background:#15803d;transform:translateY(-1px);box-shadow:0 6px 20px rgba(22,163,74,.3)}
+        .btn-green:disabled{background:#d1d5db;cursor:not-allowed;transform:none;box-shadow:none}
+        .btn-outline{display:inline-flex;align-items:center;gap:7px;background:white;color:#374151;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;border:1.5px solid #e5e7eb;cursor:pointer;font-family:inherit;transition:all .18s}
+        .btn-outline:hover{border-color:#16a34a;color:#16a34a}
+
+        .pay-card{border:2px solid #e5e7eb;border-radius:14px;padding:24px;transition:all .18s;background:white}
+        .pay-card:hover{border-color:#16a34a;box-shadow:0 4px 20px rgba(22,163,74,.1)}
+        .pay-card.featured{border-color:#16a34a;background:#f0fdf4}
+
+        .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto;backdrop-filter:blur(4px)}
+        .modal-box{background:white;border-radius:16px;width:100%;max-width:860px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.3)}
+
+        .gen-step{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;padding:8px 0;transition:all .3s}
+
+        .field-label{font-size:13px;font-weight:600;display:block;margin-bottom:6px;color:#374151}
+        .field-input{border:1.5px solid #e5e7eb;border-radius:9px;padding:11px 14px;width:100%;background:white;color:#0f172a;font-size:14px;font-family:inherit;transition:border-color .18s}
+
+        @media(max-width:640px){.hide-sm{display:none!important}.grid2{grid-template-columns:1fr!important}}
+        @media print{#cv-print{display:block!important}body{background:white}}
       `}</style>
 
-      <div style={{fontFamily:"'Inter',sans-serif",background:"#f3f4f6",color:"#111827",minHeight:"100vh",width:"100%"}}>
+      <div style={{background:"#f8fafc",minHeight:"100vh",width:"100%"}}>
 
         {/* ── NAVBAR ── */}
-        <nav style={{background:"#0f1d36",padding:"0 24px",height:60,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,width:"100%"}}>
-          <a href="https://talentmaroc.shop" style={{display:"flex",alignItems:"center",gap:10,textDecoration:"none"}}>
-            <div style={{width:34,height:34,background:"#1a56db",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:16,color:"white"}}>T</div>
-            <span style={{color:"white",fontWeight:700,fontSize:15}}>TalentMaroc</span>
-          </a>
-          <div style={{display:"flex",alignItems:"center",gap:4}}>
-            <a href="https://talentmaroc.shop"            style={{color:"rgba(255,255,255,0.7)",textDecoration:"none",fontSize:14,fontWeight:500,padding:"6px 14px",borderRadius:6}}>Emplois</a>
-            <a href="https://talentmaroc.shop/employers"  style={{color:"rgba(255,255,255,0.7)",textDecoration:"none",fontSize:14,fontWeight:500,padding:"6px 14px",borderRadius:6}}>Recruteurs</a>
-            <span style={{color:"white",fontSize:14,fontWeight:500,padding:"6px 14px",borderRadius:6,background:"rgba(255,255,255,0.08)"}}>Mon CV</span>
-            <a href="https://talentmaroc.shop/auth/login" style={{color:"rgba(255,255,255,0.7)",textDecoration:"none",fontSize:14,fontWeight:500,padding:"6px 14px",borderRadius:6}}>Connexion</a>
-            <a href="https://talentmaroc.shop/employers"  style={{background:"#1a56db",color:"white",textDecoration:"none",padding:"8px 18px",borderRadius:8,fontSize:13,fontWeight:600,marginLeft:4}}>Publier</a>
+        <nav style={{background:"rgba(255,255,255,.96)",backdropFilter:"blur(12px)",borderBottom:"1.5px solid #f0f0f0",padding:"0 24px",height:62,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
+          <div style={{display:"flex",alignItems:"center",gap:28}}>
+            <a href="/" style={{display:"flex",alignItems:"center",gap:9,textDecoration:"none"}}>
+              <div style={{width:34,height:34,background:"#16a34a",borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:16,color:"white"}}>T</div>
+              <span style={{color:"#0f172a",fontWeight:800,fontSize:16}}>TalentMaroc</span>
+            </a>
+            <div className="hide-sm" style={{display:"flex",gap:2}}>
+              <a href="/" className="nl">Emplois</a>
+              <a href="/employers" className="nl">Recruteurs</a>
+              <span style={{color:"#16a34a",fontSize:14,fontWeight:700,padding:"7px 12px"}}>Mon CV ✦</span>
+            </div>
           </div>
+          <a href="/employers/new" className="btn-green" style={{padding:"8px 16px",fontSize:13}}>Publier</a>
         </nav>
 
         {/* ── HERO ── */}
-        <div style={{background:"#0f1d36",padding:"52px 24px 60px",textAlign:"center",position:"relative",overflow:"hidden",width:"100%"}}>
-          <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 70% 80% at 50% 120%, rgba(26,86,219,0.25) 0%, transparent 60%)",pointerEvents:"none"}}/>
-          <div style={{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(26,86,219,0.2)",border:"1px solid rgba(26,86,219,0.3)",color:"#93c5fd",fontSize:12,fontWeight:600,padding:"5px 14px",borderRadius:100,marginBottom:20,position:"relative"}}>
-            ✦ Nouveau — Générateur de CV IA
+        <div style={{background:"white",borderBottom:"1.5px solid #f0f0f0",padding:"44px 24px 48px",textAlign:"center"}}>
+          <div className="au" style={{display:"inline-flex",alignItems:"center",gap:7,background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:100,padding:"5px 14px",marginBottom:18}}>
+            <span style={{width:7,height:7,borderRadius:"50%",background:"#16a34a",display:"inline-block"}}/>
+            <span style={{fontSize:12,fontWeight:700,color:"#15803d"}}>Nouveau — CV IA avec vrais modèles</span>
           </div>
-          <h1 style={{fontSize:"clamp(26px,5vw,46px)",fontWeight:800,color:"white",lineHeight:1.15,marginBottom:16,position:"relative"}}>
-            Créez un CV <span style={{color:"#60a5fa"}}>professionnel</span><br/>en quelques minutes
+          <h1 className="au" style={{fontFamily:"inherit",fontSize:"clamp(24px,5vw,44px)",fontWeight:800,color:"#0f172a",lineHeight:1.12,letterSpacing:"-0.02em",marginBottom:12,animationDelay:".08s"}}>
+            Créez un CV qui décroche des entretiens
           </h1>
-          <p style={{color:"rgba(255,255,255,0.6)",fontSize:15,maxWidth:560,margin:"0 auto 28px",position:"relative",lineHeight:1.65}}>
-            Importez votre CV existant gratuitement, ou laissez notre IA le créer de A à Z à partir de 1,99 €.
+          <p className="au" style={{fontSize:15,color:"#6b7280",maxWidth:480,margin:"0 auto 24px",lineHeight:1.7,animationDelay:".16s"}}>
+            L'IA analyse votre profil et remplit automatiquement de vrais modèles professionnels. Téléchargez en PDF.
           </p>
-
-          {/* Mode selector in hero */}
-          <div style={{display:"inline-flex",background:"rgba(255,255,255,0.08)",borderRadius:12,padding:4,gap:4,position:"relative",marginBottom:28}}>
-            <button onClick={()=>{setTab2("upload");}}
-              style={{padding:"10px 22px",borderRadius:9,border:"none",cursor:"pointer",fontWeight:600,fontSize:14,transition:"all 0.2s",
-                background:tab2==="upload"?"white":"transparent",color:tab2==="upload"?"#111827":"rgba(255,255,255,0.7)"}}>
-              ↑ Importer mon CV <span style={{fontSize:11,marginLeft:6,background:"#f0fdf4",color:"#057a55",padding:"2px 7px",borderRadius:100,fontWeight:700}}>GRATUIT</span>
+          {/* Mode toggle */}
+          <div className="au" style={{display:"inline-flex",background:"#f3f4f6",borderRadius:12,padding:4,gap:4,animationDelay:".22s"}}>
+            <button className="tab-pill" onClick={()=>{setMode("upload");setStep(1);setCvData(null);}}
+              style={{background:mode==="upload"?"white":"transparent",color:mode==="upload"?"#0f172a":"#6b7280",boxShadow:mode==="upload"?"0 1px 4px rgba(0,0,0,.1)":undefined}}>
+              ↑ Importer mon CV <span style={{fontSize:11,marginLeft:6,background:"#f0fdf4",color:"#15803d",padding:"2px 8px",borderRadius:100}}>GRATUIT</span>
             </button>
-            <button onClick={()=>{setTab2("ai");}}
-              style={{padding:"10px 22px",borderRadius:9,border:"none",cursor:"pointer",fontWeight:600,fontSize:14,transition:"all 0.2s",
-                background:tab2==="ai"?"white":"transparent",color:tab2==="ai"?"#111827":"rgba(255,255,255,0.7)"}}>
-              ✦ Générer avec l'IA <span style={{fontSize:11,marginLeft:6,background:"#fef3c7",color:"#92400e",padding:"2px 7px",borderRadius:100,fontWeight:700}}>À PARTIR DE 1,99 €</span>
+            <button className="tab-pill" onClick={()=>{setMode("ai");setStep(1);setCvData(null);}}
+              style={{background:mode==="ai"?"white":"transparent",color:mode==="ai"?"#0f172a":"#6b7280",boxShadow:mode==="ai"?"0 1px 4px rgba(0,0,0,.1)":undefined}}>
+              ✦ Générer avec l'IA <span style={{fontSize:11,marginLeft:6,background:"#fef3c7",color:"#92400e",padding:"2px 8px",borderRadius:100}}>À PARTIR DE 1,99€</span>
             </button>
-          </div>
-
-          <div style={{display:"flex",gap:28,justifyContent:"center",flexWrap:"wrap",position:"relative"}}>
-            {[["25","Modèles IA"],["Gratuit","Importer & améliorer"],["1,99 €","Générer par IA"],["ATS","Compatible"]].map(([num,lbl])=>(
-              <div key={lbl} style={{textAlign:"center"}}>
-                <div style={{fontSize:20,fontWeight:800,color:"white"}}>{num}</div>
-                <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",marginTop:2}}>{lbl}</div>
-              </div>
-            ))}
           </div>
         </div>
 
         {/* ── MAIN ── */}
-        <div style={{width:"100%",maxWidth:1140,margin:"0 auto",padding:"36px 20px 80px"}}>
+        <div style={{maxWidth:1080,margin:"0 auto",padding:"36px 20px 80px"}}>
 
-          {/* ════════════════════════════════════════════
-              UPLOAD PATH — FREE (no steps needed, direct)
-              ════════════════════════════════════════════ */}
-          {tab2 === "upload" && step !== 4 && (
-            <div>
-              {/* Free banner */}
-              <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"14px 20px",display:"flex",alignItems:"center",gap:12,marginBottom:24,fontSize:13,color:"#065f46"}}>
-                <span style={{fontSize:20}}>🎁</span>
-                <div>
-                  <strong>Gratuit</strong> — Importez votre CV existant et notre IA l'améliore instantanément, sans paiement.
-                  <span style={{color:"#6b7280",marginLeft:8}}>Envie d'un CV créé de zéro ? <button onClick={()=>setTab2("ai")} style={{background:"none",border:"none",color:"#1a56db",cursor:"pointer",fontWeight:600,padding:0,fontSize:13}}>Essayez le générateur IA →</button></span>
+          {/* ─────── STEP 1 : CHOOSE TEMPLATE ─────── */}
+          {step===1 && (
+            <div className="au">
+              <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,overflow:"hidden",marginBottom:24,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+                <div style={{padding:"20px 24px",borderBottom:"1.5px solid #f0f0f0"}}>
+                  <h2 style={{fontSize:16,fontWeight:800}}>1. Choisissez votre modèle</h2>
+                  <p style={{fontSize:13,color:"#6b7280",marginTop:3}}>Cliquez sur "Aperçu" pour voir le rendu complet avec vos données.</p>
                 </div>
-              </div>
-
-              <div style={{background:"white",border:"1px solid #e5e7eb",borderRadius:10,boxShadow:"0 1px 3px rgba(0,0,0,.08)",overflow:"hidden",marginBottom:24}}>
-                <div style={{padding:"20px 24px",borderBottom:"1px solid #e5e7eb",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <div>
-                    <h3 style={{fontSize:15,fontWeight:700}}>↑ Importer et améliorer votre CV</h3>
-                    <p style={{fontSize:12,color:"#6b7280",marginTop:3}}>Téléchargez votre CV existant — notre IA le reformule et l'optimise.</p>
-                  </div>
-                  <span className="free-badge">✓ Gratuit</span>
-                </div>
-
-                <div style={{padding:28}}>
-                  {/* Drop zone */}
-                  <label style={{border:"2px dashed #d1d5db",borderRadius:10,padding:"36px 24px",textAlign:"center",cursor:"pointer",display:"block",background:"#f9fafb",position:"relative",transition:"border-color 0.2s"}}>
-                    <input type="file" accept=".pdf,.doc,.docx,.txt"
-                      onChange={e=>{if(e.target.files?.[0])handleFileUpload(e.target.files[0]);}}
-                      style={{position:"absolute",inset:0,opacity:0,cursor:"pointer"}}/>
-                    <div style={{fontSize:40,marginBottom:12,opacity:0.5}}>📄</div>
-                    <div style={{fontSize:15,fontWeight:700,marginBottom:6,color:"#111827"}}>Déposez votre CV ici</div>
-                    <p style={{fontSize:12,color:"#9ca3af"}}>PDF, DOC, DOCX ou TXT · 10 Mo max</p>
-                  </label>
-
-                  {uploadedFile && (
-                    <div style={{display:"flex",alignItems:"center",gap:12,padding:"14px 16px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:8,marginTop:14}}>
-                      <span style={{fontSize:22}}>✅</span>
-                      <div>
-                        <div style={{fontSize:13,fontWeight:600,color:"#065f46"}}>{uploadedFile}</div>
-                        <div style={{fontSize:11,color:"#6b7280",marginTop:2}}>Fichier prêt à être amélioré</div>
-                      </div>
-                      <button onClick={()=>{setUploadedFile(null);setUploadedContent("");setUploadedBase64(null);setUploadedMime(null);setUploadedFileObj(null);}}
-                        style={{marginLeft:"auto",background:"none",border:"none",color:"#9ca3af",cursor:"pointer",fontSize:18,lineHeight:1}}>×</button>
-                    </div>
-                  )}
-
-                  {uploadError && (
-                    <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:8,padding:"10px 14px",marginTop:12,fontSize:13,color:"#dc2626"}}>
-                      ⚠ {uploadError}
-                    </div>
-                  )}
-
-                  {/* Enhancement type */}
-                  <div style={{marginTop:24}}>
-                    <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:8}}>
-                      Type d'amélioration
-                    </label>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
-                      {[
-                        {value:"Optimisation ATS — Compatible logiciels de recrutement",        icon:"🤖", desc:"Mots-clés ATS, structure optimisée"},
-                        {value:"Reformulation Pro — Améliorer l'impact des formulations",        icon:"✍️", desc:"Verbes d'action, résultats chiffrés"},
-                        {value:"Reconversion — Adapter pour un autre secteur",                   icon:"🔄", desc:"Mise en valeur des compétences transférables"},
-                        {value:"Niveau Cadre — Élever vers un profil dirigeant",                 icon:"🎯", desc:"Ton stratégique, leadership"},
-                        {value:"Refonte complète — Réécriture totale, garder les faits",         icon:"🔥", desc:"Réécriture intégrale professionnelle"},
-                      ].map(opt=>(
-                        <label key={opt.value}
-                          style={{display:"flex",alignItems:"flex-start",gap:10,padding:"12px 14px",border:`2px solid ${enhanceType===opt.value?"#1a56db":"#e5e7eb"}`,borderRadius:8,cursor:"pointer",background:enhanceType===opt.value?"#f0f7ff":"white",transition:"all 0.15s"}}>
-                          <input type="radio" name="enhance" value={opt.value} checked={enhanceType===opt.value} onChange={()=>setEnhanceType(opt.value)} style={{marginTop:2,accentColor:"#1a56db"}}/>
-                          <div>
-                            <div style={{fontSize:13,fontWeight:600,color:enhanceType===opt.value?"#1a56db":"#111827"}}>{opt.icon} {opt.value.split("—")[0].trim()}</div>
-                            <div style={{fontSize:11,color:"#6b7280",marginTop:2}}>{opt.desc}</div>
+                <div style={{padding:"24px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:16}}>
+                  {TEMPLATES.map(t=>{
+                    const bs=BADGE_STYLES[t.badge];
+                    const sel=selectedTpl===t.id;
+                    return (
+                      <div key={t.id} className={`tpl-thumb${sel?" selected":""}`} onClick={()=>setSelectedTpl(t.id)}>
+                        {/* Thumbnail — scaled real CV */}
+                        <div style={{height:220,overflow:"hidden",position:"relative",background:"#f8fafc"}}>
+                          <div style={{position:"absolute",top:0,left:0,width:794,transformOrigin:"top left",transform:"scale(0.24)",pointerEvents:"none"}}>
+                            <RenderCV id={t.id} cv={SAMPLE}/>
                           </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* CTA */}
-                  <div style={{marginTop:28,display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
-                    <button onClick={handleFreeEnhance}
-                      style={{background:"#057a55",color:"white",border:"none",padding:"14px 32px",borderRadius:8,fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
-                      ✨ Améliorer mon CV gratuitement
-                    </button>
-                    <span style={{fontSize:12,color:"#6b7280"}}>🔒 Aucun paiement requis</span>
-                  </div>
+                          {/* Fade bottom */}
+                          <div style={{position:"absolute",bottom:0,left:0,right:0,height:60,background:"linear-gradient(to bottom,transparent,#f8fafc)",pointerEvents:"none"}}/>
+                          {/* Badges */}
+                          <div style={{position:"absolute",top:8,left:8,background:bs.bg,color:bs.color,fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:100,zIndex:2}}>
+                            {{gratuit:"Gratuit",pro:"Pro",nouveau:"Nouveau"}[t.badge]}
+                          </div>
+                          {sel && <div style={{position:"absolute",top:8,right:8,width:22,height:22,background:"#16a34a",borderRadius:"50%",color:"white",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,zIndex:2}}>✓</div>}
+                        </div>
+                        {/* Footer */}
+                        <div style={{padding:"10px 14px 12px",borderTop:"1.5px solid #f0f0f0",display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
+                          <div>
+                            <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{t.name}</div>
+                            <div style={{fontSize:10,color:"#6b7280",marginTop:1,lineHeight:1.4}}>{t.desc.split(".")[0]}</div>
+                          </div>
+                          <button onClick={e=>{e.stopPropagation();setPreviewTpl(t.id);}}
+                            style={{background:"#f3f4f6",border:"1.5px solid #e5e7eb",borderRadius:7,padding:"5px 10px",fontSize:11,fontWeight:600,color:"#374151",cursor:"pointer",flexShrink:0,fontFamily:"inherit",transition:"all .15s"}}
+                            onMouseEnter={e=>e.currentTarget.style.background="#e5e7eb"}
+                            onMouseLeave={e=>e.currentTarget.style.background="#f3f4f6"}>
+                            Aperçu
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-
-              {/* Upsell */}
-              <div style={{background:"#0f1d36",borderRadius:10,padding:"20px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16}}>
-                <div>
-                  <div style={{fontSize:14,fontWeight:700,color:"white",marginBottom:4}}>✦ Envie d'un CV créé de zéro par l'IA ?</div>
-                  <div style={{fontSize:12,color:"rgba(255,255,255,0.5)"}}>Choisissez parmi 25 modèles et notre IA rédige tout pour vous.</div>
-                </div>
-                <button onClick={()=>setTab2("ai")}
-                  style={{background:"#1a56db",color:"white",border:"none",padding:"10px 22px",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",flexShrink:0}}>
-                  Essayer le générateur IA →
+              <div style={{display:"flex",justifyContent:"flex-end"}}>
+                <button className="btn-green" onClick={()=>goStep(2)}>
+                  Continuer avec {TEMPLATES.find(t=>t.id===selectedTpl)?.name} →
                 </button>
               </div>
             </div>
           )}
 
-          {/* ════════════════════════════════════════════
-              AI PATH — PAID (step 1 → 2 → 3 → 4)
-              ════════════════════════════════════════════ */}
-          {tab2 === "ai" && step !== 4 && (
-            <div>
-              {/* Paid banner */}
-              <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:"14px 20px",display:"flex",alignItems:"center",gap:12,marginBottom:24,fontSize:13,color:"#92400e"}}>
-                <span style={{fontSize:20}}>✦</span>
+          {/* ─────── STEP 2 : UPLOAD or FORM ─────── */}
+          {step===2 && mode==="upload" && (
+            <div className="au">
+              <StepBack label="← Changer de modèle" onClick={()=>goStep(1)}/>
+              <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,.04)",marginBottom:24}}>
+                <div style={{padding:"20px 24px",borderBottom:"1.5px solid #f0f0f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <h2 style={{fontSize:16,fontWeight:800}}>2. Importez votre CV</h2>
+                    <p style={{fontSize:13,color:"#6b7280",marginTop:3}}>PDF, DOC ou TXT — l'IA l'améliore et le met en forme dans votre modèle.</p>
+                  </div>
+                  <span style={{background:"#f0fdf4",color:"#15803d",border:"1.5px solid #bbf7d0",padding:"4px 12px",borderRadius:100,fontSize:12,fontWeight:700}}>✓ Gratuit</span>
+                </div>
+                <div style={{padding:28}}>
+                  {/* Drop zone */}
+                  <label style={{display:"block",border:"2px dashed #d1d5db",borderRadius:12,padding:"40px 24px",textAlign:"center",cursor:"pointer",background:"#f9fafb",transition:"all .18s"}}
+                    onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor="#16a34a";e.currentTarget.style.background="#f0fdf4"}}
+                    onDragLeave={e=>{e.currentTarget.style.borderColor="#d1d5db";e.currentTarget.style.background="#f9fafb"}}
+                    onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)handleFile(f);e.currentTarget.style.borderColor="#d1d5db";e.currentTarget.style.background="#f9fafb"}}>
+                    <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={e=>{if(e.target.files?.[0])handleFile(e.target.files[0]);}} style={{display:"none"}}/>
+                    <div style={{fontSize:36,marginBottom:10}}>📄</div>
+                    <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>Glissez votre CV ici</div>
+                    <p style={{fontSize:12,color:"#9ca3af"}}>ou cliquez pour parcourir · PDF, DOC, DOCX, TXT</p>
+                  </label>
+                  {uploadedFile && (
+                    <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:10,marginTop:14}}>
+                      <span style={{fontSize:20}}>✅</span>
+                      <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:"#15803d"}}>{uploadedFile}</div><div style={{fontSize:11,color:"#6b7280"}}>Prêt à être amélioré</div></div>
+                      <button onClick={()=>{setUploadedFile(null);setUploadedContent("");setUploadedBase64(null);setUploadedMime(null);}} style={{background:"none",border:"none",color:"#9ca3af",cursor:"pointer",fontSize:18,fontFamily:"inherit"}}>×</button>
+                    </div>
+                  )}
+                  {uploadError && <div style={{background:"#fef2f2",border:"1.5px solid #fecaca",borderRadius:8,padding:"10px 14px",marginTop:12,fontSize:13,color:"#dc2626"}}>⚠ {uploadError}</div>}
+
+                  {/* Enhancement type */}
+                  <div style={{marginTop:24}}>
+                    <label className="field-label">Type d'amélioration</label>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:9}}>
+                      {[
+                        {v:"Optimisation ATS",icon:"🤖",d:"Mots-clés, structure ATS"},
+                        {v:"Reformulation Pro",icon:"✍️",d:"Verbes d'action, impact"},
+                        {v:"Reconversion",icon:"🔄",d:"Compétences transférables"},
+                        {v:"Niveau Cadre",icon:"🎯",d:"Ton stratégique, leadership"},
+                        {v:"Refonte complète",icon:"🔥",d:"Réécriture professionnelle"},
+                      ].map(opt=>(
+                        <label key={opt.v} style={{display:"flex",gap:10,padding:"11px 13px",border:`1.5px solid ${enhanceType===opt.v?"#16a34a":"#e5e7eb"}`,borderRadius:9,cursor:"pointer",background:enhanceType===opt.v?"#f0fdf4":"white",transition:"all .15s"}}>
+                          <input type="radio" name="enhance" value={opt.v} checked={enhanceType===opt.v} onChange={()=>setEnhanceType(opt.v)} style={{accentColor:"#16a34a",marginTop:1}}/>
+                          <div><div style={{fontSize:13,fontWeight:600,color:enhanceType===opt.v?"#15803d":"#0f172a"}}>{opt.icon} {opt.v}</div><div style={{fontSize:11,color:"#6b7280"}}>{opt.d}</div></div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+                <button className="btn-outline" onClick={()=>goStep(1)}>← Retour</button>
+                <button className="btn-green" disabled={!uploadedFile} onClick={()=>runGeneration("upload")}>
+                  ✨ Améliorer et appliquer le modèle →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step===2 && mode==="ai" && (
+            <div className="au">
+              <StepBack label="← Changer de modèle" onClick={()=>goStep(1)}/>
+              <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,.04)",marginBottom:24}}>
+                <div style={{padding:"20px 24px",borderBottom:"1.5px solid #f0f0f0"}}>
+                  <h2 style={{fontSize:16,fontWeight:800}}>2. Vos informations</h2>
+                  <p style={{fontSize:13,color:"#6b7280",marginTop:3}}>L'IA génère un CV complet à partir de ces données.</p>
+                </div>
+                <div style={{padding:28}}>
+                  <div className="grid2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
+                    {[{id:"name",l:"Prénom et Nom",ph:"Youssef Benali"},{id:"title",l:"Poste visé",ph:"Développeur Full Stack"},{id:"email",l:"Email",ph:"youssef@email.ma",type:"email"},{id:"phone",l:"Téléphone",ph:"+212 6 00 00 00 00"},{id:"location",l:"Ville",ph:"Casablanca"}].map(f=>(
+                      <div key={f.id}><label className="field-label">{f.l}</label>
+                        <input type={f.type||"text"} className="field-input" value={form[f.id as keyof typeof form]} onChange={e=>setForm(p=>({...p,[f.id]:e.target.value}))} placeholder={f.ph}/>
+                      </div>
+                    ))}
+                    <div><label className="field-label">Secteur</label>
+                      <select className="field-input" value={form.industry} onChange={e=>setForm(p=>({...p,industry:e.target.value}))}>
+                        <option value="">Sélectionnez...</option>
+                        {["Informatique","Finance","Commerce","Marketing","RH","Ingénierie","Santé","Logistique","Tourisme","Juridique","Autre"].map(o=><option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div><label className="field-label">Niveau</label>
+                      <select className="field-input" value={form.level} onChange={e=>setForm(p=>({...p,level:e.target.value}))}>
+                        <option value="">Sélectionnez...</option>
+                        {["Débutant (0–2 ans)","Intermédiaire (2–5 ans)","Confirmé (5–10 ans)","Manager","Directeur","C-Suite"].map(o=><option key={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    <div style={{gridColumn:"1 / -1"}}><label className="field-label">Expériences professionnelles</label>
+                      <textarea className="field-input" rows={4} value={form.experience} onChange={e=>setForm(p=>({...p,experience:e.target.value}))} placeholder={"Société A — Poste (2021–2024) : réalisations\nSociété B — Poste (2019–2021) : réalisations"} style={{resize:"vertical",lineHeight:1.6}}/>
+                    </div>
+                    <div style={{gridColumn:"1 / -1"}}><label className="field-label">Formation</label>
+                      <input type="text" className="field-input" value={form.education} onChange={e=>setForm(p=>({...p,education:e.target.value}))} placeholder="Master Génie Informatique, ENSA Rabat, 2020"/>
+                    </div>
+                    <div><label className="field-label">Compétences</label>
+                      <input type="text" className="field-input" value={form.skills} onChange={e=>setForm(p=>({...p,skills:e.target.value}))} placeholder="React, Node.js, Python..."/>
+                    </div>
+                    <div><label className="field-label">Langues</label>
+                      <input type="text" className="field-input" value={form.langs} onChange={e=>setForm(p=>({...p,langs:e.target.value}))} placeholder="Arabe (natif), Français, Anglais"/>
+                    </div>
+                    <div style={{gridColumn:"1 / -1"}}><label className="field-label">Infos complémentaires <span style={{fontWeight:400,color:"#9ca3af"}}>(optionnel)</span></label>
+                      <textarea className="field-input" rows={2} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder="Certifications, projets, bénévolat..." style={{resize:"vertical"}}/>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+                <button className="btn-outline" onClick={()=>goStep(1)}>← Retour</button>
+                <button className="btn-green" onClick={()=>goStep(3)}>Continuer vers le paiement →</button>
+              </div>
+            </div>
+          )}
+
+          {/* ─────── STEP 3 : PAYMENT ─────── */}
+          {step===3 && mode==="ai" && (
+            <div className="au">
+              <StepBack label="← Modifier mes informations" onClick={()=>goStep(2)}/>
+              <div style={{marginBottom:20}}>
+                <h2 style={{fontSize:18,fontWeight:800}}>3. Choisissez votre formule</h2>
+                <p style={{fontSize:13,color:"#6b7280",marginTop:4}}>Paiement sécurisé via Paddle · Visa, Mastercard, PayPal</p>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",gap:14,marginBottom:20}}>
+                {PLANS.map(plan=>{
+                  const featured=plan.name==="Professionnel";
+                  return (
+                    <div key={plan.name} className={`pay-card${featured?" featured":""}`} style={{position:"relative"}}>
+                      {featured && <div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",background:"#16a34a",color:"white",fontSize:11,fontWeight:700,padding:"4px 14px",borderRadius:100,whiteSpace:"nowrap"}}>⭐ Le plus populaire</div>}
+                      <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#6b7280",marginBottom:10}}>{plan.name}</div>
+                      <div style={{fontSize:38,fontWeight:800,color:"#0f172a",lineHeight:1,marginBottom:3}}>€{plan.price}</div>
+                      <div style={{fontSize:12,color:"#6b7280",marginBottom:18}}>Paiement unique</div>
+                      <div style={{height:1,background:"#e5e7eb",marginBottom:16}}/>
+                      <ul style={{listStyle:"none",marginBottom:20}}>
+                        {PLAN_FEATURES[plan.name].map(f=><li key={f} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,marginBottom:8,color:"#374151"}}><span style={{color:"#16a34a",fontWeight:700,fontSize:14}}>✓</span>{f}</li>)}
+                      </ul>
+                      <button className="btn-green" disabled={!paddleReady||payPending} onClick={()=>openPaddle(plan)} style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a"}}>
+                        {payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer €${plan.price} →`}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{background:"#f9fafb",border:"1.5px solid #e5e7eb",borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"center",gap:10,fontSize:13,color:"#6b7280"}}>
+                <span style={{fontSize:18}}>🔒</span> Paiement 100% sécurisé via <strong style={{color:"#0f172a"}}>Paddle</strong>. Vos données bancaires ne transitent jamais par nos serveurs.
+              </div>
+            </div>
+          )}
+
+          {/* ─────── STEP 4 : RESULT ─────── */}
+          {step===4 && cvData && (
+            <div className="au">
+              <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,padding:"18px 22px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:20,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
                 <div>
-                  <strong>Générateur IA</strong> — Notre IA rédige votre CV de A à Z à partir de vos informations. À partir de 1,99 €.
-                  <span style={{color:"#6b7280",marginLeft:8}}>Vous avez déjà un CV ? <button onClick={()=>setTab2("upload")} style={{background:"none",border:"none",color:"#057a55",cursor:"pointer",fontWeight:600,padding:0,fontSize:13}}>Importez-le gratuitement →</button></span>
+                  <div style={{fontSize:17,fontWeight:800,color:"#0f172a"}}>🎉 Votre CV est prêt !</div>
+                  <div style={{fontSize:13,color:"#6b7280",marginTop:2}}>Modèle : <strong>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong> · Changez de modèle ci-dessous sans régénérer.</div>
+                </div>
+                <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                  <button className="btn-outline" onClick={()=>{setCvData(null);goStep(1);}}>↺ Recommencer</button>
+                  <button className="btn-green" onClick={downloadPDF}>⬇ Télécharger PDF</button>
                 </div>
               </div>
 
-              {/* STEP BAR */}
-              <div style={{background:"white",border:"1px solid #e5e7eb",borderRadius:10,padding:"18px 24px",marginBottom:28,display:"flex",alignItems:"center",boxShadow:"0 1px 3px rgba(0,0,0,.08)",overflowX:"auto"}}>
-                {[1,2,3].map((n,idx)=>(
-                  <div key={n} style={{display:"flex",alignItems:"center",flex:idx<2?1:"none"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-                      <div style={{width:28,height:28,borderRadius:"50%",border:"2px solid",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0,transition:"all 0.3s",...stepCircleStyle(n)}}>
-                        {n<step?"✓":n}
-                      </div>
-                      <span style={{fontSize:13,fontWeight:600,color:stepLabelColor(n),whiteSpace:"nowrap"}}>
-                        {["Choisir un modèle","Vos informations","Paiement"][n-1]}
-                      </span>
-                    </div>
-                    {idx<2 && <div style={{height:2,flex:1,minWidth:20,background:n<step?"#057a55":"#e5e7eb",margin:"0 8px",transition:"background 0.3s"}}/>}
-                  </div>
+              {/* Template switcher */}
+              <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:12,padding:"14px 20px",marginBottom:20,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+                <span style={{fontSize:13,fontWeight:600,color:"#374151",flexShrink:0}}>Changer de modèle :</span>
+                {TEMPLATES.map(t=>(
+                  <button key={t.id} onClick={()=>setSelectedTpl(t.id)}
+                    style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${selectedTpl===t.id?"#16a34a":"#e5e7eb"}`,background:selectedTpl===t.id?"#f0fdf4":"white",color:selectedTpl===t.id?"#15803d":"#374151",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .15s",fontFamily:"inherit"}}>
+                    {t.name}
+                  </button>
                 ))}
               </div>
 
-              {/* STEP 1: TEMPLATES */}
-              {step===1 && (
-                <div>
-                  <div style={{background:"white",border:"1px solid #e5e7eb",borderRadius:10,boxShadow:"0 1px 3px rgba(0,0,0,.08)",overflow:"hidden",marginBottom:24}}>
-                    <div style={{padding:"20px 24px",borderBottom:"1px solid #e5e7eb",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-                      <div>
-                        <h3 style={{fontSize:15,fontWeight:700}}>📋 Choisissez votre modèle</h3>
-                        <p style={{fontSize:12,color:"#6b7280",marginTop:2}}>Cliquez sur un modèle pour voir l'aperçu complet.</p>
-                      </div>
-                      {selectedTpl && <span style={{fontSize:13,color:"#6b7280"}}>Sélectionné : <strong>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong></span>}
-                    </div>
-
-                    {/* Category filter */}
-                    <div style={{display:"flex",borderBottom:"1px solid #e5e7eb",background:"#f9fafb",padding:"0 24px",overflowX:"auto"}}>
-                      {CATEGORIES.map(c=>(
-                        <button key={c.key} onClick={()=>setCatFilter(c.key)}
-                          className={`tab-btn${catFilter===c.key?" tab-active":""}`}>
-                          {c.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Template grid */}
-                    <div style={{padding:"20px 24px 24px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>
-                      {filteredTpls.map((t,i)=>{
-                        const isLight = t.light;
-                        const txtColor = isLight ? "rgba(30,30,30,0.6)" : "rgba(255,255,255,0.6)";
-                        const bs  = BADGE_STYLES[t.badge];
-                        const sel = selectedTpl===t.id;
-                        return (
-                          <div key={t.id} className="tpl-card"
-                            style={{border:`2px solid ${sel?"#1a56db":"#e5e7eb"}`,borderRadius:12,overflow:"hidden",cursor:"pointer",
-                              background:"white",position:"relative",
-                              boxShadow:sel?"0 0 0 4px rgba(26,86,219,0.12), 0 4px 16px rgba(0,0,0,0.1)":"0 1px 4px rgba(0,0,0,0.06)",
-                              animationDelay:`${i*0.025}s`,transition:"all 0.2s"}}>
-
-                            {sel && (
-                              <div style={{position:"absolute",top:8,right:8,width:22,height:22,background:"#1a56db",
-                                borderRadius:"50%",color:"white",fontSize:11,display:"flex",alignItems:"center",
-                                justifyContent:"center",fontWeight:700,zIndex:3}}>✓</div>
-                            )}
-                            <span style={{position:"absolute",top:8,left:8,fontSize:10,fontWeight:700,padding:"3px 8px",
-                              borderRadius:100,background:bs.bg,color:bs.color,zIndex:3,letterSpacing:"0.04em"}}>
-                              {{gratuit:"Gratuit",pro:"Pro",nouveau:"Nouveau"}[t.badge]}
-                            </span>
-
-                            {/* CV PREVIEW THUMBNAIL — scaled real layout */}
-                            <div style={{height:220,overflow:"hidden",position:"relative",background:t.bg}}>
-                              {/* Outer clip container — card width ~200px, we render at 400px then scale 0.5 */}
-                              <div style={{position:"absolute",top:0,left:0,width:400,transformOrigin:"top left",transform:"scale(0.5)",pointerEvents:"none"}}>
-                                <div style={{background:t.bg,padding:"32px 32px 24px",fontFamily:"Inter,sans-serif",width:400}}>
-                                  {/* Name */}
-                                  <div style={{fontSize:18,fontWeight:800,color:isLight?"#0f172a":"#fff",letterSpacing:"-0.02em",marginBottom:3}}>{t.name} — CV</div>
-                                  <div style={{fontSize:11,fontWeight:600,color:t.acc,marginBottom:3}}>{t.role}</div>
-                                  <div style={{fontSize:10,color:isLight?"#6b7280":"rgba(255,255,255,0.5)",marginBottom:12}}>email@exemple.ma · +212 6 00 00 00 00 · Casablanca</div>
-                                  {/* Divider */}
-                                  <div style={{height:2,background:t.acc,opacity:0.6,marginBottom:12}}/>
-                                  {/* Profile section */}
-                                  <div style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:t.acc,marginBottom:5}}>PROFIL</div>
-                                  <div style={{fontSize:9,color:isLight?"#374151":"rgba(255,255,255,0.6)",lineHeight:1.6,marginBottom:12}}>
-                                    Professionnel expérimenté avec expertise en {t.role.split("·")[0].trim()}. Forte capacité d analyse et de leadership.
-                                  </div>
-                                  {/* Experience section */}
-                                  <div style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:t.acc,marginBottom:6}}>EXPÉRIENCES</div>
-                                  <div style={{marginBottom:8}}>
-                                    <div style={{fontSize:9,fontWeight:700,color:isLight?"#111827":"#fff",marginBottom:1}}>Poste Senior — Entreprise Maroc <span style={{fontWeight:400,color:isLight?"#6b7280":"rgba(255,255,255,0.45)"}}>2021–Présent</span></div>
-                                    <div style={{fontSize:9,color:isLight?"#4b5563":"rgba(255,255,255,0.55)",lineHeight:1.5}}>Direction de projets stratégiques. Résultats mesurables et impact fort.</div>
-                                  </div>
-                                  <div style={{marginBottom:12}}>
-                                    <div style={{fontSize:9,fontWeight:700,color:isLight?"#111827":"#fff",marginBottom:1}}>Consultant — Groupe International <span style={{fontWeight:400,color:isLight?"#6b7280":"rgba(255,255,255,0.45)"}}>2018–2021</span></div>
-                                    <div style={{fontSize:9,color:isLight?"#4b5563":"rgba(255,255,255,0.55)",lineHeight:1.5}}>Accompagnement clients grands comptes. Technologies innovantes.</div>
-                                  </div>
-                                  {/* Two-col: Skills + Education */}
-                                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-                                    <div>
-                                      <div style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:t.acc,marginBottom:5}}>COMPÉTENCES</div>
-                                      {["Expertise technique","Management","Communication","Analyse & Stratégie"].map(sk=>(
-                                        <div key={sk} style={{fontSize:8,color:isLight?"#374151":"rgba(255,255,255,0.55)",marginBottom:3,display:"flex",alignItems:"center",gap:4}}>
-                                          <div style={{width:4,height:4,borderRadius:"50%",background:t.acc,flexShrink:0}}/>{sk}
-                                        </div>
-                                      ))}
-                                    </div>
-                                    <div>
-                                      <div style={{fontSize:8,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:t.acc,marginBottom:5}}>FORMATION</div>
-                                      <div style={{fontSize:9,fontWeight:600,color:isLight?"#111827":"#fff",marginBottom:1}}>Master Ingénierie</div>
-                                      <div style={{fontSize:8,color:isLight?"#6b7280":"rgba(255,255,255,0.45)"}}>Université Maroc · 2018</div>
-                                      <div style={{marginTop:8,fontSize:8,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:t.acc,marginBottom:4}}>LANGUES</div>
-                                      <div style={{fontSize:8,color:isLight?"#374151":"rgba(255,255,255,0.55)",lineHeight:1.6}}>Arabe · Français · Anglais</div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                              {/* Bottom fade */}
-                              <div style={{position:"absolute",bottom:0,left:0,right:0,height:50,background:`linear-gradient(to bottom,transparent,${t.bg})`,pointerEvents:"none"}}/>
-                            </div>
-
-                            {/* Card footer */}
-                            <div style={{padding:"10px 14px 12px",borderTop:"1px solid #e5e7eb",display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
-                              <div>
-                                <div style={{fontSize:13,fontWeight:700,color:"#111827"}}>{t.name}</div>
-                                <div style={{fontSize:10,color:"#6b7280",marginTop:1}}>{t.role}</div>
-                              </div>
-                              <button
-                                onClick={(e)=>{e.stopPropagation();setPreviewTpl(t.id);}}
-                                style={{background:"#f3f4f6",border:"1px solid #e5e7eb",borderRadius:6,padding:"4px 9px",
-                                  fontSize:10,fontWeight:600,color:"#374151",cursor:"pointer",whiteSpace:"nowrap",
-                                  transition:"all 0.15s",flexShrink:0}}
-                                onMouseEnter={e=>(e.currentTarget.style.background="#e5e7eb")}
-                                onMouseLeave={e=>(e.currentTarget.style.background="#f3f4f6")}>
-                                Aperçu
-                              </button>
-                            </div>
-
-                            {/* Click whole card to select */}
-                            <div onClick={()=>setSelectedTpl(t.id)}
-                              style={{position:"absolute",inset:0,zIndex:1}}/>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div style={{display:"flex",justifyContent:"flex-end"}}>
-                    <button onClick={()=>goStep(2)} disabled={!selectedTpl}
-                      style={{background:selectedTpl?"#1a56db":"#d1d5db",color:"white",border:"none",padding:"14px 28px",
-                        borderRadius:8,fontSize:15,fontWeight:600,cursor:selectedTpl?"pointer":"not-allowed",transition:"background 0.2s"}}>
-                      Continuer →
-                    </button>
-                  </div>
+              {/* CV PREVIEW */}
+              <div id="cv-print" ref={printRef}
+                style={{background:"white",borderRadius:14,boxShadow:"0 4px 24px rgba(0,0,0,.08)",overflow:"hidden",marginBottom:24}}>
+                <div style={{width:794,margin:"0 auto"}}>
+                  <RenderCV id={selectedTpl} cv={cvData}/>
                 </div>
-              )}
-
-              {/* STEP 2: FORM */}
-              {step===2 && (
-                <div>
-                  <div style={{background:"white",border:"1px solid #e5e7eb",borderRadius:10,boxShadow:"0 1px 3px rgba(0,0,0,.08)",overflow:"hidden",marginBottom:24}}>
-                    <div style={{padding:"20px 24px",borderBottom:"1px solid #e5e7eb"}}>
-                      <h3 style={{fontSize:15,fontWeight:700}}>📝 Vos informations</h3>
-                      <p style={{fontSize:12,color:"#6b7280",marginTop:3}}>L'IA utilisera ces données pour rédiger votre CV.</p>
-                    </div>
-                    <div style={{padding:28}}>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
-                        {[
-                          {id:"name",  label:"Prénom et Nom",  ph:"Youssef Benali",               type:"text" },
-                          {id:"title", label:"Poste visé",     ph:"Développeur Full Stack Senior", type:"text" },
-                          {id:"email", label:"Email",          ph:"youssef@email.ma",             type:"email"},
-                          {id:"phone", label:"Téléphone",      ph:"+212 6 00 00 00 00",           type:"text" },
-                        ].map(f=>(
-                          <div key={f.id}>
-                            <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>{f.label}</label>
-                            <input type={f.type} value={form[f.id as keyof typeof form]} onChange={e=>setForm(p=>({...p,[f.id]:e.target.value}))}
-                              placeholder={f.ph} style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"10px 14px",width:"100%",background:"white",color:"#111827"}}/>
-                          </div>
-                        ))}
-                        <div>
-                          <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>Secteur d'activité</label>
-                          <select value={form.industry} onChange={e=>setForm(p=>({...p,industry:e.target.value}))}
-                            style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"10px 14px",width:"100%",background:"white",color:"#111827",cursor:"pointer"}}>
-                            <option value="">Sélectionnez...</option>
-                            {["Informatique & Technologie","Finance & Banque","Commerce & Vente","Marketing & Communication","Ressources Humaines","Ingénierie & Industrie","Santé & Médecine","Juridique & Compliance","Logistique & Supply Chain","Enseignement & Recherche","Hôtellerie & Tourisme","Autre"].map(o=><option key={o}>{o}</option>)}
-                          </select>
-                        </div>
-                        <div>
-                          <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>Niveau d'expérience</label>
-                          <select value={form.level} onChange={e=>setForm(p=>({...p,level:e.target.value}))}
-                            style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"10px 14px",width:"100%",background:"white",color:"#111827",cursor:"pointer"}}>
-                            <option value="">Sélectionnez...</option>
-                            {["Débutant (0–2 ans)","Intermédiaire (2–5 ans)","Confirmé (5–10 ans)","Manager / Chef d'équipe","Directeur / Responsable","Cadre dirigeant / C-Suite"].map(o=><option key={o}>{o}</option>)}
-                          </select>
-                        </div>
-                        <div style={{gridColumn:"1 / -1"}}>
-                          <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>Expériences professionnelles <span style={{color:"#6b7280",fontWeight:400}}>(résumé)</span></label>
-                          <textarea value={form.experience} onChange={e=>setForm(p=>({...p,experience:e.target.value}))} rows={5}
-                            placeholder={"Société A — Développeur (2021–2024) : App mobile 200K utilisateurs\nSociété B — Stagiaire (2020) : API REST, optimisation SQL"}
-                            style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"10px 14px",width:"100%",background:"white",color:"#111827",resize:"vertical",lineHeight:1.6}}/>
-                        </div>
-                        {[
-                          {id:"education",label:"Formation",                ph:"Licence Informatique, ENSIAS Rabat, 2020"},
-                          {id:"skills",   label:"Compétences & Technologies",ph:"React, Node.js, SQL, Python..."},
-                          {id:"langs",    label:"Langues parlées",           ph:"Arabe (natif), Français (courant), Anglais (intermédiaire)"},
-                        ].map(f=>(
-                          <div key={f.id} style={{gridColumn:"1 / -1"}}>
-                            <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>{f.label}</label>
-                            <input type="text" value={form[f.id as keyof typeof form]} onChange={e=>setForm(p=>({...p,[f.id]:e.target.value}))}
-                              placeholder={f.ph} style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"10px 14px",width:"100%",background:"white",color:"#111827"}}/>
-                          </div>
-                        ))}
-                        <div style={{gridColumn:"1 / -1"}}>
-                          <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>Informations complémentaires <span style={{color:"#6b7280",fontWeight:400}}>(optionnel)</span></label>
-                          <textarea value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} rows={3}
-                            placeholder="Certifications, bénévolat, projets personnels..."
-                            style={{border:"1px solid #e5e7eb",borderRadius:8,padding:"10px 14px",width:"100%",background:"white",color:"#111827",resize:"vertical",lineHeight:1.6}}/>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
-                    <button onClick={()=>goStep(1)} style={{background:"#f3f4f6",color:"#111827",border:"1px solid #e5e7eb",padding:"11px 22px",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer"}}>← Retour</button>
-                    <button onClick={()=>goStep(3)} style={{background:"#1a56db",color:"white",border:"none",padding:"14px 28px",borderRadius:8,fontSize:15,fontWeight:600,cursor:"pointer"}}>Continuer vers le paiement →</button>
-                  </div>
-                </div>
-              )}
-
-              {/* STEP 3: PRICING */}
-              {step===3 && (
-                <div>
-                  <div style={{marginBottom:20}}>
-                    <h2 style={{fontSize:20,fontWeight:700}}>Choisissez votre formule</h2>
-                    <p style={{color:"#6b7280",fontSize:13,marginTop:4}}>Paiement sécurisé via Paddle · Visa, Mastercard, PayPal acceptés</p>
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:16,marginBottom:24}}>
-                    {PLANS.map(plan=>{
-                      const featured = plan.name==="Professionnel";
-                      return (
-                        <div key={plan.name} style={{background:featured?"#f8faff":"white",border:`2px solid ${featured?"#1a56db":"#e5e7eb"}`,borderRadius:10,padding:"28px 24px",position:"relative"}}>
-                          {featured && (
-                            <div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",background:"#1a56db",color:"white",fontSize:11,fontWeight:700,padding:"4px 14px",borderRadius:100,whiteSpace:"nowrap"}}>
-                              ⭐ Le plus populaire
-                            </div>
-                          )}
-                          <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#6b7280",marginBottom:12}}>{plan.name}</div>
-                          <div style={{fontSize:42,fontWeight:800,color:"#111827",lineHeight:1,marginBottom:4}}>
-                            <sup style={{fontSize:20,fontWeight:700,verticalAlign:"super"}}>€</sup>
-                            {plan.price.split(".")[0]}<span style={{fontSize:22}}>.{plan.price.split(".")[1]}</span>
-                          </div>
-                          <div style={{fontSize:12,color:"#6b7280",marginBottom:20}}>Paiement unique</div>
-                          <div style={{height:1,background:"#e5e7eb",margin:"20px 0"}}/>
-                          <ul className="pricing-feat" style={{marginBottom:24}}>
-                            {PLAN_FEATURES[plan.name].map(f=><li key={f}>{f}</li>)}
-                          </ul>
-                          <button className="pay-btn" onClick={()=>openPaddleCheckout(plan)} disabled={!paddleReady||payPending}
-                            style={{width:"100%",background:featured?"#1a56db":"transparent",color:featured?"white":"#1a56db",border:"1px solid #1a56db",padding:"12px 22px",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer"}}>
-                            {!paddleReady?"Chargement...":payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer ${plan.price} € →`}
-                          </button>
-                          <div style={{textAlign:"center",marginTop:10,fontSize:11,color:"#9ca3af"}}>🔒 Visa · Mastercard · PayPal</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div style={{background:"white",border:"1px solid #e5e7eb",borderRadius:10,padding:"16px 20px",display:"flex",alignItems:"center",gap:12,marginBottom:24,fontSize:13,color:"#6b7280"}}>
-                    <span style={{fontSize:20}}>🔒</span>
-                    <span>Paiement 100% sécurisé via <strong style={{color:"#111827"}}>Paddle</strong> — gestion complète de la facturation et des taxes. Vos données bancaires ne transitent jamais par nos serveurs.</span>
-                  </div>
-                  <button onClick={()=>goStep(2)} style={{background:"#f3f4f6",color:"#111827",border:"1px solid #e5e7eb",padding:"11px 22px",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer"}}>← Retour</button>
-                </div>
-              )}
+              </div>
             </div>
           )}
 
-          {/* ── STEP 4 : RESULT (shared by both paths) ── */}
-          {step===4 && (
-            <div ref={resultRef}>
-              {/* Mode badge */}
-              <div style={{marginBottom:16}}>
-                {genMode==="upload"
-                  ? <span className="free-badge">✓ CV amélioré gratuitement</span>
-                  : <span className="paid-badge">✦ CV généré par l'IA</span>}
-              </div>
-              <div style={{background:"white",border:"1px solid #e5e7eb",borderRadius:10,padding:"20px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:20,boxShadow:"0 1px 3px rgba(0,0,0,.08)"}}>
-                <div>
-                  <div style={{fontSize:18,fontWeight:800}}>🎉 Votre CV est prêt !</div>
-                  <div style={{fontSize:13,color:"#6b7280"}}>Consultez, téléchargez ou régénérez votre CV ci-dessous.</div>
-                </div>
-                <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                  <button onClick={()=>{setCvHtml(null);genMode==="upload"?generateUploadCV():generateAICV();}}
-                    style={{background:"#f3f4f6",color:"#111827",border:"1px solid #e5e7eb",padding:"11px 22px",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer"}}>↺ Régénérer</button>
-                  <button onClick={downloadCV}
-                    style={{background:"#057a55",color:"white",border:"none",padding:"11px 22px",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer"}}>⬇ Télécharger</button>
-                </div>
-              </div>
-              <div id="cvPreview" style={{background:"white",border:"1px solid #e5e7eb",borderRadius:10,padding:"52px 60px",boxShadow:"0 4px 16px rgba(0,0,0,.08)",fontFamily:"Georgia,'Times New Roman',serif",color:"#1a1a1a",minHeight:400,lineHeight:1.65}}>
-                {cvHtml===null
-                  ? <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:300,gap:14,color:"#6b7280",fontSize:13}}>
-                      <div className="spinner"/>Génération en cours…
+          {/* ─────── GENERATING OVERLAY ─────── */}
+          {generating && (
+            <div className="modal-bg">
+              <div className="modal-box" style={{maxWidth:400,padding:"40px 32px",textAlign:"center"}}>
+                <div className="spinner" style={{margin:"0 auto 20px"}}/>
+                <div style={{fontSize:17,fontWeight:800,marginBottom:6}}>Génération en cours…</div>
+                <div style={{fontSize:13,color:"#6b7280",marginBottom:24}}>L'IA prépare votre CV dans le modèle sélectionné.</div>
+                <div style={{textAlign:"left"}}>
+                  {GEN_STEPS.map((label,i)=>(
+                    <div key={i} className="gen-step" style={{color:genStep>i?"#16a34a":genStep===i?"#0f172a":"#d1d5db"}}>
+                      <div style={{width:20,height:20,borderRadius:"50%",flexShrink:0,background:genStep>i?"#16a34a":genStep===i?"#0f172a":"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:genStep>=i?"white":"#9ca3af",fontWeight:700}}>
+                        {genStep>i?"✓":(i+1)}
+                      </div>
+                      {label}
                     </div>
-                  : <div dangerouslySetInnerHTML={{__html:cvHtml}}/>}
-              </div>
-
-              {/* If upload path — upsell AI after */}
-              {genMode==="upload" && (
-                <div style={{background:"#0f1d36",borderRadius:10,padding:"20px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:16,marginTop:20}}>
-                  <div>
-                    <div style={{fontSize:14,fontWeight:700,color:"white",marginBottom:4}}>✦ Vous voulez un CV créé de zéro par l'IA ?</div>
-                    <div style={{fontSize:12,color:"rgba(255,255,255,0.5)"}}>25 modèles professionnels, rédaction complète par IA. À partir de 1,99 €.</div>
-                  </div>
-                  <button onClick={()=>{setTab2("ai");setStep(1);window.scrollTo({top:0,behavior:"smooth"});}}
-                    style={{background:"#1a56db",color:"white",border:"none",padding:"10px 22px",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",flexShrink:0}}>
-                    Essayer le générateur IA →
-                  </button>
+                  ))}
                 </div>
-              )}
+                {genError && <div style={{marginTop:20,padding:"12px",background:"#fef2f2",borderRadius:8,fontSize:13,color:"#dc2626",textAlign:"left"}}>{genError}</div>}
+              </div>
             </div>
           )}
+
+          {/* ─────── TEMPLATE PREVIEW MODAL ─────── */}
+          {previewTpl!==null && (()=>{
+            const t=TEMPLATES.find(tpl=>tpl.id===previewTpl)!;
+            const bs=BADGE_STYLES[t.badge];
+            return (
+              <div className="modal-bg" onClick={()=>setPreviewTpl(null)}>
+                <div className="modal-box" onClick={e=>e.stopPropagation()}>
+                  {/* Modal header */}
+                  <div style={{background:"#0f172a",padding:"16px 24px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{background:bs.bg,color:bs.color,fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:100}}>{{gratuit:"Gratuit",pro:"Pro",nouveau:"Nouveau"}[t.badge]}</span>
+                      <span style={{color:"white",fontWeight:700,fontSize:15}}>{t.name}</span>
+                      <span style={{color:"rgba(255,255,255,.45)",fontSize:12}}>— {t.desc}</span>
+                    </div>
+                    <button onClick={()=>setPreviewTpl(null)} style={{background:"rgba(255,255,255,.08)",border:"none",color:"rgba(255,255,255,.7)",fontSize:20,width:32,height:32,borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit"}}>×</button>
+                  </div>
+                  {/* Scrollable CV preview */}
+                  <div style={{overflowY:"auto",maxHeight:"70vh",background:"#f8fafc",padding:"20px"}}>
+                    <div style={{width:794,margin:"0 auto",boxShadow:"0 4px 24px rgba(0,0,0,.1)",borderRadius:4,overflow:"hidden"}}>
+                      <RenderCV id={t.id} cv={SAMPLE}/>
+                    </div>
+                  </div>
+                  {/* Footer */}
+                  <div style={{background:"white",borderTop:"1.5px solid #f0f0f0",padding:"16px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+                    <div style={{fontSize:13,color:"#6b7280"}}>Aperçu avec données fictives · Votre contenu sera différent</div>
+                    <div style={{display:"flex",gap:10}}>
+                      <button className="btn-outline" onClick={()=>setPreviewTpl(null)}>Fermer</button>
+                      <button className="btn-green" onClick={()=>{setSelectedTpl(t.id);setPreviewTpl(null);}}>
+                        {selectedTpl===t.id?"✓ Sélectionné":"Choisir ce modèle →"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
         </div>{/* /main */}
 
         {/* ── FOOTER ── */}
-        <footer style={{background:"#0f1d36",color:"rgba(255,255,255,0.45)",textAlign:"center",padding:24,fontSize:13,marginTop:60,width:"100%"}}>
-          © 2026 Talent Maroc — Propulsé par n8n &amp; Supabase &nbsp;·&nbsp;
-          <a href="#" style={{color:"rgba(255,255,255,0.55)",textDecoration:"none"}}>Politique de confidentialité</a> &nbsp;·&nbsp;
-          <a href="#" style={{color:"rgba(255,255,255,0.55)",textDecoration:"none"}}>Remboursement</a> &nbsp;·&nbsp;
-          <a href="#" style={{color:"rgba(255,255,255,0.55)",textDecoration:"none"}}>Contact</a>
+        <footer style={{background:"#0f172a",padding:"24px",textAlign:"center"}}>
+          <span style={{fontSize:12,color:"rgba(255,255,255,.25)"}}>© 2026 Talent Maroc</span>
         </footer>
       </div>
-
-      {/* ── TEMPLATE PREVIEW MODAL ── */}
-      {previewTpl !== null && (() => {
-        const t = TEMPLATES.find(tpl => tpl.id === previewTpl)!;
-        const isLight = t.light;
-        const headColor = isLight ? "#0f172a" : "#ffffff";
-        const subColor  = isLight ? "#374151" : "rgba(255,255,255,0.75)";
-        const bodyColor = isLight ? "#4b5563" : "rgba(255,255,255,0.6)";
-        const bs = BADGE_STYLES[t.badge];
-        return (
-          <div className="overlay-backdrop" onClick={()=>setPreviewTpl(null)} style={{alignItems:"flex-start",paddingTop:40,paddingBottom:40,overflowY:"auto"}}>
-            <div className="modal-anim" onClick={e=>e.stopPropagation()}
-              style={{background:"white",borderRadius:16,width:"100%",maxWidth:720,
-                boxShadow:"0 32px 80px rgba(0,0,0,0.35)",overflow:"hidden",position:"relative"}}>
-
-              {/* Modal header */}
-              <div style={{background:"#0f1d36",padding:"16px 24px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{background:bs.bg,color:bs.color,fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:100,letterSpacing:"0.04em"}}>
-                    {{gratuit:"Gratuit",pro:"Pro",nouveau:"Nouveau"}[t.badge]}
-                  </span>
-                  <span style={{color:"white",fontWeight:700,fontSize:15}}>{t.name}</span>
-                  <span style={{color:"rgba(255,255,255,0.4)",fontSize:13}}>— {t.role}</span>
-                </div>
-                <button onClick={()=>setPreviewTpl(null)}
-                  style={{background:"rgba(255,255,255,0.08)",border:"none",color:"rgba(255,255,255,0.7)",
-                    fontSize:18,width:32,height:32,borderRadius:8,cursor:"pointer",
-                    display:"flex",alignItems:"center",justifyContent:"center"}}>x</button>
-              </div>
-
-              {/* Full CV preview */}
-              <div style={{background:t.bg,padding:"48px 52px",fontFamily:"Georgia,serif",minHeight:540}}>
-                <div style={{marginBottom:20}}>
-                  <div style={{fontSize:26,fontWeight:800,color:headColor,letterSpacing:"-0.02em",lineHeight:1.1,marginBottom:4,fontFamily:"Inter,sans-serif"}}>
-                    Youssef Benali
-                  </div>
-                  <div style={{fontSize:14,fontWeight:600,color:t.acc,marginBottom:6,fontFamily:"Inter,sans-serif"}}>
-                    Développeur Full Stack Senior
-                  </div>
-                  <div style={{fontSize:12,color:subColor,display:"flex",gap:16,flexWrap:"wrap",fontFamily:"Inter,sans-serif"}}>
-                    <span>youssef@email.ma</span><span>+212 6 00 00 00 00</span><span>Casablanca, Maroc</span>
-                  </div>
-                </div>
-                <div style={{height:2,background:t.acc,opacity:0.7,marginBottom:20}}/>
-                <div style={{marginBottom:18}}>
-                  <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:t.acc,marginBottom:8,fontFamily:"Inter,sans-serif"}}>Profil Professionnel</div>
-                  <div style={{fontSize:13,color:bodyColor,lineHeight:1.7}}>
-                    Ingénieur Full Stack avec 5 ans d expérience dans le développement d applications web performantes.
-                    Expert React et Node.js, passionné par l optimisation des systèmes et la qualité du code.
-                  </div>
-                </div>
-                <div style={{marginBottom:18}}>
-                  <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:t.acc,marginBottom:10,fontFamily:"Inter,sans-serif"}}>Expériences Professionnelles</div>
-                  {[
-                    {title:"Lead Developer",company:"Capgemini Maroc",period:"2021 – Présent",desc:"Pilotage d une équipe de 6 développeurs. Architecture microservices, CI/CD, React, Node.js."},
-                    {title:"Développeur Full Stack",company:"OCP Digital",period:"2019 – 2021",desc:"Développement de portails internes. PostgreSQL, GraphQL, TypeScript."},
-                  ].map(exp=>(
-                    <div key={exp.title} style={{marginBottom:12}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:2}}>
-                        <div style={{fontSize:13,fontWeight:700,color:headColor,fontFamily:"Inter,sans-serif"}}>{exp.title} — <span style={{color:t.acc}}>{exp.company}</span></div>
-                        <div style={{fontSize:11,color:subColor,flexShrink:0,marginLeft:8,fontFamily:"Inter,sans-serif"}}>{exp.period}</div>
-                      </div>
-                      <div style={{fontSize:12,color:bodyColor,lineHeight:1.6}}>{exp.desc}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24}}>
-                  <div>
-                    <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:t.acc,marginBottom:8,fontFamily:"Inter,sans-serif"}}>Compétences</div>
-                    {["React · Next.js · TypeScript","Node.js · Python · SQL","AWS · Docker · CI/CD","Agile · Scrum · Git"].map(sk=>(
-                      <div key={sk} style={{fontSize:12,color:bodyColor,marginBottom:5,display:"flex",alignItems:"center",gap:6}}>
-                        <div style={{width:5,height:5,borderRadius:"50%",background:t.acc,flexShrink:0}}/>{sk}
-                      </div>
-                    ))}
-                  </div>
-                  <div>
-                    <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:t.acc,marginBottom:8,fontFamily:"Inter,sans-serif"}}>Formation</div>
-                    <div style={{fontSize:12,fontWeight:600,color:headColor,marginBottom:2,fontFamily:"Inter,sans-serif"}}>Master Génie Informatique</div>
-                    <div style={{fontSize:11,color:subColor,fontFamily:"Inter,sans-serif"}}>ENSA Rabat · 2019</div>
-                    <div style={{marginTop:10,fontSize:12,fontWeight:600,color:headColor,marginBottom:3,fontFamily:"Inter,sans-serif"}}>Langues</div>
-                    <div style={{fontSize:11,color:bodyColor,lineHeight:1.7,fontFamily:"Inter,sans-serif"}}>Arabe (natif) · Français · Anglais</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div style={{background:"white",borderTop:"1px solid #e5e7eb",padding:"16px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
-                <div style={{fontSize:13,color:"#6b7280"}}>
-                  {selectedTpl===t.id
-                    ? <span style={{color:"#057a55",fontWeight:600}}>checkmark Modèle sélectionné</span>
-                    : "Aperçu avec données fictives"}
-                </div>
-                <div style={{display:"flex",gap:10}}>
-                  <button onClick={()=>setPreviewTpl(null)}
-                    style={{background:"#f3f4f6",color:"#374151",border:"1px solid #e5e7eb",padding:"9px 18px",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>
-                    Fermer
-                  </button>
-                  <button onClick={()=>{setSelectedTpl(t.id);setPreviewTpl(null);}}
-                    style={{background:selectedTpl===t.id?"#057a55":"#1a56db",color:"white",border:"none",
-                      padding:"9px 20px",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>
-                    {selectedTpl===t.id ? "Selectionne" : "Choisir ce modele"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ── GENERATING MODAL ── */}
-      {showGenModal && (
-        <div className="overlay-backdrop">
-          <div className="modal-anim" style={{background:"white",borderRadius:14,maxWidth:420,width:"100%",padding:"40px 32px",textAlign:"center",boxShadow:"0 24px 80px rgba(0,0,0,0.2)"}}>
-            <div className="spinner" style={{margin:"0 auto 20px"}}/>
-            <div style={{fontSize:17,fontWeight:700,marginBottom:6}}>
-              {genMode==="upload"?"Amélioration de votre CV en cours…":"Création de votre CV en cours…"}
-            </div>
-            <div style={{fontSize:13,color:"#6b7280",marginBottom:24}}>Notre IA optimise chaque section pour vous.</div>
-            <div style={{maxWidth:280,margin:"0 auto",textAlign:"left",display:"flex",flexDirection:"column",gap:10}}>
-              {GEN_STEP_LABELS.map((label,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"center",gap:10,fontSize:13,fontWeight:genSteps[i]==="active"?600:400,
-                  color:genSteps[i]==="done"?"#057a55":genSteps[i]==="active"?"#1a56db":"#d1d5db"}}>
-                  <div style={{width:8,height:8,borderRadius:"50%",flexShrink:0,
-                    backgroundColor:genSteps[i]==="done"?"#057a55":genSteps[i]==="active"?"#1a56db":"#d1d5db"}}/>
-                  {label}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </>
+  );
+}
+
+// ── HELPER ─────────────────────────────────────────────────────────────────
+function StepBack({ label, onClick }: { label:string; onClick:()=>void }) {
+  return (
+    <button onClick={onClick} style={{display:"inline-flex",alignItems:"center",gap:6,color:"#6b7280",background:"none",border:"none",cursor:"pointer",fontSize:13,fontWeight:600,marginBottom:16,fontFamily:"inherit",padding:0}}>
+      {label}
+    </button>
   );
 }
