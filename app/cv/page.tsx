@@ -28,7 +28,7 @@ interface CVData {
 interface Template {
   id:    number;
   name:  string;
-  cat:   "classic"|"modern"|"minimal"|"executive"|"creative";
+  cat:   "classic"|"modern"|"minimal"|"executive"|"creative"|"twocol"|"timeline"|"rightsidebar";
   desc:  string;
   badge: "gratuit"|"pro"|"nouveau";
 }
@@ -66,11 +66,15 @@ const SAMPLE: CVData = {
 
 // ── TEMPLATES REGISTRY ─────────────────────────────────────────────────────
 const TEMPLATES: Template[] = [
-  { id:1, name:"Classique",  cat:"classic",   desc:"Sobre et intemporel. Idéal pour finance, juridique, institutions.", badge:"gratuit" },
-  { id:2, name:"Moderne",    cat:"modern",    desc:"Sidebar colorée, typographie soignée. Tech, marketing, startups.",  badge:"gratuit" },
-  { id:3, name:"Minimaliste",cat:"minimal",   desc:"Ultra-épuré, beaucoup d'espace. Design, consulting, créatif.",      badge:"nouveau" },
-  { id:4, name:"Exécutif",   cat:"executive", desc:"Prestige et autorité. Cadres dirigeants, direction générale.",      badge:"pro"     },
-  { id:5, name:"Créatif",    cat:"creative",  desc:"Accrocheur et original. Design, UX, communication, médias.",        badge:"nouveau" },
+  { id:1, name:"Classique",   cat:"classic",   desc:"Sobre et intemporel. Idéal pour finance, juridique, institutions.", badge:"gratuit" },
+  { id:2, name:"Moderne",     cat:"modern",    desc:"Sidebar colorée, typographie soignée. Tech, marketing, startups.",  badge:"gratuit" },
+  { id:3, name:"Minimaliste", cat:"minimal",   desc:"Ultra-épuré, beaucoup d'espace. Design, consulting, créatif.",      badge:"nouveau" },
+  { id:4, name:"Exécutif",    cat:"executive", desc:"Prestige et autorité. Cadres dirigeants, direction générale.",      badge:"pro"     },
+  { id:5, name:"Créatif",     cat:"creative",  desc:"Accrocheur et original. Design, UX, communication, médias.",        badge:"nouveau" },
+  { id:6, name:"Azurill",     cat:"classic",   desc:"Colonne unique élégante. ATS-friendly, sobre et efficace.",         badge:"nouveau" },
+  { id:7, name:"Bronzor",     cat:"modern",    desc:"Sidebar droite, mise en valeur des compétences. Tech & data.",      badge:"nouveau" },
+  { id:8, name:"Ditto",       cat:"minimal",   desc:"Deux colonnes équilibrées, lecture rapide. Tous secteurs.",         badge:"gratuit" },
+  { id:9, name:"Leafish",     cat:"creative",  desc:"Timeline visuelle, accent vert nature. Impact immédiat.",           badge:"nouveau" },
 ];
 
 const BADGE_STYLES: Record<string,{bg:string;color:string}> = {
@@ -390,6 +394,388 @@ function TplCreatif({ cv, scale=1 }: { cv: CVData; scale?: number }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ── NEW TEMPLATES (Reactive Resume inspired layouts) ──────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── 6. AZURILL — clean single column, ATS-friendly ────────────────────────
+function TplAzurill({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+  return (
+    <div style={{ width:794, background:"white", fontFamily:"'Calibri','Segoe UI',sans-serif", padding:"48px 56px", transform:`scale(${scale})`, transformOrigin:"top left", color:"#1e293b" }}>
+      {/* Header — centered, teal accent */}
+      <div style={{ textAlign:"center", marginBottom:24 }}>
+        <div style={{ fontSize:30, fontWeight:800, color:"#0f172a", letterSpacing:"-0.02em", marginBottom:4 }}>{cv.name}</div>
+        <div style={{ fontSize:14, color:"#0d9488", fontWeight:600, marginBottom:10 }}>{cv.title}</div>
+        <div style={{ display:"flex", justifyContent:"center", gap:20, fontSize:11, color:"#64748b", flexWrap:"wrap" }}>
+          <span>✉ {cv.email}</span>
+          <span>📞 {cv.phone}</span>
+          <span>📍 {cv.location}</span>
+        </div>
+      </div>
+
+      {/* Teal rule */}
+      <div style={{ height:3, background:"linear-gradient(90deg,#0d9488,#14b8a6,#0d9488)", borderRadius:2, marginBottom:22 }}/>
+
+      {/* Profile */}
+      <ASection title="Résumé" accent="#0d9488">
+        <p style={{ fontSize:12, lineHeight:1.85, color:"#334155" }}>{cv.profile}</p>
+      </ASection>
+
+      {/* Experience */}
+      <ASection title="Expérience Professionnelle" accent="#0d9488">
+        {cv.experiences.map((e,i)=>(
+          <div key={i} style={{ marginBottom:16 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:3 }}>
+              <div>
+                <span style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</span>
+                <span style={{ fontSize:12, color:"#0d9488", fontWeight:600 }}> · {e.company}</span>
+              </div>
+              <span style={{ fontSize:11, color:"#94a3b8", flexShrink:0, marginLeft:12, background:"#f1f5f9", padding:"2px 8px", borderRadius:100 }}>{e.period}</span>
+            </div>
+            <ul style={{ paddingLeft:16, margin:0 }}>
+              {e.bullets.map((b,j)=><li key={j} style={{ fontSize:12, lineHeight:1.75, color:"#334155", marginBottom:2 }}>{b}</li>)}
+            </ul>
+          </div>
+        ))}
+      </ASection>
+
+      {/* Education */}
+      <ASection title="Formation" accent="#0d9488">
+        {cv.education.map((e,i)=>(
+          <div key={i} style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+            <div>
+              <div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div>
+              <div style={{ fontSize:11, color:"#64748b" }}>{e.school}</div>
+            </div>
+            <div style={{ fontSize:11, color:"#94a3b8", flexShrink:0 }}>{e.year}</div>
+          </div>
+        ))}
+      </ASection>
+
+      {/* Bottom row: skills + languages */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:28 }}>
+        <ASection title="Compétences" accent="#0d9488">
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+            {cv.skills.map((s,i)=>(
+              <span key={i} style={{ fontSize:10, background:"#f0fdfa", color:"#0d9488", border:"1px solid #99f6e4", padding:"3px 10px", borderRadius:100, fontWeight:600 }}>{s}</span>
+            ))}
+          </div>
+        </ASection>
+        <ASection title="Langues" accent="#0d9488">
+          {cv.languages.map((l,i)=>(
+            <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:6, alignItems:"center" }}>
+              <span style={{ fontWeight:600, color:"#0f172a" }}>{l.lang}</span>
+              <span style={{ fontSize:10, color:"#0d9488", background:"#f0fdfa", padding:"2px 8px", borderRadius:100, border:"1px solid #99f6e4" }}>{l.level}</span>
+            </div>
+          ))}
+          {cv.certifications?.map((c,i)=>(
+            <div key={i} style={{ fontSize:11, color:"#334155", marginBottom:4 }}>🏅 {c}</div>
+          ))}
+        </ASection>
+      </div>
+    </div>
+  );
+}
+
+// ── 7. BRONZOR — right sidebar layout ─────────────────────────────────────
+function TplBronzor({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+  return (
+    <div style={{ width:794, background:"white", fontFamily:"'Inter',sans-serif", display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600 }}>
+      {/* Main content — left */}
+      <div style={{ flex:1, padding:"40px 36px 40px 44px", borderRight:"1px solid #e2e8f0" }}>
+        {/* Name block */}
+        <div style={{ marginBottom:24, paddingBottom:20, borderBottom:"2px solid #f1f5f9" }}>
+          <div style={{ fontSize:28, fontWeight:800, color:"#0f172a", letterSpacing:"-0.02em", marginBottom:4 }}>{cv.name}</div>
+          <div style={{ fontSize:14, color:"#6366f1", fontWeight:600 }}>{cv.title}</div>
+        </div>
+
+        {/* Profile */}
+        <BSection title="Profil" accent="#6366f1">
+          <p style={{ fontSize:12, lineHeight:1.85, color:"#475569" }}>{cv.profile}</p>
+        </BSection>
+
+        {/* Experience */}
+        <BSection title="Expériences" accent="#6366f1">
+          {cv.experiences.map((e,i)=>(
+            <div key={i} style={{ marginBottom:18, paddingLeft:12, borderLeft:"3px solid #e0e7ff" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</div>
+                <div style={{ fontSize:10, color:"#6366f1", background:"#eef2ff", padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8, fontWeight:600 }}>{e.period}</div>
+              </div>
+              <div style={{ fontSize:11, color:"#6366f1", fontWeight:600, marginBottom:5 }}>{e.company}</div>
+              {e.bullets.map((b,j)=><div key={j} style={{ fontSize:11, color:"#475569", lineHeight:1.7, marginBottom:3, paddingLeft:8 }}>· {b}</div>)}
+            </div>
+          ))}
+        </BSection>
+
+        {/* Education */}
+        <BSection title="Formation" accent="#6366f1">
+          {cv.education.map((e,i)=>(
+            <div key={i} style={{ marginBottom:10 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div>
+              <div style={{ fontSize:11, color:"#64748b" }}>{e.school} · {e.year}</div>
+            </div>
+          ))}
+        </BSection>
+      </div>
+
+      {/* Right sidebar */}
+      <div style={{ width:200, background:"#f8fafc", padding:"40px 20px", flexShrink:0 }}>
+        {/* Contact */}
+        <div style={{ marginBottom:24 }}>
+          <div style={{ fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.14em", color:"#6366f1", marginBottom:12 }}>Contact</div>
+          {[cv.email, cv.phone, cv.location].map((v,i)=>(
+            <div key={i} style={{ fontSize:10, color:"#475569", marginBottom:6, lineHeight:1.5, wordBreak:"break-all" }}>{v}</div>
+          ))}
+        </div>
+
+        {/* Skills */}
+        <div style={{ marginBottom:24 }}>
+          <div style={{ fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.14em", color:"#6366f1", marginBottom:12 }}>Compétences</div>
+          {cv.skills.map((s,i)=>(
+            <div key={i} style={{ marginBottom:7 }}>
+              <div style={{ fontSize:10, color:"#334155", marginBottom:3, fontWeight:500 }}>{s}</div>
+              <div style={{ height:3, background:"#e2e8f0", borderRadius:2 }}>
+                <div style={{ height:3, background:"#6366f1", borderRadius:2, width:`${70+((i*11)%30)}%`, transition:"width .6s" }}/>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Languages */}
+        <div style={{ marginBottom:24 }}>
+          <div style={{ fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.14em", color:"#6366f1", marginBottom:12 }}>Langues</div>
+          {cv.languages.map((l,i)=>(
+            <div key={i} style={{ marginBottom:8 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, marginBottom:3 }}>
+                <span style={{ fontWeight:600, color:"#334155" }}>{l.lang}</span>
+                <span style={{ color:"#94a3b8" }}>{l.level}</span>
+              </div>
+              <div style={{ height:3, background:"#e2e8f0", borderRadius:2 }}>
+                <div style={{ height:3, background:"#a5b4fc", borderRadius:2, width:l.level==="Natif"?"100%":l.level==="Courant"?"80%":"50%" }}/>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Certs */}
+        {cv.certifications && cv.certifications.length>0 && (
+          <div>
+            <div style={{ fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.14em", color:"#6366f1", marginBottom:10 }}>Certifications</div>
+            {cv.certifications.map((c,i)=><div key={i} style={{ fontSize:10, color:"#475569", marginBottom:6, lineHeight:1.5 }}>✦ {c}</div>)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── 8. DITTO — balanced two-column layout ─────────────────────────────────
+function TplDitto({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+  return (
+    <div style={{ width:794, background:"white", fontFamily:"'Georgia',serif", transform:`scale(${scale})`, transformOrigin:"top left" }}>
+      {/* Header — full width with slate bg */}
+      <div style={{ background:"#1e293b", padding:"36px 44px 28px", marginBottom:0 }}>
+        <div style={{ fontSize:30, fontWeight:700, color:"white", letterSpacing:"0.04em", textTransform:"uppercase", marginBottom:4 }}>{cv.name}</div>
+        <div style={{ fontSize:13, color:"#94a3b8", letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:14 }}>{cv.title}</div>
+        <div style={{ display:"flex", gap:24, fontSize:11, color:"#64748b", flexWrap:"wrap" }}>
+          <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
+        </div>
+      </div>
+
+      {/* Two column body */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0 }}>
+        {/* Left column */}
+        <div style={{ padding:"28px 28px 28px 44px", borderRight:"1px solid #e2e8f0" }}>
+          <DSection title="Profil">
+            <p style={{ fontSize:12, lineHeight:1.85, color:"#334155" }}>{cv.profile}</p>
+          </DSection>
+          <DSection title="Formation">
+            {cv.education.map((e,i)=>(
+              <div key={i} style={{ marginBottom:12 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div>
+                <div style={{ fontSize:11, color:"#64748b" }}>{e.school}</div>
+                <div style={{ fontSize:10, color:"#94a3b8" }}>{e.year}</div>
+              </div>
+            ))}
+          </DSection>
+          <DSection title="Compétences">
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"4px 8px" }}>
+              {cv.skills.map((s,i)=>(
+                <div key={i} style={{ fontSize:11, color:"#334155", display:"flex", alignItems:"center", gap:5 }}>
+                  <div style={{ width:4, height:4, borderRadius:"50%", background:"#334155", flexShrink:0 }}/>{s}
+                </div>
+              ))}
+            </div>
+          </DSection>
+          <DSection title="Langues">
+            {cv.languages.map((l,i)=>(
+              <div key={i} style={{ fontSize:12, marginBottom:5 }}>
+                <strong style={{ color:"#0f172a" }}>{l.lang}</strong>
+                <span style={{ color:"#64748b" }}> — {l.level}</span>
+              </div>
+            ))}
+          </DSection>
+        </div>
+
+        {/* Right column */}
+        <div style={{ padding:"28px 44px 28px 28px" }}>
+          <DSection title="Expériences Professionnelles">
+            {cv.experiences.map((e,i)=>(
+              <div key={i} style={{ marginBottom:18 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:1 }}>{e.role}</div>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+                  <div style={{ fontSize:11, color:"#475569", fontStyle:"italic" }}>{e.company}</div>
+                  <div style={{ fontSize:10, color:"#94a3b8" }}>{e.period}</div>
+                </div>
+                <ul style={{ paddingLeft:14, margin:0 }}>
+                  {e.bullets.map((b,j)=><li key={j} style={{ fontSize:11, lineHeight:1.7, color:"#334155", marginBottom:2 }}>{b}</li>)}
+                </ul>
+              </div>
+            ))}
+          </DSection>
+          {cv.certifications && cv.certifications.length>0 && (
+            <DSection title="Certifications">
+              {cv.certifications.map((c,i)=>(
+                <div key={i} style={{ fontSize:11, color:"#334155", marginBottom:5 }}>🏅 {c}</div>
+              ))}
+            </DSection>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── 9. LEAFISH — timeline layout, green nature accent ─────────────────────
+function TplLeafish({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+  return (
+    <div style={{ width:794, background:"#fafaf9", fontFamily:"'Inter',sans-serif", transform:`scale(${scale})`, transformOrigin:"top left" }}>
+      {/* Top header band */}
+      <div style={{ background:"white", borderBottom:"3px solid #16a34a", padding:"36px 48px 28px", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", top:0, right:0, width:160, height:"100%", background:"linear-gradient(135deg,#f0fdf4,#dcfce7)", opacity:0.6 }}/>
+        <div style={{ position:"relative" }}>
+          <div style={{ fontSize:30, fontWeight:800, color:"#0f172a", letterSpacing:"-0.02em", marginBottom:4 }}>{cv.name}</div>
+          <div style={{ fontSize:14, color:"#16a34a", fontWeight:700, marginBottom:12 }}>{cv.title}</div>
+          <div style={{ display:"flex", gap:20, fontSize:11, color:"#64748b", flexWrap:"wrap" }}>
+            <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding:"28px 48px", display:"grid", gridTemplateColumns:"1fr 220px", gap:36 }}>
+        {/* Left — timeline experience */}
+        <div>
+          {/* Profile */}
+          <div style={{ marginBottom:24 }}>
+            <div style={{ fontSize:10, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:"#16a34a", marginBottom:10 }}>À Propos</div>
+            <p style={{ fontSize:12, lineHeight:1.85, color:"#374151" }}>{cv.profile}</p>
+          </div>
+
+          {/* Timeline experience */}
+          <div style={{ marginBottom:24 }}>
+            <div style={{ fontSize:10, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:"#16a34a", marginBottom:16 }}>Parcours</div>
+            <div style={{ position:"relative", paddingLeft:24 }}>
+              {/* Vertical line */}
+              <div style={{ position:"absolute", left:7, top:6, bottom:0, width:2, background:"#bbf7d0", borderRadius:2 }}/>
+
+              {cv.experiences.map((e,i)=>(
+                <div key={i} style={{ position:"relative", marginBottom:20 }}>
+                  {/* Timeline dot */}
+                  <div style={{ position:"absolute", left:-24, top:4, width:12, height:12, borderRadius:"50%", background:"#16a34a", border:"2px solid white", boxShadow:"0 0 0 2px #16a34a" }}/>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:3 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</div>
+                    <div style={{ fontSize:10, color:"#6b7280", background:"#f0fdf4", border:"1px solid #bbf7d0", padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8 }}>{e.period}</div>
+                  </div>
+                  <div style={{ fontSize:11, color:"#16a34a", fontWeight:600, marginBottom:5 }}>{e.company}</div>
+                  {e.bullets.map((b,j)=><div key={j} style={{ fontSize:11, color:"#374151", lineHeight:1.7, marginBottom:2 }}>→ {b}</div>)}
+                </div>
+              ))}
+
+              {/* Education in timeline */}
+              {cv.education.map((e,i)=>(
+                <div key={i} style={{ position:"relative", marginBottom:14 }}>
+                  <div style={{ position:"absolute", left:-24, top:4, width:12, height:12, borderRadius:"50%", background:"white", border:"2px solid #16a34a" }}/>
+                  <div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div>
+                  <div style={{ fontSize:11, color:"#6b7280" }}>{e.school} · {e.year}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right sidebar */}
+        <div>
+          {/* Skills */}
+          <div style={{ background:"white", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"16px", marginBottom:14 }}>
+            <div style={{ fontSize:9, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:"#16a34a", marginBottom:12 }}>Compétences</div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+              {cv.skills.map((s,i)=>(
+                <span key={i} style={{ fontSize:10, background:"#f0fdf4", color:"#15803d", border:"1px solid #bbf7d0", padding:"3px 9px", borderRadius:100, fontWeight:600 }}>{s}</span>
+              ))}
+            </div>
+          </div>
+
+          {/* Languages */}
+          <div style={{ background:"white", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"16px", marginBottom:14 }}>
+            <div style={{ fontSize:9, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:"#16a34a", marginBottom:12 }}>Langues</div>
+            {cv.languages.map((l,i)=>(
+              <div key={i} style={{ marginBottom:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, marginBottom:4 }}>
+                  <span style={{ fontWeight:600, color:"#0f172a" }}>{l.lang}</span>
+                  <span style={{ color:"#6b7280", fontSize:10 }}>{l.level}</span>
+                </div>
+                <div style={{ height:4, background:"#f3f4f6", borderRadius:100 }}>
+                  <div style={{ height:4, borderRadius:100, background:"linear-gradient(90deg,#16a34a,#4ade80)", width:l.level==="Natif"?"100%":l.level==="Courant"?"82%":"50%" }}/>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Certifications */}
+          {cv.certifications && cv.certifications.length>0 && (
+            <div style={{ background:"white", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"16px" }}>
+              <div style={{ fontSize:9, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:"#16a34a", marginBottom:10 }}>Certifications</div>
+              {cv.certifications.map((c,i)=>(
+                <div key={i} style={{ fontSize:10, color:"#374151", marginBottom:6, lineHeight:1.5 }}>🏅 {c}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── TEMPLATE-SPECIFIC SECTION HELPERS ─────────────────────────────────────
+function ASection({ title, accent, children }: { title:string; accent:string; children:React.ReactNode }) {
+  return (
+    <div style={{ marginBottom:18 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+        <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.12em", color:accent }}>{title}</div>
+        <div style={{ flex:1, height:1, background:"#e2e8f0" }}/>
+      </div>
+      {children}
+    </div>
+  );
+}
+function BSection({ title, accent, children }: { title:string; accent:string; children:React.ReactNode }) {
+  return (
+    <div style={{ marginBottom:20 }}>
+      <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.1em", color:accent, marginBottom:10, borderLeft:`3px solid ${accent}`, paddingLeft:8 }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+function DSection({ title, children }: { title:string; children:React.ReactNode }) {
+  return (
+    <div style={{ marginBottom:18 }}>
+      <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", color:"#1e293b", borderBottom:"2px solid #1e293b", paddingBottom:4, marginBottom:10, display:"inline-block" }}>{title}</div>
+      <div>{children}</div>
+    </div>
+  );
+}
+
 // ── HELPER SUB-COMPONENTS ─────────────────────────────────────────────────
 function Section({ title, children }: { title:string; children:React.ReactNode }) {
   return (
@@ -423,6 +809,10 @@ function RenderCV({ id, cv, scale=1 }: { id:number; cv:CVData; scale?:number }) 
   if (id===3) return <TplMinimal    cv={cv} scale={scale}/>;
   if (id===4) return <TplExecutif   cv={cv} scale={scale}/>;
   if (id===5) return <TplCreatif    cv={cv} scale={scale}/>;
+  if (id===6) return <TplAzurill    cv={cv} scale={scale}/>;
+  if (id===7) return <TplBronzor    cv={cv} scale={scale}/>;
+  if (id===8) return <TplDitto      cv={cv} scale={scale}/>;
+  if (id===9) return <TplLeafish    cv={cv} scale={scale}/>;
   return null;
 }
 
