@@ -966,7 +966,7 @@ Génère un profil percutant et des bullet points impactants. Retourne UNIQUEMEN
     setCurrentPlan(plan); setPayPending(true);
     paddle.Checkout.open({
       items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
-      customer: { email: form.email || undefined },
+      ...(form.email ? { customer: { email: form.email } } : {}),
       settings: {
         displayModeTheme: "light",
         locale: "fr",
@@ -1391,14 +1391,5 @@ Génère un profil percutant et des bullet points impactants. Retourne UNIQUEMEN
         </footer>
       </div>
     </>
-  );
-}
-
-// ── HELPER ─────────────────────────────────────────────────────────────────
-function StepBack({ label, onClick }: { label:string; onClick:()=>void }) {
-  return (
-    <button onClick={onClick} style={{display:"inline-flex",alignItems:"center",gap:6,color:"#6b7280",background:"none",border:"none",cursor:"pointer",fontSize:13,fontWeight:600,marginBottom:16,fontFamily:"inherit",padding:0}}>
-      {label}
-    </button>
   );
 }
