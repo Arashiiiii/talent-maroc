@@ -862,9 +862,19 @@ export default function CVPage() {
     initializePaddle({
       environment: PADDLE_ENV,
       token: PADDLE_CLIENT_TOKEN,
+      eventCallback(event) {
+        if (event.name === "checkout.completed") {
+          setPayPending(false);
+          runGeneration("ai");
+        }
+        if (event.name === "checkout.closed") {
+          setPayPending(false);
+        }
+      },
     }).then((p) => {
       if (p) setPaddle(p);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(()=>{
@@ -972,10 +982,6 @@ Génère un profil percutant et des bullet points impactants. Retourne UNIQUEMEN
         theme: "light",
         locale: "fr",
         successUrl: `${window.location.origin}/cv?payment=success`,
-      },
-      eventCallback: (ev: { name: string }) => {
-        if (ev.name === "checkout.completed") { setPayPending(false); runGeneration("ai"); }
-        if (ev.name === "checkout.closed")    { setPayPending(false); }
       },
     });
   };
