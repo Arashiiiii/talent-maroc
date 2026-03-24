@@ -1,13 +1,17 @@
 "use client";
 import { useState, useCallback, useEffect, useRef } from "react";
+import { initializePaddle, type Paddle } from "@paddle/paddle-js";
 
 // ── PADDLE CONFIG ──────────────────────────────────────────────────────────
-const PADDLE_CLIENT_TOKEN = "test_f6beac788c5a1289b346269ad2a";
-const PADDLE_SANDBOX      = true;
+// 🔑 REPLACE these with your real values from paddle.com
+// While testing:  PADDLE_ENV = "sandbox"  +  use your sandbox token + sandbox price IDs
+// When live:      PADDLE_ENV = "production" + use your live token + live price IDs
+const PADDLE_CLIENT_TOKEN = "test_f6beac788c5a1289b346269ad2a";  // from Paddle → Developer Tools → Authentication
+const PADDLE_ENV = "sandbox" as "sandbox" | "production";       // change to "production" when going live
 const PADDLE_PRICE_IDS    = {
   starter:       "pri_01kmgxck2ancmk83gjky609g1r",
   professionnel: "pri_01kmgx9tx3xhdn8gadp5sqqdzt",
-  cadre:         "pri_01kmgxck2ancmk83gjky609g1r",
+  cadre:         "pri_01kmgx4gba4kvpn78wr2ds9qwb",
 };
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
@@ -840,7 +844,7 @@ export default function CVPage() {
   });
 
   // Paddle
-  const [paddleReady, setPaddleReady] = useState(false);
+  const [paddle,      setPaddle]      = useState<Paddle | undefined>(undefined);
   const [payPending,  setPayPending]  = useState(false);
   const [currentPlan, setCurrentPlan] = useState<Plan>(PLANS[1]);
 
@@ -853,24 +857,23 @@ export default function CVPage() {
 
   const GEN_STEPS = ["Lecture du CV","Extraction des données","Application du modèle","Optimisation ATS","Finalisation"];
 
-  // Load Paddle
+  // Initialize Paddle via npm package
   useEffect(() => {
-    if (document.getElementById("paddle-js")) { setPaddleReady(true); return; }
-    const s = document.createElement("script"); s.id="paddle-js";
-    s.src="https://cdn.paddle.com/paddle/v2/paddle.js";
-    s.onload=()=>{
-      // @ts-ignore
-      const P=window.Paddle;
-      if(PADDLE_SANDBOX)P.Environment.set("sandbox");
-      P.Initialize({token:PADDLE_CLIENT_TOKEN});
-      setPaddleReady(true);
-    };
-    document.body.appendChild(s);
-  },[]);
+    initializePaddle({
+      environment: PADDLE_ENV,
+      token: PADDLE_CLIENT_TOKEN,
+    }).then((p) => {
+      if (p) setPaddle(p);
+    });
+  }, []);
 
   useEffect(()=>{
     const p=new URLSearchParams(window.location.search);
-    if(p.get("payment")==="success"){window.history.replaceState({},"","/cv");runGeneration("ai");}
+    if(p.get("payment")==="success"){
+      window.history.replaceState({},"","/cv");
+      // paddle redirect fallback — runs after page reload
+      runGeneration("ai");
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
@@ -959,17 +962,19 @@ Génère un profil percutant et des bullet points impactants. Retourne UNIQUEMEN
 
   // ── PADDLE CHECKOUT ───────────────────────────────────────────────────────
   const openPaddle = (plan: Plan) => {
-    // @ts-ignore
-    const P=window.Paddle;
-    if(!P||!paddleReady){alert("Chargement…");return;}
+    if (!paddle) { alert("Paddle non chargé. Rafraîchissez la page."); return; }
     setCurrentPlan(plan); setPayPending(true);
-    P.Checkout.open({
-      items:[{priceId:plan.paddlePriceId,quantity:1}],
-      customer:{email:form.email||undefined},
-      settings:{displayModeTheme:"light",locale:"fr",successUrl:`${window.location.origin}/cv?payment=success`},
-      eventCallback:(ev:{name:string})=>{
-        if(ev.name==="checkout.completed"){setPayPending(false);runGeneration("ai");}
-        if(ev.name==="checkout.closed"){setPayPending(false);}
+    paddle.Checkout.open({
+      items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
+      customer: { email: form.email || undefined },
+      settings: {
+        displayModeTheme: "light",
+        locale: "fr",
+        successUrl: `${window.location.origin}/cv?payment=success`,
+      },
+      eventCallback: (ev: { name: string }) => {
+        if (ev.name === "checkout.completed") { setPayPending(false); runGeneration("ai"); }
+        if (ev.name === "checkout.closed")    { setPayPending(false); }
       },
     });
   };
@@ -1271,7 +1276,7 @@ Génère un profil percutant et des bullet points impactants. Retourne UNIQUEMEN
                       <ul style={{listStyle:"none",marginBottom:20}}>
                         {PLAN_FEATURES[plan.name].map(f=><li key={f} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,marginBottom:8,color:"#374151"}}><span style={{color:"#16a34a",fontWeight:700,fontSize:14}}>✓</span>{f}</li>)}
                       </ul>
-                      <button className="btn-green" disabled={!paddleReady||payPending} onClick={()=>openPaddle(plan)} style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a"}}>
+                      <button className="btn-green" disabled={!paddle||payPending} onClick={()=>openPaddle(plan)} style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a"}}>
                         {payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer €${plan.price} →`}
                       </button>
                     </div>
