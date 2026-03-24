@@ -2,12 +2,12 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 
 // ── PADDLE CONFIG ──────────────────────────────────────────────────────────
-const PADDLE_CLIENT_TOKEN = "live_REPLACE_YOUR_CLIENT_TOKEN";
-const PADDLE_SANDBOX      = false;
+const PADDLE_CLIENT_TOKEN = "test_f6beac788c5a1289b346269ad2a";
+const PADDLE_SANDBOX      = true;
 const PADDLE_PRICE_IDS    = {
-  starter:       "pri_REPLACE_STARTER",
-  professionnel: "pri_REPLACE_PROFESSIONNEL",
-  cadre:         "pri_REPLACE_CADRE",
+  starter:       "pri_01kmgxck2ancmk83gjky609g1r",
+  professionnel: "pri_01kmgx9tx3xhdn8gadp5sqqdzt",
+  cadre:         "pri_01kmgxck2ancmk83gjky609g1r",
 };
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
