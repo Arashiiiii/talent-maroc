@@ -1153,6 +1153,21 @@ Génère un profil percutant et des bullet points impactants. Retourne UNIQUEMEN
           {step===2 && mode==="upload" && (
             <div className="au">
               <StepBack label="← Changer de modèle" onClick={()=>goStep(1)}/>
+
+              {/* ── ERROR BANNER ── */}
+              {genError && (
+                <div style={{background:"#fef2f2",border:"1.5px solid #fecaca",borderRadius:10,padding:"14px 18px",marginBottom:16,display:"flex",gap:12,alignItems:"flex-start"}}>
+                  <span style={{fontSize:18,flexShrink:0}}>⚠️</span>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700,color:"#dc2626",marginBottom:4}}>Erreur de génération</div>
+                    <div style={{fontSize:12,color:"#7f1d1d",lineHeight:1.6}}>{genError}</div>
+                    <button onClick={()=>setGenError(null)} style={{marginTop:8,fontSize:12,color:"#dc2626",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:0,fontWeight:600}}>
+                      Fermer ×
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,.04)",marginBottom:24}}>
                 <div style={{padding:"20px 24px",borderBottom:"1.5px solid #f0f0f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
