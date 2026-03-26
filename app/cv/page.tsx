@@ -6,12 +6,12 @@ import { initializePaddle, type Paddle } from "@paddle/paddle-js";
 // 🔑 REPLACE these with your real values from paddle.com
 // While testing:  PADDLE_ENV = "sandbox"  +  use your sandbox token + sandbox price IDs
 // When live:      PADDLE_ENV = "production" + use your live token + live price IDs
-const PADDLE_CLIENT_TOKEN = "test_f6beac788c5a1289b346269ad2a";  // from Paddle → Developer Tools → Authentication
+const PADDLE_CLIENT_TOKEN = "test_REPLACE_YOUR_SANDBOX_TOKEN";  // from Paddle → Developer Tools → Authentication
 const PADDLE_ENV = "sandbox" as "sandbox" | "production";       // change to "production" when going live
 const PADDLE_PRICE_IDS    = {
-  starter:       "pri_01kmgxck2ancmk83gjky609g1r",
-  professionnel: "pri_01kmgx9tx3xhdn8gadp5sqqdzt",
-  cadre:         "pri_01kmgx4gba4kvpn78wr2ds9qwb",
+  starter:       "pri_REPLACE_STARTER",
+  professionnel: "pri_REPLACE_PROFESSIONNEL",
+  cadre:         "pri_REPLACE_CADRE",
 };
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
@@ -27,6 +27,7 @@ interface CVData {
   skills:      string[];
   languages:   { lang: string; level: string }[];
   certifications?: string[];
+  photo?:      string; // base64 data URL
 }
 
 interface Template {
@@ -166,10 +167,14 @@ function TplModerne({ cv, scale=1 }: { cv: CVData; scale?: number }) {
     <div style={{ width:794, background:"white", fontFamily:"'Inter',sans-serif", display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600 }}>
       {/* Sidebar */}
       <div style={{ width:240, background:"#1e3a5f", padding:"40px 24px", flexShrink:0 }}>
-        {/* Avatar initial */}
-        <div style={{ width:72, height:72, borderRadius:"50%", background:"#3b82f6", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, fontWeight:800, color:"white", marginBottom:20 }}>
-          {cv.name.charAt(0)}
-        </div>
+        {/* Avatar — photo if available, else initial */}
+        {cv.photo ? (
+          <img src={cv.photo} alt={cv.name} style={{ width:80, height:80, borderRadius:"50%", objectFit:"cover", marginBottom:20, border:"3px solid rgba(255,255,255,0.2)" }}/>
+        ) : (
+          <div style={{ width:72, height:72, borderRadius:"50%", background:"#3b82f6", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, fontWeight:800, color:"white", marginBottom:20 }}>
+            {cv.name.charAt(0)}
+          </div>
+        )}
         <div style={{ fontSize:16, fontWeight:800, color:"white", marginBottom:4, lineHeight:1.2 }}>{cv.name}</div>
         <div style={{ fontSize:11, color:"#93c5fd", marginBottom:24, lineHeight:1.4 }}>{cv.title}</div>
         <SideSection title="Contact" light>
@@ -335,11 +340,16 @@ function TplCreatif({ cv, scale=1 }: { cv: CVData; scale?: number }) {
       <div style={{ height:8, background:"linear-gradient(90deg,#7c3aed,#ec4899,#f97316)" }}/>
       <div style={{ padding:"40px 52px" }}>
         {/* Header - big name */}
-        <div style={{ marginBottom:28 }}>
-          <div style={{ fontSize:34, fontWeight:900, color:"#0f172a", letterSpacing:"-0.03em", lineHeight:1, marginBottom:6 }}>{cv.name}</div>
-          <div style={{ fontSize:14, fontWeight:600, background:"linear-gradient(90deg,#7c3aed,#ec4899)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:12 }}>{cv.title}</div>
-          <div style={{ display:"flex", gap:20, fontSize:11, color:"#6b7280" }}>
-            <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
+        <div style={{ marginBottom:28, display:"flex", alignItems:"flex-start", gap:20 }}>
+          {cv.photo && (
+            <img src={cv.photo} alt={cv.name} style={{ width:80, height:80, borderRadius:12, objectFit:"cover", flexShrink:0, border:"2px solid #e9d5ff" }}/>
+          )}
+          <div>
+            <div style={{ fontSize:34, fontWeight:900, color:"#0f172a", letterSpacing:"-0.03em", lineHeight:1, marginBottom:6 }}>{cv.name}</div>
+            <div style={{ fontSize:14, fontWeight:600, background:"linear-gradient(90deg,#7c3aed,#ec4899)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:12 }}>{cv.title}</div>
+            <div style={{ display:"flex", gap:20, fontSize:11, color:"#6b7280", flexWrap:"wrap" }}>
+              <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
+            </div>
           </div>
         </div>
         {/* Profile with left border */}
@@ -408,6 +418,9 @@ function TplAzurill({ cv, scale=1 }: { cv: CVData; scale?: number }) {
     <div style={{ width:794, background:"white", fontFamily:"'Calibri','Segoe UI',sans-serif", padding:"48px 56px", transform:`scale(${scale})`, transformOrigin:"top left", color:"#1e293b" }}>
       {/* Header — centered, teal accent */}
       <div style={{ textAlign:"center", marginBottom:24 }}>
+        {cv.photo && (
+          <img src={cv.photo} alt={cv.name} style={{ width:88, height:88, borderRadius:"50%", objectFit:"cover", marginBottom:14, border:"3px solid #99f6e4", display:"block", margin:"0 auto 14px" }}/>
+        )}
         <div style={{ fontSize:30, fontWeight:800, color:"#0f172a", letterSpacing:"-0.02em", marginBottom:4 }}>{cv.name}</div>
         <div style={{ fontSize:14, color:"#0d9488", fontWeight:600, marginBottom:10 }}>{cv.title}</div>
         <div style={{ display:"flex", justifyContent:"center", gap:20, fontSize:11, color:"#64748b", flexWrap:"wrap" }}>
@@ -658,11 +671,16 @@ function TplLeafish({ cv, scale=1 }: { cv: CVData; scale?: number }) {
       {/* Top header band */}
       <div style={{ background:"white", borderBottom:"3px solid #16a34a", padding:"36px 48px 28px", position:"relative", overflow:"hidden" }}>
         <div style={{ position:"absolute", top:0, right:0, width:160, height:"100%", background:"linear-gradient(135deg,#f0fdf4,#dcfce7)", opacity:0.6 }}/>
-        <div style={{ position:"relative" }}>
-          <div style={{ fontSize:30, fontWeight:800, color:"#0f172a", letterSpacing:"-0.02em", marginBottom:4 }}>{cv.name}</div>
-          <div style={{ fontSize:14, color:"#16a34a", fontWeight:700, marginBottom:12 }}>{cv.title}</div>
-          <div style={{ display:"flex", gap:20, fontSize:11, color:"#64748b", flexWrap:"wrap" }}>
-            <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
+        <div style={{ position:"relative", display:"flex", alignItems:"flex-start", gap:18 }}>
+          {cv.photo && (
+            <img src={cv.photo} alt={cv.name} style={{ width:76, height:76, borderRadius:10, objectFit:"cover", flexShrink:0, border:"2px solid #bbf7d0" }}/>
+          )}
+          <div>
+            <div style={{ fontSize:30, fontWeight:800, color:"#0f172a", letterSpacing:"-0.02em", marginBottom:4 }}>{cv.name}</div>
+            <div style={{ fontSize:14, color:"#16a34a", fontWeight:700, marginBottom:12 }}>{cv.title}</div>
+            <div style={{ display:"flex", gap:20, fontSize:11, color:"#64748b", flexWrap:"wrap" }}>
+              <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -834,8 +852,11 @@ export default function CVPage() {
   const [uploadedContent, setUploadedContent] = useState<string>("");
   const [uploadedBase64,  setUploadedBase64]  = useState<string|null>(null);
   const [uploadedMime,    setUploadedMime]    = useState<string|null>(null);
+  const [photoBase64,     setPhotoBase64]     = useState<string|null>(null); // user photo data URL
   const [enhanceType,     setEnhanceType]     = useState("Optimisation ATS");
   const [uploadError,     setUploadError]     = useState<string|null>(null);
+  // Payment state for upload path
+  const [uploadPaywall,   setUploadPaywall]   = useState(false); // show payment modal
 
   // AI form state
   const [form, setForm] = useState({
@@ -844,9 +865,10 @@ export default function CVPage() {
   });
 
   // Paddle
-  const [paddle,      setPaddle]      = useState<Paddle | undefined>(undefined);
-  const [payPending,  setPayPending]  = useState(false);
-  const [currentPlan, setCurrentPlan] = useState<Plan>(PLANS[1]);
+  const [paddle,         setPaddle]         = useState<Paddle | undefined>(undefined);
+  const [payPending,     setPayPending]      = useState(false);
+  const [currentPlan,    setCurrentPlan]     = useState<Plan>(PLANS[1]);
+  const pendingModeRef = useRef<Mode>("ai"); // track which mode triggered paddle
 
   // Generation
   const [generating,  setGenerating]  = useState(false);
@@ -865,7 +887,7 @@ export default function CVPage() {
       eventCallback(event) {
         if (event.name === "checkout.completed") {
           setPayPending(false);
-          runGeneration("ai");
+          runGeneration(pendingModeRef.current);
         }
         if (event.name === "checkout.closed") {
           setPayPending(false);
@@ -900,168 +922,82 @@ export default function CVPage() {
   };
 
   // ── GENERATE ──────────────────────────────────────────────────────────────
-const runGeneration = async (sourceMode: "upload" | "ai") => {
-  const formText =
-    sourceMode === "upload"
-      ? uploadedContent || ""
-      : `${form.name}, ${form.title}, ${form.experience}, ${form.education}, ${form.skills}, ${form.langs}`;
+  const runGeneration = useCallback(async (src: Mode) => {
+    setGenerating(true); setGenError(null); setCvData(null); setGenStep(0);
 
-  const hasPdfUpload = !!uploadedBase64;
+    const tick = (i:number) => new Promise<void>(r=>setTimeout(()=>{setGenStep(i);r()},600));
 
-  if (!formText.trim() && !hasPdfUpload) {
-    setGenError("Veuillez fournir des informations ou importer un CV.");
-    return;
-  }
-
-  setGenerating(true);
-  setGenError(null);
-  setGenStep(0);
-
-  try {
-    for (let i = 0; i < GEN_STEPS.length; i++) {
-      setGenStep(i);
-      await new Promise((resolve) => setTimeout(resolve, 400));
-    }
-
-    const systemPrompt = `
-Tu es un assistant expert en rédaction de CV.
-Retourne uniquement un JSON valide.
-N'ajoute aucun texte avant ou après.
-N'utilise pas de balises markdown.
-Le JSON doit être complet et fermé correctement.
-
-Format attendu :
+    const systemPrompt = `Tu es un expert en rédaction de CV professionnels pour le marché marocain.
+Tu dois TOUJOURS répondre avec UNIQUEMENT un objet JSON valide, sans aucun texte avant ou après.
+Le JSON doit suivre exactement ce schéma :
 {
-  "name": "",
-  "title": "",
-  "email": "",
-  "phone": "",
-  "location": "",
-  "profile": "",
-  "experiences": [
-    {
-      "company": "",
-      "role": "",
-      "period": "",
-      "bullets": [""]
-    }
-  ],
-  "education": [
-    {
-      "school": "",
-      "degree": "",
-      "year": ""
-    }
-  ],
-  "skills": [""],
-  "languages": [
-    {
-      "lang": "",
-      "level": ""
-    }
-  ]
+  "name": string,
+  "title": string,
+  "email": string,
+  "phone": string,
+  "location": string,
+  "profile": string (2-3 phrases percutantes),
+  "experiences": [{ "company": string, "role": string, "period": string, "bullets": string[] }],
+  "education": [{ "school": string, "degree": string, "year": string }],
+  "skills": string[] (max 10),
+  "languages": [{ "lang": string, "level": string }],
+  "certifications": string[]
 }
-`;
+RÈGLES ABSOLUES :
+- Utilise UNIQUEMENT les informations du CV fourni. Ne génère RIEN de fictif.
+- Améliore la formulation et le style selon le mode demandé.
+- Réponds avec UNIQUEMENT le JSON, rien d'autre.`;
 
-    const userPrompt = sourceMode === "upload"
-      ? `Voici le contenu du CV/import. Améliore-le et transforme-le en JSON CV structuré.\n\n${formText}`
-      : `Crée un CV professionnel structuré à partir des informations suivantes:\n
-Nom: ${form.name}
-Titre: ${form.title}
-Email: ${form.email}
-Téléphone: ${form.phone}
-Localisation: ${form.location}
-Profil: ${form.notes}
-Expérience: ${form.experience}
-Formation: ${form.education}
-Compétences: ${form.skills}
-Langues: ${form.langs}`;
-
-    const messages: any[] = [
-      {
-        role: "user",
-        content: hasPdfUpload
-          ? [
-              {
-                type: "document",
-                source: {
-                  type: "base64",
-                  media_type: "application/pdf",
-                  data: uploadedBase64,
-                },
-              },
-              {
-                type: "text",
-                text: userPrompt,
-              },
-            ]
-          : [
-              {
-                type: "text",
-                text: userPrompt,
-              },
-            ],
-      },
-    ];
-
-    const res = await fetch("/api/generate-cv", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4000,
-        system: systemPrompt,
-        messages,
-        isPdf: hasPdfUpload,
-      }),
-    });
-
-    const text = await res.text();
-
-    if (!text || !text.trim()) {
-      throw new Error("Réponse vide du serveur.");
-    }
-
-    let data: any;
     try {
-      data = JSON.parse(text);
-    } catch {
-      throw new Error("Le serveur n'a pas renvoyé un JSON valide.");
+      await tick(1);
+      let messages: any[];
+      if (src==="upload") {
+        const instructions = `Mode d'amélioration : "${enhanceType}"\nRetourne le JSON du CV amélioré.`;
+        if (uploadedBase64 && uploadedMime==="application/pdf") {
+          messages=[{role:"user",content:[{type:"document",source:{type:"base64",media_type:"application/pdf",data:uploadedBase64}},{type:"text",text:instructions}]}];
+        } else {
+          messages=[{role:"user",content:`CV source :\n${uploadedContent}\n\n${instructions}`}];
+        }
+      } else {
+        messages=[{role:"user",content:`Génère un CV professionnel JSON pour :
+Nom : ${form.name} | Poste : ${form.title} | Email : ${form.email} | Tél : ${form.phone} | Ville : ${form.location||"Maroc"}
+Secteur : ${form.industry} | Niveau : ${form.level}
+Expériences : ${form.experience}
+Formation : ${form.education}
+Compétences : ${form.skills}
+Langues : ${form.langs}
+Notes : ${form.notes}
+Génère un profil percutant et des bullet points impactants. Retourne UNIQUEMENT le JSON.`}];
+      }
+
+      await tick(2);
+      const res = await fetch("/api/generate-cv",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,system:systemPrompt,messages,
+          ...(uploadedBase64?{"anthropic-beta":"pdfs-2024-09-25"}:{})}),
+      });
+      await tick(3);
+      const data = await res.json();
+      const raw  = data.content?.map((c:any)=>c.text??"").join("")??"";
+      const clean = raw.replace(/```json|```/g,"").trim();
+      await tick(4);
+      const parsed: CVData = JSON.parse(clean);
+      // Inject user photo if provided
+      if (photoBase64) parsed.photo = photoBase64;
+      await tick(5);
+      setCvData(parsed);
+      setStep(4);
+    } catch(e:any) {
+      setGenError("Erreur lors de la génération. Vérifiez votre fichier et réessayez. "+e.message);
+    } finally {
+      setGenerating(false); setGenStep(0);
     }
-
-    if (!res.ok) {
-      throw new Error(data?.error?.message || `Erreur API (${res.status})`);
-    }
-
-    const raw = data?.content?.map((c: any) => c?.text ?? "").join("") ?? "";
-    const clean = raw.replace(/```json|```/g, "").trim();
-
-    if (!clean) {
-      throw new Error("La réponse de l'IA est vide.");
-    }
-
-    let parsed: CVData;
-    try {
-      parsed = JSON.parse(clean);
-    } catch (e) {
-      console.error("Invalid AI JSON:", clean);
-      throw new Error("L'IA a renvoyé un JSON incomplet ou invalide.");
-    }
-
-    setCvData(parsed);
-    setGenStep(GEN_STEPS.length);
-    setStep(4);
-  } catch (err: any) {
-    console.error("Generation Error:", err);
-    setGenError(err.message || "Erreur lors de la génération. Réessayez.");
-  } finally {
-    setGenerating(false);
-  }
-};
+  },[uploadedBase64,uploadedMime,uploadedContent,enhanceType,form,photoBase64]);
 
   // ── PADDLE CHECKOUT ───────────────────────────────────────────────────────
-  const openPaddle = (plan: Plan) => {
+  const openPaddle = (plan: Plan, triggerMode: Mode = "ai") => {
     if (!paddle) { alert("Paddle non chargé. Rafraîchissez la page."); return; }
+    pendingModeRef.current = triggerMode;
     setCurrentPlan(plan); setPayPending(true);
     paddle.Checkout.open({
       items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
@@ -1076,85 +1012,15 @@ Langues: ${form.langs}`;
   };
 
   // ── PRINT / DOWNLOAD ──────────────────────────────────────────────────────
- const downloadPDF = () => {
-  const cvNode = printRef.current;
-  if (!cvNode) return;
+  const downloadPDF = () => {
+    const style = document.createElement("style");
+    style.innerHTML=`@media print{body *{visibility:hidden}#cv-print,#cv-print *{visibility:visible}#cv-print{position:fixed;left:0;top:0;width:100%}}`;
+    document.head.appendChild(style);
+    window.print();
+    document.head.removeChild(style);
+  };
 
-  const printWindow = window.open("", "_blank", "width=900,height=1200");
-  if (!printWindow) {
-    alert("Impossible d'ouvrir la fenêtre d'impression.");
-    return;
-  }
-
-  const html = cvNode.innerHTML;
-
-  printWindow.document.open();
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html lang="fr">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>CV</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
-          * {
-            box-sizing: border-box;
-          }
-
-          html, body {
-            margin: 0;
-            padding: 0;
-            background: white;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-          }
-
-          @page {
-            size: A4;
-            margin: 0;
-          }
-
-          body {
-            width: 794px;
-            margin: 0 auto;
-            background: white;
-          }
-
-          #print-root {
-            width: 794px;
-            margin: 0 auto;
-            background: white;
-          }
-
-          @media print {
-            html, body {
-              width: 210mm;
-              background: white;
-            }
-
-            #print-root {
-              width: 210mm;
-              margin: 0;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <div id="print-root">${html}</div>
-        <script>
-          window.onload = function () {
-            setTimeout(() => {
-              window.focus();
-              window.print();
-            }, 300);
-          };
-        </script>
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
-};
+  const goStep = (n: Step) => { setStep(n); window.scrollTo({top:0,behavior:"smooth"}); };
 
   // ── JSX ───────────────────────────────────────────────────────────────────
   return (
@@ -1301,7 +1167,7 @@ Langues: ${form.langs}`;
                 </div>
               </div>
               <div style={{display:"flex",justifyContent:"flex-end"}}>
-                <button className="btn-green" onClick={()=>setStep(2)}>
+                <button className="btn-green" onClick={()=>goStep(2)}>
                   Continuer avec {TEMPLATES.find(t=>t.id===selectedTpl)?.name} →
                 </button>
               </div>
@@ -1311,7 +1177,7 @@ Langues: ${form.langs}`;
           {/* ─────── STEP 2 : UPLOAD or FORM ─────── */}
           {step===2 && mode==="upload" && (
             <div className="au">
-              <StepBack label="← Changer de modèle" onClick={()=>setStep(1)}/>
+              <StepBack label="← Changer de modèle" onClick={()=>goStep(1)}/>
 
               {/* ── ERROR BANNER ── */}
               {genError && (
@@ -1355,8 +1221,36 @@ Langues: ${form.langs}`;
                   )}
                   {uploadError && <div style={{background:"#fef2f2",border:"1.5px solid #fecaca",borderRadius:8,padding:"10px 14px",marginTop:12,fontSize:13,color:"#dc2626"}}>⚠ {uploadError}</div>}
 
+                  {/* Photo upload */}
+                  <div style={{marginTop:24,marginBottom:4}}>
+                    <label className="field-label">Photo de profil <span style={{fontWeight:400,color:"#9ca3af"}}>(optionnel — pour les modèles avec photo)</span></label>
+                    <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+                      <label style={{display:"inline-flex",alignItems:"center",gap:8,padding:"10px 18px",border:"1.5px solid #e5e7eb",borderRadius:9,cursor:"pointer",background:"white",fontSize:13,fontWeight:600,color:"#374151",transition:"all .18s"}}
+                        onMouseEnter={e=>e.currentTarget.style.borderColor="#16a34a"}
+                        onMouseLeave={e=>e.currentTarget.style.borderColor="#e5e7eb"}>
+                        <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
+                          const f=e.target.files?.[0];
+                          if(!f)return;
+                          const r=new FileReader();
+                          r.onload=ev=>setPhotoBase64(ev.target?.result as string);
+                          r.readAsDataURL(f);
+                        }}/>
+                        📷 Importer une photo
+                      </label>
+                      {photoBase64 && (
+                        <div style={{display:"flex",alignItems:"center",gap:10}}>
+                          <img src={photoBase64} alt="Photo" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid #bbf7d0"}}/>
+                          <div>
+                            <div style={{fontSize:12,fontWeight:600,color:"#15803d"}}>✓ Photo ajoutée</div>
+                            <button onClick={()=>setPhotoBase64(null)} style={{fontSize:11,color:"#9ca3af",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"inherit"}}>Supprimer</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Enhancement type */}
-                  <div style={{marginTop:24}}>
+                  <div style={{marginTop:20}}>
                     <label className="field-label">Type d'amélioration</label>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:9}}>
                       {[
@@ -1376,8 +1270,8 @@ Langues: ${form.langs}`;
                 </div>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
-                <button className="btn-outline" onClick={()=>setStep(1)}>← Retour</button>
-                <button className="btn-green" disabled={!uploadedFile} onClick={()=>runGeneration("upload")}>
+                <button className="btn-outline" onClick={()=>goStep(1)}>← Retour</button>
+                <button className="btn-green" disabled={!uploadedFile} onClick={()=>setUploadPaywall(true)}>
                   ✨ Améliorer et appliquer le modèle →
                 </button>
               </div>
@@ -1386,7 +1280,7 @@ Langues: ${form.langs}`;
 
           {step===2 && mode==="ai" && (
             <div className="au">
-              <StepBack label="← Changer de modèle" onClick={()=>setStep(1)}/>
+              <StepBack label="← Changer de modèle" onClick={()=>goStep(1)}/>
               <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,.04)",marginBottom:24}}>
                 <div style={{padding:"20px 24px",borderBottom:"1.5px solid #f0f0f0"}}>
                   <h2 style={{fontSize:16,fontWeight:800}}>2. Vos informations</h2>
@@ -1430,8 +1324,8 @@ Langues: ${form.langs}`;
                 </div>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
-                <button className="btn-outline" onClick={()=>setStep(1)}>← Retour</button>
-                <button className="btn-green" onClick={()=>setStep(3)}>Continuer vers le paiement →</button>
+                <button className="btn-outline" onClick={()=>goStep(1)}>← Retour</button>
+                <button className="btn-green" onClick={()=>goStep(3)}>Continuer vers le paiement →</button>
               </div>
             </div>
           )}
@@ -1439,7 +1333,7 @@ Langues: ${form.langs}`;
           {/* ─────── STEP 3 : PAYMENT ─────── */}
           {step===3 && mode==="ai" && (
             <div className="au">
-              <StepBack label="← Modifier mes informations" onClick={()=>setStep(2)}/>
+              <StepBack label="← Modifier mes informations" onClick={()=>goStep(2)}/>
               <div style={{marginBottom:20}}>
                 <h2 style={{fontSize:18,fontWeight:800}}>3. Choisissez votre formule</h2>
                 <p style={{fontSize:13,color:"#6b7280",marginTop:4}}>Paiement sécurisé via Paddle · Visa, Mastercard, PayPal</p>
@@ -1479,7 +1373,7 @@ Langues: ${form.langs}`;
                   <div style={{fontSize:13,color:"#6b7280",marginTop:2}}>Modèle : <strong>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong> · Changez de modèle ci-dessous sans régénérer.</div>
                 </div>
                 <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                  <button className="btn-outline" onClick={()=>{setCvData(null);setStep(1);}}>↺ Recommencer</button>
+                  <button className="btn-outline" onClick={()=>{setCvData(null);goStep(1);}}>↺ Recommencer</button>
                   <button className="btn-green" onClick={downloadPDF}>⬇ Télécharger PDF</button>
                 </div>
               </div>
@@ -1500,6 +1394,50 @@ Langues: ${form.langs}`;
                 style={{background:"white",borderRadius:14,boxShadow:"0 4px 24px rgba(0,0,0,.08)",overflow:"hidden",marginBottom:24}}>
                 <div style={{width:794,margin:"0 auto"}}>
                   <RenderCV id={selectedTpl} cv={cvData}/>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ─────── UPLOAD PAYWALL MODAL ─────── */}
+          {uploadPaywall && (
+            <div className="modal-bg" onClick={()=>setUploadPaywall(false)}>
+              <div className="modal-box" style={{maxWidth:680}} onClick={e=>e.stopPropagation()}>
+                <div style={{background:"#0f172a",padding:"18px 24px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <div>
+                    <div style={{color:"white",fontWeight:800,fontSize:15}}>Amélioration de CV par IA</div>
+                    <div style={{color:"rgba(255,255,255,.45)",fontSize:12,marginTop:2}}>Choisissez votre formule pour continuer</div>
+                  </div>
+                  <button onClick={()=>setUploadPaywall(false)} style={{background:"rgba(255,255,255,.08)",border:"none",color:"rgba(255,255,255,.7)",fontSize:20,width:32,height:32,borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit"}}>×</button>
+                </div>
+                <div style={{padding:"24px"}}>
+                  {/* What's included */}
+                  <div style={{background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:10,padding:"14px 16px",marginBottom:20,display:"flex",gap:10,alignItems:"flex-start"}}>
+                    <span style={{fontSize:18,flexShrink:0}}>✨</span>
+                    <div style={{fontSize:13,color:"#15803d",lineHeight:1.6}}>
+                      <strong>Ce qui sera fait :</strong> Votre CV sera analysé par notre IA, reformulé selon le mode choisi ({enhanceType}), et mis en page dans le modèle <strong>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong> que vous avez sélectionné.
+                    </div>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12}}>
+                    {PLANS.map(plan=>{
+                      const featured=plan.name==="Professionnel";
+                      return (
+                        <div key={plan.name} className={`pay-card${featured?" featured":""}`} style={{position:"relative",padding:"20px 18px"}}>
+                          {featured && <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",background:"#16a34a",color:"white",fontSize:10,fontWeight:700,padding:"3px 12px",borderRadius:100,whiteSpace:"nowrap"}}>⭐ Populaire</div>}
+                          <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#6b7280",marginBottom:8}}>{plan.name}</div>
+                          <div style={{fontSize:32,fontWeight:800,color:"#0f172a",lineHeight:1,marginBottom:12}}>€{plan.price}</div>
+                          <ul style={{listStyle:"none",marginBottom:16}}>
+                            {PLAN_FEATURES[plan.name].map(f=><li key={f} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,marginBottom:6,color:"#374151"}}><span style={{color:"#16a34a",fontWeight:700}}>✓</span>{f}</li>)}
+                          </ul>
+                          <button className="btn-green" disabled={!paddle||payPending} onClick={()=>{setUploadPaywall(false);openPaddle(plan,"upload");}}
+                            style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a",fontSize:13,padding:"10px"}}>
+                            {payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer €${plan.price}`}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p style={{fontSize:11,color:"#9ca3af",textAlign:"center",marginTop:16}}>🔒 Paiement sécurisé via Paddle · Aucune donnée bancaire stockée</p>
                 </div>
               </div>
             </div>
