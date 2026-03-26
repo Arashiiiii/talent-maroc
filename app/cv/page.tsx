@@ -901,59 +901,163 @@ export default function CVPage() {
 
   // ── GENERATE ──────────────────────────────────────────────────────────────
 const runGeneration = async (sourceMode: "upload" | "ai") => {
-    const formText = sourceMode === "upload"
+  const formText =
+    sourceMode === "upload"
       ? uploadedContent || ""
       : `${form.name}, ${form.title}, ${form.experience}, ${form.education}, ${form.skills}, ${form.langs}`;
 
-    if (!formText.trim()) {
-      setGenError("Veuillez fournir des informations ou importer un CV.");
-      return;
+  const hasPdfUpload = !!uploadedBase64;
+
+  if (!formText.trim() && !hasPdfUpload) {
+    setGenError("Veuillez fournir des informations ou importer un CV.");
+    return;
+  }
+
+  setGenerating(true);
+  setGenError(null);
+  setGenStep(0);
+
+  try {
+    for (let i = 0; i < GEN_STEPS.length; i++) {
+      setGenStep(i);
+      await new Promise((resolve) => setTimeout(resolve, 400));
     }
 
-    setGenerating(true);
-    setGenError(null);
-    setGenStep(0);
+    const systemPrompt = `
+Tu es un assistant expert en rédaction de CV.
+Retourne uniquement un JSON valide.
+N'ajoute aucun texte avant ou après.
+N'utilise pas de balises markdown.
+Le JSON doit être complet et fermé correctement.
 
+Format attendu :
+{
+  "name": "",
+  "title": "",
+  "email": "",
+  "phone": "",
+  "location": "",
+  "profile": "",
+  "experiences": [
+    {
+      "company": "",
+      "role": "",
+      "period": "",
+      "bullets": [""]
+    }
+  ],
+  "education": [
+    {
+      "school": "",
+      "degree": "",
+      "year": ""
+    }
+  ],
+  "skills": [""],
+  "languages": [
+    {
+      "lang": "",
+      "level": ""
+    }
+  ]
+}
+`;
+
+    const userPrompt = sourceMode === "upload"
+      ? `Voici le contenu du CV/import. Améliore-le et transforme-le en JSON CV structuré.\n\n${formText}`
+      : `Crée un CV professionnel structuré à partir des informations suivantes:\n
+Nom: ${form.name}
+Titre: ${form.title}
+Email: ${form.email}
+Téléphone: ${form.phone}
+Localisation: ${form.location}
+Profil: ${form.notes}
+Expérience: ${form.experience}
+Formation: ${form.education}
+Compétences: ${form.skills}
+Langues: ${form.langs}`;
+
+    const messages: any[] = [
+      {
+        role: "user",
+        content: hasPdfUpload
+          ? [
+              {
+                type: "document",
+                source: {
+                  type: "base64",
+                  media_type: "application/pdf",
+                  data: uploadedBase64,
+                },
+              },
+              {
+                type: "text",
+                text: userPrompt,
+              },
+            ]
+          : [
+              {
+                type: "text",
+                text: userPrompt,
+              },
+            ],
+      },
+    ];
+
+    const res = await fetch("/api/generate-cv", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4000,
+        system: systemPrompt,
+        messages,
+        isPdf: hasPdfUpload,
+      }),
+    });
+
+    const text = await res.text();
+
+    if (!text || !text.trim()) {
+      throw new Error("Réponse vide du serveur.");
+    }
+
+    let data: any;
     try {
-      for (let i = 0; i < GEN_STEPS.length; i++) {
-        setGenStep(i);
-        await new Promise(resolve => setTimeout(resolve, 400));
-      }
-
-      // Mock CV generation — replace with real API call
-      const mockCV: CVData = {
-        name: form.name || "Consultant",
-        title: form.title || "Professionnel",
-        email: form.email || "contact@email.com",
-        phone: form.phone || "+212 6 00 00 00 00",
-        location: form.location || "Maroc",
-        profile: form.notes || "Professionnel expérimenté avec expertise multisectorielle.",
-        experiences: [
-          {
-            company: "Experience",
-            role: form.title || "Poste",
-            period: "2023 – Présent",
-            bullets: [form.experience?.split("\n")?.[0] || "Responsabilités clés"],
-          },
-        ],
-        education: [{ school: "Institution", degree: form.education || "Formation", year: "2020" }],
-        skills: form.skills?.split(",").map(s => s.trim()).filter(Boolean) || [],
-        languages: form.langs?.split(",").map((lang, i) => {
-          const parts = lang.split(/[\/\-]/);
-          return { lang: parts[0]?.trim() || lang, level: parts[1]?.trim() || "Courant" };
-        }) || [],
-      };
-
-      setCvData(mockCV);
-      setGenStep(GEN_STEPS.length);
-      setStep(4);
-    } catch (err: any) {
-      console.error("Generation Error:", err);
-      setGenError(err.message || "Erreur lors de la génération. Réessayez.");
-    } finally {
-      setGenerating(false);
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Le serveur n'a pas renvoyé un JSON valide.");
     }
-  };
+
+    if (!res.ok) {
+      throw new Error(data?.error?.message || `Erreur API (${res.status})`);
+    }
+
+    const raw = data?.content?.map((c: any) => c?.text ?? "").join("") ?? "";
+    const clean = raw.replace(/```json|```/g, "").trim();
+
+    if (!clean) {
+      throw new Error("La réponse de l'IA est vide.");
+    }
+
+    let parsed: CVData;
+    try {
+      parsed = JSON.parse(clean);
+    } catch (e) {
+      console.error("Invalid AI JSON:", clean);
+      throw new Error("L'IA a renvoyé un JSON incomplet ou invalide.");
+    }
+
+    setCvData(parsed);
+    setGenStep(GEN_STEPS.length);
+    setStep(4);
+  } catch (err: any) {
+    console.error("Generation Error:", err);
+    setGenError(err.message || "Erreur lors de la génération. Réessayez.");
+  } finally {
+    setGenerating(false);
+  }
+};
 
   // ── PADDLE CHECKOUT ───────────────────────────────────────────────────────
   const openPaddle = (plan: Plan) => {
