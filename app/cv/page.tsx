@@ -1301,7 +1301,7 @@ Langues: ${form.langs}`;
                 </div>
               </div>
               <div style={{display:"flex",justifyContent:"flex-end"}}>
-                <button className="btn-green" onClick={()=>goStep(2)}>
+                <button className="btn-green" onClick={()=>setStep(2)}>
                   Continuer avec {TEMPLATES.find(t=>t.id===selectedTpl)?.name} →
                 </button>
               </div>
@@ -1311,7 +1311,7 @@ Langues: ${form.langs}`;
           {/* ─────── STEP 2 : UPLOAD or FORM ─────── */}
           {step===2 && mode==="upload" && (
             <div className="au">
-              <StepBack label="← Changer de modèle" onClick={()=>goStep(1)}/>
+              <StepBack label="← Changer de modèle" onClick={()=>setStep(1)}/>
 
               {/* ── ERROR BANNER ── */}
               {genError && (
@@ -1376,7 +1376,7 @@ Langues: ${form.langs}`;
                 </div>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
-                <button className="btn-outline" onClick={()=>goStep(1)}>← Retour</button>
+                <button className="btn-outline" onClick={()=>setStep(1)}>← Retour</button>
                 <button className="btn-green" disabled={!uploadedFile} onClick={()=>runGeneration("upload")}>
                   ✨ Améliorer et appliquer le modèle →
                 </button>
@@ -1386,7 +1386,7 @@ Langues: ${form.langs}`;
 
           {step===2 && mode==="ai" && (
             <div className="au">
-              <StepBack label="← Changer de modèle" onClick={()=>goStep(1)}/>
+              <StepBack label="← Changer de modèle" onClick={()=>setStep(1)}/>
               <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,.04)",marginBottom:24}}>
                 <div style={{padding:"20px 24px",borderBottom:"1.5px solid #f0f0f0"}}>
                   <h2 style={{fontSize:16,fontWeight:800}}>2. Vos informations</h2>
@@ -1430,8 +1430,8 @@ Langues: ${form.langs}`;
                 </div>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
-                <button className="btn-outline" onClick={()=>goStep(1)}>← Retour</button>
-                <button className="btn-green" onClick={()=>goStep(3)}>Continuer vers le paiement →</button>
+                <button className="btn-outline" onClick={()=>setStep(1)}>← Retour</button>
+                <button className="btn-green" onClick={()=>setStep(3)}>Continuer vers le paiement →</button>
               </div>
             </div>
           )}
@@ -1439,7 +1439,7 @@ Langues: ${form.langs}`;
           {/* ─────── STEP 3 : PAYMENT ─────── */}
           {step===3 && mode==="ai" && (
             <div className="au">
-              <StepBack label="← Modifier mes informations" onClick={()=>goStep(2)}/>
+              <StepBack label="← Modifier mes informations" onClick={()=>setStep(2)}/>
               <div style={{marginBottom:20}}>
                 <h2 style={{fontSize:18,fontWeight:800}}>3. Choisissez votre formule</h2>
                 <p style={{fontSize:13,color:"#6b7280",marginTop:4}}>Paiement sécurisé via Paddle · Visa, Mastercard, PayPal</p>
@@ -1479,7 +1479,7 @@ Langues: ${form.langs}`;
                   <div style={{fontSize:13,color:"#6b7280",marginTop:2}}>Modèle : <strong>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong> · Changez de modèle ci-dessous sans régénérer.</div>
                 </div>
                 <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                  <button className="btn-outline" onClick={()=>{setCvData(null);goStep(1);}}>↺ Recommencer</button>
+                  <button className="btn-outline" onClick={()=>{setCvData(null);setStep(1);}}>↺ Recommencer</button>
                   <button className="btn-green" onClick={downloadPDF}>⬇ Télécharger PDF</button>
                 </div>
               </div>
