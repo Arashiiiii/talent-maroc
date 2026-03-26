@@ -1076,15 +1076,85 @@ Langues: ${form.langs}`;
   };
 
   // ── PRINT / DOWNLOAD ──────────────────────────────────────────────────────
-  const downloadPDF = () => {
-    const style = document.createElement("style");
-    style.innerHTML=`@media print{body *{visibility:hidden}#cv-print,#cv-print *{visibility:visible}#cv-print{position:fixed;left:0;top:0;width:100%}}`;
-    document.head.appendChild(style);
-    window.print();
-    document.head.removeChild(style);
-  };
+ const downloadPDF = () => {
+  const cvNode = printRef.current;
+  if (!cvNode) return;
 
-  const goStep = (n: Step) => { setStep(n); window.scrollTo({top:0,behavior:"smooth"}); };
+  const printWindow = window.open("", "_blank", "width=900,height=1200");
+  if (!printWindow) {
+    alert("Impossible d'ouvrir la fenêtre d'impression.");
+    return;
+  }
+
+  const html = cvNode.innerHTML;
+
+  printWindow.document.open();
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html lang="fr">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>CV</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+          * {
+            box-sizing: border-box;
+          }
+
+          html, body {
+            margin: 0;
+            padding: 0;
+            background: white;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+          }
+
+          @page {
+            size: A4;
+            margin: 0;
+          }
+
+          body {
+            width: 794px;
+            margin: 0 auto;
+            background: white;
+          }
+
+          #print-root {
+            width: 794px;
+            margin: 0 auto;
+            background: white;
+          }
+
+          @media print {
+            html, body {
+              width: 210mm;
+              background: white;
+            }
+
+            #print-root {
+              width: 210mm;
+              margin: 0;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div id="print-root">${html}</div>
+        <script>
+          window.onload = function () {
+            setTimeout(() => {
+              window.focus();
+              window.print();
+            }, 300);
+          };
+        </script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+};
 
   // ── JSX ───────────────────────────────────────────────────────────────────
   return (
