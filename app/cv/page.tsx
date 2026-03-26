@@ -43,9 +43,9 @@ export default function CVBuilderPage() {
         throw new Error(errData.error?.message || "Erreur serveur AI.");
       }
 
-      const data = await response.json();
-      if (data?.content?.?.text) {
-  setGeneratedCV(data.content.text);
+  const data = await response.json();
+  if (data?.content?.text) {
+    setGeneratedCV(data.content.text);
         setStep(2); // Move to template selection after success
       } else {
         throw new Error("Format de réponse invalide.");
@@ -84,7 +84,7 @@ export default function CVBuilderPage() {
           </Link>
           <span className="font-bold">Talent<span className="text-blue-400">Maroc</span> CV</span>
           <div className="flex gap-2">
-            {.map((s) => (
+            {[1, 2, 3].map((s) => (
               <div key={s} className={`w-2 h-2 rounded-full ${step === s ? 'bg-blue-400' : 'bg-gray-600'}`} />
             ))}
           </div>
