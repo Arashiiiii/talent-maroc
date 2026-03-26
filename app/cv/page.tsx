@@ -1109,11 +1109,11 @@ Génère un profil percutant et des bullet points impactants. Retourne UNIQUEMEN
           <div className="au" style={{display:"inline-flex",background:"#f3f4f6",borderRadius:12,padding:4,gap:4,animationDelay:".22s"}}>
             <button className="tab-pill" onClick={()=>{setMode("upload");setStep(1);setCvData(null);}}
               style={{background:mode==="upload"?"white":"transparent",color:mode==="upload"?"#0f172a":"#6b7280",boxShadow:mode==="upload"?"0 1px 4px rgba(0,0,0,.1)":undefined}}>
-              ↑ Importer mon CV <span style={{fontSize:11,marginLeft:6,background:"#f0fdf4",color:"#15803d",padding:"2px 8px",borderRadius:100}}>GRATUIT</span>
+              ↑ Importer mon CV <span style={{fontSize:11,marginLeft:6,background:"#f0fdf4",color:"#15803d",padding:"2px 8px",borderRadius:100}}>À PARTIR DE 20 DH</span>
             </button>
             <button className="tab-pill" onClick={()=>{setMode("ai");setStep(1);setCvData(null);}}
               style={{background:mode==="ai"?"white":"transparent",color:mode==="ai"?"#0f172a":"#6b7280",boxShadow:mode==="ai"?"0 1px 4px rgba(0,0,0,.1)":undefined}}>
-              ✦ Générer avec l'IA <span style={{fontSize:11,marginLeft:6,background:"#fef3c7",color:"#92400e",padding:"2px 8px",borderRadius:100}}>À PARTIR DE 1,99€</span>
+              ✦ Générer avec l'IA <span style={{fontSize:11,marginLeft:6,background:"#fef3c7",color:"#92400e",padding:"2px 8px",borderRadius:100}}>À PARTIR DE 20 DH</span>
             </button>
           </div>
         </div>

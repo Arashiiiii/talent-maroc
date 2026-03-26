@@ -22,23 +22,28 @@ const CITY_META: Record<string,{icon:string;count:string}> = {
   Fès:       { icon:'🕌', count:'290+'   },
 };
 
-// ── JOB LIST ───────────────────────────────────────────────────────────────
+// ── JOB LIST WITH PAGINATION ──────────────────────────────────────────────
+const PAGE_SIZE = 12;
+
 async function JobList({ searchParams }: { searchParams: any }) {
   noStore();
   const params   = await searchParams;
   const query    = params.q || '';
   const location = params.l || '';
+  const page     = Math.max(1, parseInt(params.page || '1', 10));
+  const from     = (page - 1) * PAGE_SIZE;
+  const to       = from + PAGE_SIZE - 1;
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 
-  let q = supabase.from('jobs').select('*').order('created_at', { ascending: false });
+  let q = supabase.from('jobs').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(from, to);
   if (query)    q = q.or(`title.ilike.%${query}%,company.ilike.%${query}%`);
   if (location) q = q.ilike('city', `%${location}%`);
 
-  const { data: jobs, error } = await q;
+  const { data: jobs, error, count } = await q;
 
   if (error) return (
     <div style={{ padding:20, color:'#dc2626', fontSize:14, background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10 }}>
@@ -54,35 +59,96 @@ async function JobList({ searchParams }: { searchParams: any }) {
     </div>
   );
 
+  const totalPages = Math.ceil((count || 0) / PAGE_SIZE);
+
+  // Build pagination URL helper
+  const pageUrl = (p: number) => {
+    const qs = new URLSearchParams();
+    if (query)    qs.set('q', query);
+    if (location) qs.set('l', location);
+    if (p > 1)    qs.set('page', String(p));
+    const str = qs.toString();
+    return str ? `/?${str}` : '/';
+  };
+
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-      {jobs.map((job: any, i: number) => (
-        <a key={job.id} href={`/jobs/${job.id}`} className="job-card"
-          style={{ display:'block', textDecoration:'none', background:'white', border:'1.5px solid #f0f0f0', borderRadius:14, padding:'18px 20px', transition:'all 0.2s', position:'relative', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
-          <div style={{ display:'flex', gap:14, alignItems:'center' }}>
-            <div style={{ flexShrink:0 }}>
-              <CompanyLogo logoUrl={job.logo_url} companyName={job.company}/>
-            </div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <h2 style={{ fontSize:14, fontWeight:700, color:'#111827', lineHeight:1.35, marginBottom:4 }}>{job.title}</h2>
-              <div style={{ display:'flex', flexWrap:'wrap', gap:'3px 14px', fontSize:12, color:'#6b7280' }}>
-                <span style={{ display:'flex', alignItems:'center', gap:4, fontWeight:600, color:'#374151' }}>
-                  <Briefcase size={11}/> {job.company}
-                </span>
-                <span style={{ display:'flex', alignItems:'center', gap:4 }}>
-                  <MapPin size={11}/> {job.city}
-                </span>
-                <span style={{ display:'flex', alignItems:'center', gap:4 }}>
-                  <Clock size={11}/> {job.posted_at || new Date(job.created_at).toLocaleDateString('fr-FR')}
-                </span>
+    <div>
+      {/* Results count */}
+      <div style={{ fontSize:12, color:'#9ca3af', marginBottom:14, fontWeight:500 }}>
+        {count} offre{(count||0)>1?'s':''} trouvée{(count||0)>1?'s':''} · Page {page} sur {totalPages}
+      </div>
+
+      <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:24 }}>
+        {jobs.map((job: any) => (
+          <a key={job.id} href={`/jobs/${job.id}`} className="job-card"
+            style={{ display:'block', textDecoration:'none', background:'white', border:'1.5px solid #f0f0f0', borderRadius:14, padding:'18px 20px', transition:'all 0.2s', position:'relative', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
+            <div style={{ display:'flex', gap:14, alignItems:'center' }}>
+              <div style={{ flexShrink:0 }}>
+                <CompanyLogo logoUrl={job.logo_url} companyName={job.company}/>
               </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <h2 style={{ fontSize:14, fontWeight:700, color:'#111827', lineHeight:1.35, marginBottom:4 }}>{job.title}</h2>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:'3px 14px', fontSize:12, color:'#6b7280' }}>
+                  <span style={{ display:'flex', alignItems:'center', gap:4, fontWeight:600, color:'#374151' }}>
+                    <Briefcase size={11}/> {job.company}
+                  </span>
+                  <span style={{ display:'flex', alignItems:'center', gap:4 }}>
+                    <MapPin size={11}/> {job.city}
+                  </span>
+                  <span style={{ display:'flex', alignItems:'center', gap:4 }}>
+                    <Clock size={11}/> {job.posted_at || new Date(job.created_at).toLocaleDateString('fr-FR')}
+                  </span>
+                </div>
+              </div>
+              <span className="apply-btn" style={{ flexShrink:0, background:'#f0fdf4', color:'#16a34a', border:'1.5px solid #bbf7d0', padding:'8px 16px', borderRadius:8, fontSize:12, fontWeight:700, whiteSpace:'nowrap', transition:'all 0.2s' }}>
+                Voir l'offre →
+              </span>
             </div>
-            <span className="apply-btn" style={{ flexShrink:0, background:'#f0fdf4', color:'#16a34a', border:'1.5px solid #bbf7d0', padding:'8px 16px', borderRadius:8, fontSize:12, fontWeight:700, whiteSpace:'nowrap', transition:'all 0.2s' }}>
-              Voir l'offre →
-            </span>
-          </div>
-        </a>
-      ))}
+          </a>
+        ))}
+      </div>
+
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, flexWrap:'wrap' }}>
+          {/* Previous */}
+          {page > 1 ? (
+            <a href={pageUrl(page - 1)} style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'8px 14px', borderRadius:9, border:'1.5px solid #e5e7eb', background:'white', color:'#374151', textDecoration:'none', fontSize:13, fontWeight:600, transition:'all .18s' }}>
+              ← Précédent
+            </a>
+          ) : (
+            <span style={{ display:'inline-flex', padding:'8px 14px', borderRadius:9, border:'1.5px solid #f0f0f0', background:'#f9fafb', color:'#d1d5db', fontSize:13, fontWeight:600 }}>← Précédent</span>
+          )}
+
+          {/* Page numbers */}
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+            .reduce<(number|string)[]>((acc, p, i, arr) => {
+              if (i > 0 && (p as number) - (arr[i-1] as number) > 1) acc.push('...');
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((p, i) =>
+              p === '...' ? (
+                <span key={`dot-${i}`} style={{ padding:'8px 6px', color:'#9ca3af', fontSize:13 }}>…</span>
+              ) : (
+                <a key={p} href={pageUrl(p as number)}
+                  style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:36, height:36, borderRadius:9, border:`1.5px solid ${p===page?'#16a34a':'#e5e7eb'}`, background:p===page?'#16a34a':'white', color:p===page?'white':'#374151', textDecoration:'none', fontSize:13, fontWeight:600, transition:'all .18s' }}>
+                  {p}
+                </a>
+              )
+            )}
+
+          {/* Next */}
+          {page < totalPages ? (
+            <a href={pageUrl(page + 1)} style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'8px 14px', borderRadius:9, border:'1.5px solid #e5e7eb', background:'white', color:'#374151', textDecoration:'none', fontSize:13, fontWeight:600, transition:'all .18s' }}>
+              Suivant →
+            </a>
+          ) : (
+            <span style={{ display:'inline-flex', padding:'8px 14px', borderRadius:9, border:'1.5px solid #f0f0f0', background:'#f9fafb', color:'#d1d5db', fontSize:13, fontWeight:600 }}>Suivant →</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
