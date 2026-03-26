@@ -45,7 +45,7 @@ export default function CVBuilderPage() {
 
       const data = await response.json();
       if (data?.content?.?.text) {
-        setGeneratedCV(data.content.text);
+  setGeneratedCV(data.content.text);
         setStep(2); // Move to template selection after success
       } else {
         throw new Error("Format de réponse invalide.");
