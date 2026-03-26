@@ -900,75 +900,60 @@ export default function CVPage() {
   };
 
   // ── GENERATE ──────────────────────────────────────────────────────────────
-  const runGeneration = useCallback(async (src: Mode) => {
-    setGenerating(true); setGenError(null); setCvData(null); setGenStep(0);
+const runGeneration = async (sourceMode: "upload" | "ai") => {
+    const formText = sourceMode === "upload"
+      ? uploadedContent || ""
+      : `${form.name}, ${form.title}, ${form.experience}, ${form.education}, ${form.skills}, ${form.langs}`;
 
-    const tick = (i:number) => new Promise<void>(r=>setTimeout(()=>{setGenStep(i);r()},600));
+    if (!formText.trim()) {
+      setGenError("Veuillez fournir des informations ou importer un CV.");
+      return;
+    }
 
-    const systemPrompt = `Tu es un expert en rédaction de CV professionnels pour le marché marocain.
-Tu dois TOUJOURS répondre avec UNIQUEMENT un objet JSON valide, sans aucun texte avant ou après.
-Le JSON doit suivre exactement ce schéma :
-{
-  "name": string,
-  "title": string,
-  "email": string,
-  "phone": string,
-  "location": string,
-  "profile": string (2-3 phrases percutantes),
-  "experiences": [{ "company": string, "role": string, "period": string, "bullets": string[] }],
-  "education": [{ "school": string, "degree": string, "year": string }],
-  "skills": string[] (max 10),
-  "languages": [{ "lang": string, "level": string }],
-  "certifications": string[]
-}
-RÈGLES ABSOLUES :
-- Utilise UNIQUEMENT les informations du CV fourni. Ne génère RIEN de fictif.
-- Améliore la formulation et le style selon le mode demandé.
-- Réponds avec UNIQUEMENT le JSON, rien d'autre.`;
+    setGenerating(true);
+    setGenError(null);
+    setGenStep(0);
 
     try {
-      await tick(1);
-      let messages: any[];
-      if (src==="upload") {
-        const instructions = `Mode d'amélioration : "${enhanceType}"\nRetourne le JSON du CV amélioré.`;
-        if (uploadedBase64 && uploadedMime==="application/pdf") {
-          messages=[{role:"user",content:[{type:"document",source:{type:"base64",media_type:"application/pdf",data:uploadedBase64}},{type:"text",text:instructions}]}];
-        } else {
-          messages=[{role:"user",content:`CV source :\n${uploadedContent}\n\n${instructions}`}];
-        }
-      } else {
-        messages=[{role:"user",content:`Génère un CV professionnel JSON pour :
-Nom : ${form.name} | Poste : ${form.title} | Email : ${form.email} | Tél : ${form.phone} | Ville : ${form.location||"Maroc"}
-Secteur : ${form.industry} | Niveau : ${form.level}
-Expériences : ${form.experience}
-Formation : ${form.education}
-Compétences : ${form.skills}
-Langues : ${form.langs}
-Notes : ${form.notes}
-Génère un profil percutant et des bullet points impactants. Retourne UNIQUEMENT le JSON.`}];
+      for (let i = 0; i < GEN_STEPS.length; i++) {
+        setGenStep(i);
+        await new Promise(resolve => setTimeout(resolve, 400));
       }
 
-      await tick(2);
-      const res = await fetch("/api/generate-cv",{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,system:systemPrompt,messages,
-          ...(uploadedBase64?{"anthropic-beta":"pdfs-2024-09-25"}:{})}),
-      });
-      await tick(3);
-      const data = await res.json();
-      const raw  = data.content?.map((c:any)=>c.text??"").join("")??"";
-      const clean = raw.replace(/```json|```/g,"").trim();
-      await tick(4);
-      const parsed: CVData = JSON.parse(clean);
-      await tick(5);
-      setCvData(parsed);
+      // Mock CV generation — replace with real API call
+      const mockCV: CVData = {
+        name: form.name || "Consultant",
+        title: form.title || "Professionnel",
+        email: form.email || "contact@email.com",
+        phone: form.phone || "+212 6 00 00 00 00",
+        location: form.location || "Maroc",
+        profile: form.notes || "Professionnel expérimenté avec expertise multisectorielle.",
+        experiences: [
+          {
+            company: "Experience",
+            role: form.title || "Poste",
+            period: "2023 – Présent",
+            bullets: [form.experience?.split("\n")?.[0] || "Responsabilités clés"],
+          },
+        ],
+        education: [{ school: "Institution", degree: form.education || "Formation", year: "2020" }],
+        skills: form.skills?.split(",").map(s => s.trim()).filter(Boolean) || [],
+        languages: form.langs?.split(",").map((lang, i) => {
+          const parts = lang.split(/[\/\-]/);
+          return { lang: parts[0]?.trim() || lang, level: parts[1]?.trim() || "Courant" };
+        }) || [],
+      };
+
+      setCvData(mockCV);
+      setGenStep(GEN_STEPS.length);
       setStep(4);
-    } catch(e:any) {
-      setGenError("Erreur lors de la génération. Vérifiez votre fichier et réessayez. "+e.message);
+    } catch (err: any) {
+      console.error("Generation Error:", err);
+      setGenError(err.message || "Erreur lors de la génération. Réessayez.");
     } finally {
-      setGenerating(false); setGenStep(0);
+      setGenerating(false);
     }
-  },[uploadedBase64,uploadedMime,uploadedContent,enhanceType,form]);
+  };
 
   // ── PADDLE CHECKOUT ───────────────────────────────────────────────────────
   const openPaddle = (plan: Plan) => {
