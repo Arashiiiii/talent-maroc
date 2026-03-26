@@ -15,8 +15,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Better than scanning the whole JSON string
-    const hasPdf = body?.isPdf === true;
+    // Extract isPdf so it does NOT get forwarded to Anthropic
+    const { isPdf, ...anthropicBody } = body;
+    const hasPdf = isPdf === true;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
         ...(hasPdf ? { "anthropic-beta": "pdfs-2024-09-25" } : {}),
       },
       body: JSON.stringify({
-        ...body,
+        ...anthropicBody,
         model: "claude-3-haiku-20240307",
       }),
     });
@@ -47,22 +48,19 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json();
 
-    // Normalize Anthropic errors into one predictable shape
     if (!response.ok) {
       console.error("Anthropic API error:", data);
       return NextResponse.json(
         {
           error: {
-            message:
-              data?.error?.message || "Erreur retournée par le service IA."
-          }
+            message: data?.error?.message || "Erreur retournée par le service IA.",
+          },
         },
         { status: response.status }
       );
     }
 
     return NextResponse.json(data, { status: 200 });
-
   } catch (error: any) {
     clearTimeout(timeoutId);
     console.error("generate-cv route error:", error);
