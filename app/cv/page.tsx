@@ -926,14 +926,39 @@ export default function CVPage() {
 
   // ── FILE UPLOAD ───────────────────────────────────────────────────────────
   const handleFile = (file: File) => {
-    setUploadError(null); setUploadedFile(file.name);
-    if (file.name.endsWith(".pdf")) {
-      const r=new FileReader(); r.onload=e=>{setUploadedBase64((e.target?.result as string).split(",")[1]);setUploadedMime("application/pdf");setUploadedContent("");};
+    setUploadError(null);
+    setUploadedFile(file.name);
+
+    const lower = file.name.toLowerCase();
+    const isPdf = lower.endsWith(".pdf");
+    const isTxt = lower.endsWith(".txt") || file.type.startsWith("text/");
+
+    if (isPdf) {
+      const r = new FileReader();
+      r.onload = e => {
+        setUploadedBase64((e.target?.result as string).split(",")[1]);
+        setUploadedMime("application/pdf");
+        setUploadedContent("");
+      };
       r.readAsDataURL(file);
-    } else {
-      const r=new FileReader(); r.onload=e=>{setUploadedContent(e.target?.result as string??"");setUploadedBase64(null);setUploadedMime(null);};
-      r.readAsText(file);
+      return;
     }
+
+    if (isTxt) {
+      const r = new FileReader();
+      r.onload = e => {
+        setUploadedContent((e.target?.result as string) ?? "");
+        setUploadedBase64(null);
+        setUploadedMime(null);
+      };
+      r.readAsText(file);
+      return;
+    }
+
+    setUploadedBase64(null);
+    setUploadedMime(null);
+    setUploadedContent("");
+    setUploadError("Format non supporté. Utilisez un PDF ou un fichier texte.");
   };
 
   // ── GENERATE — reads from refs so always has fresh values even in stale closures ──
@@ -1011,6 +1036,7 @@ Retourne UNIQUEMENT le JSON.`}];
           max_tokens:4000,
           system:systemPrompt,
           messages,
+          isPdf: !!(base64 && mime === "application/pdf"),
         }),
       });
 
@@ -1055,6 +1081,17 @@ Retourne UNIQUEMENT le JSON.`}];
   // Intentionally empty deps — function reads from refs, not state
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const paid = p.get("payment");
+    const paidMode = p.get("mode") as Mode | null;
+
+    if (paid === "success") {
+      window.history.replaceState({}, "", "/cv");
+      runGeneration(paidMode === "upload" ? "upload" : "ai");
+    }
+  }, [runGeneration]);
 
   // ── PADDLE CHECKOUT ───────────────────────────────────────────────────────
   const openPaddle = (plan: Plan, triggerMode: Mode = "ai") => {
@@ -1315,10 +1352,10 @@ Retourne UNIQUEMENT le JSON.`}];
                     onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor="#16a34a";e.currentTarget.style.background="#f0fdf4"}}
                     onDragLeave={e=>{e.currentTarget.style.borderColor="#d1d5db";e.currentTarget.style.background="#f9fafb"}}
                     onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)handleFile(f);e.currentTarget.style.borderColor="#d1d5db";e.currentTarget.style.background="#f9fafb"}}>
-                    <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={e=>{if(e.target.files?.[0])handleFile(e.target.files[0]);}} style={{display:"none"}}/>
+                    <input type="file" accept=".pdf,.txt" onChange={e=>{if(e.target.files?.[0])handleFile(e.target.files[0]);}} style={{display:"none"}}/>
                     <div style={{fontSize:36,marginBottom:10}}>📄</div>
                     <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>Glissez votre CV ici</div>
-                    <p style={{fontSize:12,color:"#9ca3af"}}>ou cliquez pour parcourir · PDF, DOC, DOCX, TXT</p>
+                    <p style={{fontSize:12,color:"#9ca3af"}}>ou cliquez pour parcourir · PDF, TXT</p>
                   </label>
                   {uploadedFile && (
                     <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:10,marginTop:14}}>
