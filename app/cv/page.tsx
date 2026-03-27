@@ -906,16 +906,6 @@ export default function CVPage() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-useEffect(() => {
-  const p = new URLSearchParams(window.location.search);
-  const paid = p.get("payment");
-  const paidMode = p.get("mode") as Mode | null;
-
-  if (paid === "success") {
-    window.history.replaceState({}, "", "/cv");
-    runGeneration(paidMode === "upload" ? "upload" : "ai");
-  }
-}, [runGeneration]);
 
   // Keep refs in sync with latest state values
   useEffect(()=>{ uploadedBase64Ref.current  = uploadedBase64;  }, [uploadedBase64]);
@@ -1106,7 +1096,7 @@ Retourne UNIQUEMENT le JSON.`}];
         displayMode: "overlay",
         theme: "light",
         locale: "fr",
-        successUrl: `${window.location.origin}/cv?payment=success`,
+        successUrl: `${window.location.origin}/cv?payment=success&mode=${triggerMode}`,
       },
     });
   };
@@ -1343,7 +1333,7 @@ Retourne UNIQUEMENT le JSON.`}];
                 <div style={{padding:"20px 24px",borderBottom:"1.5px solid #f0f0f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
                     <h2 style={{fontSize:16,fontWeight:800}}>2. Importez votre CV</h2>
-                    <p style={{fontSize:13,color:"#6b7280",marginTop:3}}>PDF, DOC ou TXT — l'IA l'améliore et le met en forme dans votre modèle.</p>
+                    <p style={{fontSize:13,color:"#6b7280",marginTop:3}}>PDF ou TXT — l'IA l'améliore et le met en forme dans votre modèle.</p>
                   </div>
                   <span style={{background:"#f0fdf4",color:"#15803d",border:"1.5px solid #bbf7d0",padding:"4px 12px",borderRadius:100,fontSize:12,fontWeight:700}}>✓ Gratuit</span>
                 </div>
@@ -1353,10 +1343,10 @@ Retourne UNIQUEMENT le JSON.`}];
                     onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor="#16a34a";e.currentTarget.style.background="#f0fdf4"}}
                     onDragLeave={e=>{e.currentTarget.style.borderColor="#d1d5db";e.currentTarget.style.background="#f9fafb"}}
                     onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)handleFile(f);e.currentTarget.style.borderColor="#d1d5db";e.currentTarget.style.background="#f9fafb"}}>
-                    <input type="file" accept=".pdf,.txt" onChange={e=>{if(e.target.files?.[0])handleFile(e.target.files[0]);}} style={{display:"none"}}/>
+                    <input type="file" accept=".pdf,.txt,text/plain,application/pdf" onChange={e=>{if(e.target.files?.[0])handleFile(e.target.files[0]);}} style={{display:"none"}}/>
                     <div style={{fontSize:36,marginBottom:10}}>📄</div>
                     <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>Glissez votre CV ici</div>
-                    <p style={{fontSize:12,color:"#9ca3af"}}>ou cliquez pour parcourir · PDF, TXT</p>
+                    <p style={{fontSize:12,color:"#9ca3af"}}>ou cliquez pour parcourir · PDF, DOC, DOCX, TXT</p>
                   </label>
                   {uploadedFile && (
                     <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:10,marginTop:14}}>
