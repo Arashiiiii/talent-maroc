@@ -877,6 +877,14 @@ export default function CVPage() {
   const [genError,    setGenError]    = useState<string|null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
+  // Refs to always hold latest values — solves stale closure in Paddle eventCallback
+  const uploadedBase64Ref  = useRef<string|null>(null);
+  const uploadedMimeRef    = useRef<string|null>(null);
+  const uploadedContentRef = useRef<string>("");
+  const enhanceTypeRef     = useRef<string>("Optimisation ATS");
+  const formRef            = useRef(form);
+  const photoBase64Ref     = useRef<string|null>(null);
+
   const GEN_STEPS = ["Lecture du CV","Extraction des données","Application du modèle","Optimisation ATS","Finalisation"];
 
   // Initialize Paddle via npm package
@@ -903,11 +911,18 @@ export default function CVPage() {
     const p=new URLSearchParams(window.location.search);
     if(p.get("payment")==="success"){
       window.history.replaceState({},"","/cv");
-      // paddle redirect fallback — runs after page reload
       runGeneration("ai");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
+
+  // Keep refs in sync with latest state values
+  useEffect(()=>{ uploadedBase64Ref.current  = uploadedBase64;  }, [uploadedBase64]);
+  useEffect(()=>{ uploadedMimeRef.current    = uploadedMime;    }, [uploadedMime]);
+  useEffect(()=>{ uploadedContentRef.current = uploadedContent; }, [uploadedContent]);
+  useEffect(()=>{ enhanceTypeRef.current     = enhanceType;     }, [enhanceType]);
+  useEffect(()=>{ formRef.current            = form;            }, [form]);
+  useEffect(()=>{ photoBase64Ref.current     = photoBase64;     }, [photoBase64]);
 
   // ── FILE UPLOAD ───────────────────────────────────────────────────────────
   const handleFile = (file: File) => {
@@ -921,8 +936,16 @@ export default function CVPage() {
     }
   };
 
-  // ── GENERATE ──────────────────────────────────────────────────────────────
+  // ── GENERATE — reads from refs so always has fresh values even in stale closures ──
   const runGeneration = useCallback(async (src: Mode) => {
+    // Read latest values from refs (not closure-captured state)
+    const base64   = uploadedBase64Ref.current;
+    const mime     = uploadedMimeRef.current;
+    const content  = uploadedContentRef.current;
+    const enhance  = enhanceTypeRef.current;
+    const f        = formRef.current;
+    const photo    = photoBase64Ref.current;
+
     setGenerating(true); setGenError(null); setCvData(null); setGenStep(0);
 
     const tick = (i:number) => new Promise<void>(r=>setTimeout(()=>{setGenStep(i);r()},600));
@@ -936,63 +959,102 @@ Le JSON doit suivre exactement ce schéma :
   "email": string,
   "phone": string,
   "location": string,
-  "profile": string (2-3 phrases percutantes),
+  "profile": "2-3 phrases percutantes",
   "experiences": [{ "company": string, "role": string, "period": string, "bullets": string[] }],
   "education": [{ "school": string, "degree": string, "year": string }],
-  "skills": string[] (max 10),
+  "skills": string[],
   "languages": [{ "lang": string, "level": string }],
   "certifications": string[]
 }
 RÈGLES ABSOLUES :
 - Utilise UNIQUEMENT les informations du CV fourni. Ne génère RIEN de fictif.
 - Améliore la formulation et le style selon le mode demandé.
-- Réponds avec UNIQUEMENT le JSON, rien d'autre.`;
+- Réponds avec UNIQUEMENT le JSON, rien d'autre, pas de markdown.`;
 
     try {
       await tick(1);
       let messages: any[];
+
       if (src==="upload") {
-        const instructions = `Mode d'amélioration : "${enhanceType}"\nRetourne le JSON du CV amélioré.`;
-        if (uploadedBase64 && uploadedMime==="application/pdf") {
-          messages=[{role:"user",content:[{type:"document",source:{type:"base64",media_type:"application/pdf",data:uploadedBase64}},{type:"text",text:instructions}]}];
+        const instructions = `Mode : "${enhance}". Analyse ce CV et retourne le JSON amélioré.`;
+        if (base64 && mime==="application/pdf") {
+          messages=[{role:"user",content:[
+            {type:"document",source:{type:"base64",media_type:"application/pdf",data:base64}},
+            {type:"text",text:instructions}
+          ]}];
+        } else if (content.trim()) {
+          messages=[{role:"user",content:`Voici le CV à améliorer :
+
+${content}
+
+${instructions}`}];
         } else {
-          messages=[{role:"user",content:`CV source :\n${uploadedContent}\n\n${instructions}`}];
+          throw new Error("Aucun contenu CV trouvé. Veuillez réimporter votre fichier.");
         }
       } else {
         messages=[{role:"user",content:`Génère un CV professionnel JSON pour :
-Nom : ${form.name} | Poste : ${form.title} | Email : ${form.email} | Tél : ${form.phone} | Ville : ${form.location||"Maroc"}
-Secteur : ${form.industry} | Niveau : ${form.level}
-Expériences : ${form.experience}
-Formation : ${form.education}
-Compétences : ${form.skills}
-Langues : ${form.langs}
-Notes : ${form.notes}
-Génère un profil percutant et des bullet points impactants. Retourne UNIQUEMENT le JSON.`}];
+Nom : ${f.name} | Poste : ${f.title} | Email : ${f.email} | Tél : ${f.phone} | Ville : ${f.location||"Maroc"}
+Secteur : ${f.industry} | Niveau : ${f.level}
+Expériences : ${f.experience}
+Formation : ${f.education}
+Compétences : ${f.skills}
+Langues : ${f.langs}
+Notes : ${f.notes}
+Retourne UNIQUEMENT le JSON.`}];
       }
 
       await tick(2);
-      const res = await fetch("/api/generate-cv",{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4000,system:systemPrompt,messages,
-          ...(uploadedBase64?{"anthropic-beta":"pdfs-2024-09-25"}:{})}),
+      const res = await fetch("/api/generate-cv", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:4000,
+          system:systemPrompt,
+          messages,
+        }),
       });
+
       await tick(3);
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Erreur API (${res.status}): ${err.slice(0,200)}`);
+      }
+
       const data = await res.json();
-      const raw  = data.content?.map((c:any)=>c.text??"").join("")??"";
-      const clean = raw.replace(/```json|```/g,"").trim();
+
+      if (data.error) throw new Error(`Anthropic: ${data.error.message || JSON.stringify(data.error)}`);
+
+      const raw   = data.content?.map((c:any)=>c.text??"").join("")??"";
+      const clean = raw.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/\s*```$/i,"").trim();
+
+      if (!clean) throw new Error("Réponse vide. Vérifiez votre clé API sur Vercel.");
+
       await tick(4);
-      const parsed: CVData = JSON.parse(clean);
-      // Inject user photo if provided
-      if (photoBase64) parsed.photo = photoBase64;
+
+      let parsed: CVData;
+      try {
+        parsed = JSON.parse(clean);
+      } catch {
+        throw new Error(`JSON invalide reçu. Début : ${clean.slice(0,120)}`);
+      }
+
+      if (!parsed.name && !parsed.experiences) throw new Error("CV incomplet retourné par l'IA. Réessayez.");
+
+      // Inject photo
+      if (photo) parsed.photo = photo;
+
       await tick(5);
       setCvData(parsed);
       setStep(4);
     } catch(e:any) {
-      setGenError("Erreur lors de la génération. Vérifiez votre fichier et réessayez. "+e.message);
+      setGenError(e.message || "Erreur inconnue. Réessayez.");
     } finally {
       setGenerating(false); setGenStep(0);
     }
-  },[uploadedBase64,uploadedMime,uploadedContent,enhanceType,form,photoBase64]);
+  // Intentionally empty deps — function reads from refs, not state
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
 
   // ── PADDLE CHECKOUT ───────────────────────────────────────────────────────
   const openPaddle = (plan: Plan, triggerMode: Mode = "ai") => {
@@ -1011,13 +1073,59 @@ Génère un profil percutant et des bullet points impactants. Retourne UNIQUEMEN
     });
   };
 
-  // ── PRINT / DOWNLOAD ──────────────────────────────────────────────────────
+  // ── PRINT / DOWNLOAD — opens a clean isolated window ─────────────────────
   const downloadPDF = () => {
-    const style = document.createElement("style");
-    style.innerHTML=`@media print{body *{visibility:hidden}#cv-print,#cv-print *{visibility:visible}#cv-print{position:fixed;left:0;top:0;width:100%}}`;
-    document.head.appendChild(style);
-    window.print();
-    document.head.removeChild(style);
+    const node = printRef.current;
+    if (!node) return;
+
+    // Collect all Google Font link tags from the current page
+    const fontLinks = Array.from(document.querySelectorAll('link[href*="fonts.googleapis.com"]'))
+      .map((l: any) => `<link rel="stylesheet" href="${l.href}">`)
+      .join("\n");
+
+    const printWin = window.open("", "_blank", "width=870,height=1100");
+    if (!printWin) { alert("Popup bloquée. Autorisez les popups pour talentmaroc.shop."); return; }
+
+    printWin.document.write(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Mon CV — TalentMaroc</title>
+  ${fontLinks}
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 794px;
+      margin: 0 auto;
+      background: white;
+      font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    @page { size: A4; margin: 0; }
+    @media print {
+      html, body { width: 210mm; }
+    }
+    /* Prevent any blue link underlines */
+    a { text-decoration: none; color: inherit; }
+    /* Hide scrollbars in print */
+    ::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body>
+  <div id="cv-root">${node.innerHTML}</div>
+  <script>
+    // Wait for fonts to load before printing
+    document.fonts.ready.then(function() {
+      setTimeout(function() {
+        window.focus();
+        window.print();
+      }, 400);
+    });
+  </script>
+</body>
+</html>`);
+    printWin.document.close();
   };
 
   const goStep = (n: Step) => { setStep(n); window.scrollTo({top:0,behavior:"smooth"}); };
@@ -1109,11 +1217,11 @@ Génère un profil percutant et des bullet points impactants. Retourne UNIQUEMEN
           <div className="au" style={{display:"inline-flex",background:"#f3f4f6",borderRadius:12,padding:4,gap:4,animationDelay:".22s"}}>
             <button className="tab-pill" onClick={()=>{setMode("upload");setStep(1);setCvData(null);}}
               style={{background:mode==="upload"?"white":"transparent",color:mode==="upload"?"#0f172a":"#6b7280",boxShadow:mode==="upload"?"0 1px 4px rgba(0,0,0,.1)":undefined}}>
-              ↑ Importer mon CV <span style={{fontSize:11,marginLeft:6,background:"#f0fdf4",color:"#15803d",padding:"2px 8px",borderRadius:100}}>À PARTIR DE 20 DH</span>
+              ↑ Importer mon CV <span style={{fontSize:11,marginLeft:6,background:"#f0fdf4",color:"#15803d",padding:"2px 8px",borderRadius:100}}>GRATUIT</span>
             </button>
             <button className="tab-pill" onClick={()=>{setMode("ai");setStep(1);setCvData(null);}}
               style={{background:mode==="ai"?"white":"transparent",color:mode==="ai"?"#0f172a":"#6b7280",boxShadow:mode==="ai"?"0 1px 4px rgba(0,0,0,.1)":undefined}}>
-              ✦ Générer avec l'IA <span style={{fontSize:11,marginLeft:6,background:"#fef3c7",color:"#92400e",padding:"2px 8px",borderRadius:100}}>À PARTIR DE 20 DH</span>
+              ✦ Générer avec l'IA <span style={{fontSize:11,marginLeft:6,background:"#fef3c7",color:"#92400e",padding:"2px 8px",borderRadius:100}}>À PARTIR DE 1,99€</span>
             </button>
           </div>
         </div>
