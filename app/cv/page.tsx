@@ -1073,16 +1073,6 @@ Retourne UNIQUEMENT le JSON.`}];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-  useEffect(() => {
-    const p = new URLSearchParams(window.location.search);
-    const paid = p.get("payment");
-    const paidMode = p.get("mode") as Mode | null;
-
-    if (paid === "success") {
-      window.history.replaceState({}, "", "/cv");
-      runGeneration(paidMode === "upload" ? "upload" : "ai");
-    }
-  }, [runGeneration]);
 
   // ── PADDLE CHECKOUT ───────────────────────────────────────────────────────
   const openPaddle = (plan: Plan, triggerMode: Mode = "ai") => {
@@ -1096,7 +1086,6 @@ Retourne UNIQUEMENT le JSON.`}];
         displayMode: "overlay",
         theme: "light",
         locale: "fr",
-        successUrl: `${window.location.origin}/cv?payment=success&mode=${triggerMode}`,
       },
     });
   };
