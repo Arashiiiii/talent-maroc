@@ -906,15 +906,16 @@ export default function CVPage() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+useEffect(() => {
+  const p = new URLSearchParams(window.location.search);
+  const paid = p.get("payment");
+  const paidMode = p.get("mode") as Mode | null;
 
-  useEffect(()=>{
-    const p=new URLSearchParams(window.location.search);
-    if(p.get("payment")==="success"){
-      window.history.replaceState({},"","/cv");
-      runGeneration("ai");
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[]);
+  if (paid === "success") {
+    window.history.replaceState({}, "", "/cv");
+    runGeneration(paidMode === "upload" ? "upload" : "ai");
+  }
+}, [runGeneration]);
 
   // Keep refs in sync with latest state values
   useEffect(()=>{ uploadedBase64Ref.current  = uploadedBase64;  }, [uploadedBase64]);
