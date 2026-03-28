@@ -100,6 +100,33 @@ const PLAN_FEATURES: Record<string,string[]> = {
   Cadre:         ["Révisions illimitées","PDF + Word + HTML","Lettre + Bio","Questions d'entretien IA","Support prioritaire"],
 };
 
+const PLAN_CAPS = {
+  Starter: {
+    allowPdf: true,
+    allowWord: false,
+    allowHtml: false,
+    allowCoverLetter: false,
+    allowLinkedIn: false,
+    templateLimit: 1,
+  },
+  Professionnel: {
+    allowPdf: true,
+    allowWord: true,
+    allowHtml: false,
+    allowCoverLetter: true,
+    allowLinkedIn: true,
+    templateLimit: 3,
+  },
+  Cadre: {
+    allowPdf: true,
+    allowWord: true,
+    allowHtml: true,
+    allowCoverLetter: true,
+    allowLinkedIn: true,
+    templateLimit: 999,
+  },
+} as const;
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ── CV TEMPLATE RENDERERS ─────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
@@ -868,6 +895,7 @@ export default function CVPage() {
   const [paddle,         setPaddle]         = useState<Paddle | undefined>(undefined);
   const [payPending,     setPayPending]      = useState(false);
   const [currentPlan,    setCurrentPlan]     = useState<Plan>(PLANS[1]);
+  const currentCaps = PLAN_CAPS[currentPlan.name as keyof typeof PLAN_CAPS] ?? PLAN_CAPS.Starter;
   const pendingModeRef = useRef<Mode>("ai"); // track which mode triggered paddle
 
   // Generation
@@ -895,6 +923,7 @@ export default function CVPage() {
       eventCallback(event) {
         if (event.name === "checkout.completed") {
           setPayPending(false);
+          try { sessionStorage.setItem("tm_plan_name", currentPlan.name); } catch {}
           runGeneration(pendingModeRef.current);
         }
         if (event.name === "checkout.closed") {
@@ -905,6 +934,15 @@ export default function CVPage() {
       if (p) setPaddle(p);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("tm_plan_name");
+      if (!saved) return;
+      const found = PLANS.find((p) => p.name === saved);
+      if (found) setCurrentPlan(found);
+    } catch {}
   }, []);
 
   // Keep refs in sync with latest state values
@@ -1078,6 +1116,7 @@ Retourne UNIQUEMENT le JSON.`}];
   const openPaddle = (plan: Plan, triggerMode: Mode = "ai") => {
     if (!paddle) { alert("Paddle non chargé. Rafraîchissez la page."); return; }
     pendingModeRef.current = triggerMode;
+    try { sessionStorage.setItem("tm_plan_name", plan.name); } catch {}
     setCurrentPlan(plan); setPayPending(true);
     paddle.Checkout.open({
       items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
@@ -1090,63 +1129,124 @@ Retourne UNIQUEMENT le JSON.`}];
     });
   };
 
-  // ── PRINT / DOWNLOAD — opens a clean isolated window ─────────────────────
-  const downloadPDF = () => {
+  const allowedTemplateIds = TEMPLATES.slice(0, currentCaps.templateLimit).map((t) => t.id);
+  const selectedTemplateLocked = !allowedTemplateIds.includes(selectedTpl);
+
+  useEffect(() => {
+    if (selectedTemplateLocked && allowedTemplateIds.length) {
+      setSelectedTpl(allowedTemplateIds[0]);
+    }
+  }, [selectedTemplateLocked, allowedTemplateIds]);
+
+  const downloadTextFile = (filename: string, content: string, mime = "text/plain;charset=utf-8") => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const cvToPlainText = (cv: CVData) => {
+    return [
+      `${cv.name}`,
+      `${cv.title}`,
+      `${cv.email} | ${cv.phone} | ${cv.location}`,
+      "",
+      "PROFIL",
+      cv.profile,
+      "",
+      "EXPÉRIENCES",
+      ...cv.experiences.flatMap((e) => [
+        `${e.role} — ${e.company} (${e.period})`,
+        ...e.bullets.map((b) => `- ${b}`),
+        "",
+      ]),
+      "FORMATION",
+      ...cv.education.map((e) => `${e.degree} — ${e.school} (${e.year})`),
+      "",
+      "COMPÉTENCES",
+      cv.skills.join(", "),
+      "",
+      "LANGUES",
+      ...cv.languages.map((l) => `${l.lang} — ${l.level}`),
+      ...(cv.certifications?.length ? ["", "CERTIFICATIONS", ...cv.certifications] : []),
+    ].join("\n");
+  };
+
+  const coverLetterText = (cv: CVData) => `Objet : Candidature au poste de ${cv.title}
+
+Madame, Monsieur,
+
+Je vous adresse ma candidature pour le poste de ${cv.title}. Fort${cv.name.endsWith('a') ? 'e' : ''} d'une expérience construite autour de ${cv.experiences[0]?.role || cv.title}, je souhaite mettre mes compétences au service de votre structure.
+
+Au fil de mon parcours, j'ai développé une expertise en ${cv.skills.slice(0, 4).join(", ")} et j'ai contribué à des missions à forte valeur ajoutée, notamment chez ${cv.experiences[0]?.company || 'mes précédents employeurs'}. Mon sens de l'organisation, ma capacité d'adaptation et mon orientation résultats me permettent d'apporter une contribution rapide et concrète.
+
+Je serais ravi${cv.name.endsWith('a') ? 'e' : ''} d'échanger avec vous afin de vous présenter plus en détail ma motivation et l'apport que je pourrais avoir au sein de votre équipe.
+
+Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.
+
+${cv.name}`;
+
+  const linkedinSummaryText = (cv: CVData) => `${cv.title} basé${cv.name.endsWith('a') ? 'e' : ''} à ${cv.location}. ${cv.profile} Compétences clés : ${cv.skills.slice(0, 8).join(", ")}. Expérience récente : ${cv.experiences[0]?.role || cv.title} chez ${cv.experiences[0]?.company || 'une entreprise de référence'}.`;
+
+  const downloadWord = () => {
+    if (!cvData) return;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><pre style="font-family:Calibri,Arial,sans-serif;white-space:pre-wrap">${cvToPlainText(cvData)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")}</pre></body></html>`;
+    downloadTextFile(`CV-${(cvData.name || "TalentMaroc").replace(/\s+/g, "-")}.doc`, html, "application/msword");
+  };
+
+  const downloadHTML = () => {
     const node = printRef.current;
-    if (!node) return;
+    if (!node || !cvData) return;
+    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>CV ${cvData.name}</title></head><body style="margin:0;background:#fff">${node.innerHTML}</body></html>`;
+    downloadTextFile(`CV-${(cvData.name || "TalentMaroc").replace(/\s+/g, "-")}.html`, html, "text/html;charset=utf-8");
+  };
 
-    // Collect all Google Font link tags from the current page
-    const fontLinks = Array.from(document.querySelectorAll('link[href*="fonts.googleapis.com"]'))
-      .map((l: any) => `<link rel="stylesheet" href="${l.href}">`)
-      .join("\n");
+  const downloadCoverLetter = () => {
+    if (!cvData) return;
+    downloadTextFile(`Lettre-${(cvData.name || "TalentMaroc").replace(/\s+/g, "-")}.txt`, coverLetterText(cvData));
+  };
 
-    const printWin = window.open("", "_blank", "width=870,height=1100");
-    if (!printWin) { alert("Popup bloquée. Autorisez les popups pour talentmaroc.shop."); return; }
+  const downloadLinkedInSummary = () => {
+    if (!cvData) return;
+    downloadTextFile(`LinkedIn-${(cvData.name || "TalentMaroc").replace(/\s+/g, "-")}.txt`, linkedinSummaryText(cvData));
+  };
 
-    printWin.document.write(`<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8"/>
-  <title>Mon CV — TalentMaroc</title>
-  ${fontLinks}
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-      width: 794px;
-      margin: 0 auto;
-      background: white;
-      font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    @page { size: A4; margin: 0; }
-    @media print {
-      html, body { width: 210mm; }
-    }
-    /* Prevent any blue link underlines */
-    a { text-decoration: none; color: inherit; }
-    /* Hide scrollbars in print */
-    ::-webkit-scrollbar { display: none; }
-  </style>
-</head>
-<body>
-  <div id="cv-root">${node.innerHTML}</div>
-  <script>
-    // Wait for fonts to load before printing
-    document.fonts.ready.then(function() {
-      setTimeout(function() {
-        window.focus();
-        window.print();
-      }, 400);
-    });
-  </script>
-</body>
-</html>`);
-    printWin.document.close();
+  // ── PRINT / DOWNLOAD — direct PDF save ──────────────────────────────────
+  const downloadPDF = async () => {
+    const node = printRef.current;
+    if (!node || !cvData) return;
+
+    const mod: any = await import("html2pdf.js");
+    const html2pdf = mod.default || mod;
+
+    await html2pdf()
+      .set({
+        margin: 0,
+        filename: `CV-${(cvData.name || "TalentMaroc").replace(/\s+/g, "-")}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          scrollX: 0,
+          scrollY: 0,
+        },
+        jsPDF: { unit: "px", format: [794, 1123], orientation: "portrait" },
+        pagebreak: { mode: ["css", "legacy"] },
+      })
+      .from(node)
+      .save();
   };
 
   const goStep = (n: Step) => { setStep(n); window.scrollTo({top:0,behavior:"smooth"}); };
-
   // ── JSX ───────────────────────────────────────────────────────────────────
   return (
     <>
@@ -1495,29 +1595,45 @@ Retourne UNIQUEMENT le JSON.`}];
               <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,padding:"18px 22px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:20,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
                 <div>
                   <div style={{fontSize:17,fontWeight:800,color:"#0f172a"}}>🎉 Votre CV est prêt !</div>
-                  <div style={{fontSize:13,color:"#6b7280",marginTop:2}}>Modèle : <strong>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong> · Changez de modèle ci-dessous sans régénérer.</div>
+                  <div style={{fontSize:13,color:"#6b7280",marginTop:2}}>Formule active : <strong>{currentPlan.name}</strong> · Modèle : <strong>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong>.</div>
                 </div>
                 <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
                   <button className="btn-outline" onClick={()=>{setCvData(null);goStep(1);}}>↺ Recommencer</button>
-                  <button className="btn-green" onClick={downloadPDF}>⬇ Télécharger PDF</button>
+                  {currentCaps.allowPdf && <button className="btn-green" onClick={downloadPDF}>⬇ Télécharger PDF</button>}
+                  {currentCaps.allowWord && <button className="btn-outline" onClick={downloadWord}>⬇ Word</button>}
+                  {currentCaps.allowHtml && <button className="btn-outline" onClick={downloadHTML}>⬇ HTML</button>}
                 </div>
               </div>
+
+              {(currentCaps.allowCoverLetter || currentCaps.allowLinkedIn) && (
+                <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:12,padding:"14px 20px",marginBottom:20,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>Options incluses avec votre formule</div>
+                    <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Téléchargez aussi les livrables inclus dans votre achat.</div>
+                  </div>
+                  <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                    {currentCaps.allowCoverLetter && <button className="btn-outline" onClick={downloadCoverLetter}>⬇ Lettre de motivation</button>}
+                    {currentCaps.allowLinkedIn && <button className="btn-outline" onClick={downloadLinkedInSummary}>⬇ Résumé LinkedIn</button>}
+                  </div>
+                </div>
+              )}
 
               {/* Template switcher */}
               <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:12,padding:"14px 20px",marginBottom:20,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
                 <span style={{fontSize:13,fontWeight:600,color:"#374151",flexShrink:0}}>Changer de modèle :</span>
-                {TEMPLATES.map(t=>(
-                  <button key={t.id} onClick={()=>setSelectedTpl(t.id)}
-                    style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${selectedTpl===t.id?"#16a34a":"#e5e7eb"}`,background:selectedTpl===t.id?"#f0fdf4":"white",color:selectedTpl===t.id?"#15803d":"#374151",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .15s",fontFamily:"inherit"}}>
-                    {t.name}
+                {TEMPLATES.map((t, idx)=>(
+                  <button key={t.id} onClick={()=>allowedTemplateIds.includes(t.id) && setSelectedTpl(t.id)}
+                    disabled={!allowedTemplateIds.includes(t.id)}
+                    title={allowedTemplateIds.includes(t.id) ? "" : "Disponible avec une formule supérieure"}
+                    style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${selectedTpl===t.id?"#16a34a":"#e5e7eb"}`,background:!allowedTemplateIds.includes(t.id)?"#f3f4f6":selectedTpl===t.id?"#f0fdf4":"white",color:!allowedTemplateIds.includes(t.id)?"#9ca3af":selectedTpl===t.id?"#15803d":"#374151",fontSize:12,fontWeight:600,cursor:allowedTemplateIds.includes(t.id)?"pointer":"not-allowed",transition:"all .15s",fontFamily:"inherit",opacity:allowedTemplateIds.includes(t.id)?1:.7}}>
+                    {t.name}{!allowedTemplateIds.includes(t.id) ? " 🔒" : ""}
                   </button>
                 ))}
               </div>
 
               {/* CV PREVIEW */}
-              <div id="cv-print" ref={printRef}
-                style={{background:"white",borderRadius:14,boxShadow:"0 4px 24px rgba(0,0,0,.08)",overflow:"hidden",marginBottom:24}}>
-                <div style={{width:794,margin:"0 auto"}}>
+              <div style={{background:"white",borderRadius:14,boxShadow:"0 4px 24px rgba(0,0,0,.08)",overflow:"hidden",marginBottom:24}}>
+                <div id="cv-print" ref={printRef} style={{width:794,margin:"0 auto",background:"white"}}>
                   <RenderCV id={selectedTpl} cv={cvData}/>
                 </div>
               </div>
