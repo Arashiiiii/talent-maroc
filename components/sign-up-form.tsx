@@ -85,9 +85,7 @@ export function SignUpForm({
       const supabase = createClient();
 
       const nextPath = isEmployer ? "/employeur/dashboard" : "/protected";
-      const redirectUrl = `${window.location.origin}/auth/confirm?next=${encodeURIComponent(
-        nextPath
-      )}`;
+const redirectUrl = `${window.location.origin}/auth/confirm?next=${encodeURIComponent(nextPath)}`;
 
       setDebug(`Sending signUp request to Supabase with redirect: ${redirectUrl}`);
 
