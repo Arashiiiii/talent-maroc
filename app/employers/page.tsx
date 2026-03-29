@@ -121,7 +121,7 @@ export default function EmployerLandingPage() {
 
               <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                 <Link
-                  href="/auth/register?role=employer"
+                  href="/auth/sign-up?role=employer"
                   className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-6 py-4 text-base font-bold text-white transition hover:bg-blue-700"
                 >
                   Créer un compte recruteur
