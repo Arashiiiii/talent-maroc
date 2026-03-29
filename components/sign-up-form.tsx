@@ -58,6 +58,12 @@ export function SignUpForm({
       return;
     }
 
+    if (!email.trim()) {
+      setError("Veuillez saisir votre email.");
+      setIsLoading(false);
+      return;
+    }
+
     if (password !== repeatPassword) {
       setError("Les mots de passe ne correspondent pas.");
       setIsLoading(false);
@@ -71,9 +77,10 @@ export function SignUpForm({
     }
 
     try {
-      const redirectUrl = isEmployer
-        ? `${window.location.origin}/employeur/dashboard`
-        : `${window.location.origin}/protected`;
+      const nextPath = isEmployer ? "/employeur/dashboard" : "/protected";
+      const redirectUrl = `${window.location.origin}/auth/confirm?next=${encodeURIComponent(
+        nextPath
+      )}`;
 
       const { error } = await supabase.auth.signUp({
         email,
@@ -93,7 +100,7 @@ export function SignUpForm({
 
       router.push(`/auth/sign-up-success?role=${role}`);
     } catch (err: any) {
-      setError(err.message || "Erreur lors de l'inscription.");
+      setError(err?.message || "Erreur lors de l'inscription.");
     } finally {
       setIsLoading(false);
     }
@@ -118,8 +125,9 @@ export function SignUpForm({
             <div className="flex flex-col gap-5">
               {isEmployer && (
                 <div className="grid gap-2">
-                  <Label>Entreprise</Label>
+                  <Label htmlFor="companyName">Entreprise</Label>
                   <Input
+                    id="companyName"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="Nom de l'entreprise"
@@ -128,16 +136,21 @@ export function SignUpForm({
               )}
 
               <div className="grid gap-2">
-                <Label>{isEmployer ? "Nom du recruteur" : "Nom complet"}</Label>
+                <Label htmlFor="fullName">
+                  {isEmployer ? "Nom du recruteur" : "Nom complet"}
+                </Label>
                 <Input
+                  id="fullName"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  placeholder={isEmployer ? "Votre nom" : "Votre nom complet"}
                 />
               </div>
 
               <div className="grid gap-2">
-                <Label>Téléphone</Label>
+                <Label htmlFor="phone">Téléphone</Label>
                 <Input
+                  id="phone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+212..."
@@ -145,17 +158,20 @@ export function SignUpForm({
               </div>
 
               <div className="grid gap-2">
-                <Label>Email</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
+                  id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  placeholder="m@example.com"
                 />
               </div>
 
               <div className="grid gap-2">
-                <Label>Mot de passe</Label>
+                <Label htmlFor="password">Mot de passe</Label>
                 <Input
+                  id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -163,8 +179,9 @@ export function SignUpForm({
               </div>
 
               <div className="grid gap-2">
-                <Label>Confirmer mot de passe</Label>
+                <Label htmlFor="repeatPassword">Confirmer mot de passe</Label>
                 <Input
+                  id="repeatPassword"
                   type="password"
                   value={repeatPassword}
                   onChange={(e) => setRepeatPassword(e.target.value)}
