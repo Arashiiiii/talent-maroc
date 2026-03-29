@@ -1,20 +1,24 @@
+import { Suspense } from "react";
 import { SignUpForm } from "@/components/sign-up-form";
 
-export const dynamic = "force-dynamic";
+function SignUpFallback() {
+  return (
+    <div className="w-full max-w-md">
+      <div className="rounded-xl border p-6 text-sm text-muted-foreground">
+        Chargement...
+      </div>
+    </div>
+  );
+}
 
-export default async function Page({
-  searchParams,
-}: {
-  searchParams: Promise<{ role?: string }>;
-}) {
-  const params = await searchParams;
-  const role = params?.role === "employer" ? "employer" : "candidate";
-
+export default function Page() {
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-md">
-        <SignUpForm role={role} />
-      </div>
+      <Suspense fallback={<SignUpFallback />}>
+        <div className="w-full max-w-md">
+          <SignUpForm />
+        </div>
+      </Suspense>
     </div>
   );
 }

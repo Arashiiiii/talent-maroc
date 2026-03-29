@@ -13,28 +13,29 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
 
 export function SignUpForm({
   className,
-  role = "candidate",
   ...props
-}: React.ComponentPropsWithoutRef<"div"> & {
-  role?: "candidate" | "employer";
-}) {
-  const isEmployer = role === "employer";
-
+}: React.ComponentPropsWithoutRef<"div">) {
+  const searchParams = useSearchParams();
   const router = useRouter();
+
+  const role = useMemo(
+    () => (searchParams.get("role") === "employer" ? "employer" : "candidate"),
+    [searchParams]
+  );
+
+  const isEmployer = role === "employer";
 
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
-
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -103,9 +104,7 @@ export function SignUpForm({
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            {isEmployer
-              ? "Créer un compte recruteur"
-              : "Créer un compte"}
+            {isEmployer ? "Créer un compte recruteur" : "Créer un compte"}
           </CardTitle>
           <CardDescription>
             {isEmployer
@@ -122,18 +121,14 @@ export function SignUpForm({
                   <Label>Entreprise</Label>
                   <Input
                     value={companyName}
-                    onChange={(e) =>
-                      setCompanyName(e.target.value)
-                    }
+                    onChange={(e) => setCompanyName(e.target.value)}
                     placeholder="Nom de l'entreprise"
                   />
                 </div>
               )}
 
               <div className="grid gap-2">
-                <Label>
-                  {isEmployer ? "Nom du recruteur" : "Nom complet"}
-                </Label>
+                <Label>{isEmployer ? "Nom du recruteur" : "Nom complet"}</Label>
                 <Input
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
@@ -163,9 +158,7 @@ export function SignUpForm({
                 <Input
                   type="password"
                   value={password}
-                  onChange={(e) =>
-                    setPassword(e.target.value)
-                  }
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
@@ -174,35 +167,24 @@ export function SignUpForm({
                 <Input
                   type="password"
                   value={repeatPassword}
-                  onChange={(e) =>
-                    setRepeatPassword(e.target.value)
-                  }
+                  onChange={(e) => setRepeatPassword(e.target.value)}
                 />
               </div>
 
-              {error && (
-                <p className="text-sm text-red-500">{error}</p>
-              )}
+              {error && <p className="text-sm text-red-500">{error}</p>}
 
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full"
-              >
+              <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading
                   ? "Création..."
                   : isEmployer
-                  ? "Créer un compte recruteur"
-                  : "Créer un compte"}
+                    ? "Créer un compte recruteur"
+                    : "Créer un compte"}
               </Button>
             </div>
 
             <div className="mt-4 text-center text-sm">
               Déjà inscrit ?{" "}
-              <Link
-                href="/auth/login"
-                className="underline underline-offset-4"
-              >
+              <Link href="/auth/login" className="underline underline-offset-4">
                 Se connecter
               </Link>
             </div>
