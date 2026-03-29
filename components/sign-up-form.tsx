@@ -36,15 +36,19 @@ export function SignUpForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
+
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [debug, setDebug] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const supabase = createClient();
-    setIsLoading(true);
+    setDebug("Submit clicked");
     setError(null);
+    setSuccess(null);
+    setIsLoading(true);
 
     if (!fullName.trim()) {
       setError("Veuillez saisir votre nom.");
@@ -77,12 +81,17 @@ export function SignUpForm({
     }
 
     try {
+      setDebug("Creating Supabase client");
+      const supabase = createClient();
+
       const nextPath = isEmployer ? "/employeur/dashboard" : "/protected";
       const redirectUrl = `${window.location.origin}/auth/confirm?next=${encodeURIComponent(
         nextPath
       )}`;
 
-      const { error } = await supabase.auth.signUp({
+      setDebug(`Sending signUp request to Supabase with redirect: ${redirectUrl}`);
+
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -96,11 +105,20 @@ export function SignUpForm({
         },
       });
 
-      if (error) throw error;
+      console.log("Supabase signUp response:", { data, error });
+
+      if (error) {
+        throw error;
+      }
+
+      setSuccess("Compte créé. Vérifiez votre email pour confirmer l'inscription.");
+      setDebug("Signup succeeded, redirecting to success page");
 
       router.push(`/auth/sign-up-success?role=${role}`);
     } catch (err: any) {
+      console.error("Signup error:", err);
       setError(err?.message || "Erreur lors de l'inscription.");
+      setDebug(`Signup failed: ${err?.message || "unknown error"}`);
     } finally {
       setIsLoading(false);
     }
@@ -188,14 +206,30 @@ export function SignUpForm({
                 />
               </div>
 
-              {error && <p className="text-sm text-red-500">{error}</p>}
+              {error && (
+                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                  {success}
+                </div>
+              )}
+
+              {debug && (
+                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                  Debug: {debug}
+                </div>
+              )}
 
               <Button type="submit" disabled={isLoading} className="w-full">
                 {isLoading
                   ? "Création..."
                   : isEmployer
-                    ? "Créer un compte recruteur"
-                    : "Créer un compte"}
+                  ? "Créer un compte recruteur"
+                  : "Créer un compte"}
               </Button>
             </div>
 
