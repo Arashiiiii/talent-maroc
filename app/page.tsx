@@ -245,13 +245,13 @@ export default function Index({ searchParams }: { searchParams: any }) {
             </a>
             <div className="hide-sm" style={{ display:'flex', gap:2 }}>
               <a href="/"          className="nl active">Emplois</a>
-              <a href="/employers" className="nl">Recruteurs</a>
+              <a href="/employeur" className="nl">Recruteurs</a>
               <a href="/cv"        className="nl" style={{ color:'#16a34a' }}>Mon CV ✦</a>
             </div>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <a href="/auth/login"    className="nl hide-sm">Connexion</a>
-            <a href="/employers/new" className="btn-green" style={{ padding:'8px 18px', fontSize:13 }}>Publier une offre</a>
+            <a href="/employeur/new" className="btn-green" style={{ padding:'8px 18px', fontSize:13 }}>Publier une offre</a>
           </div>
         </nav>
 
@@ -440,9 +440,9 @@ export default function Index({ searchParams }: { searchParams: any }) {
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(270px,1fr))', gap:12 }}>
             {[
-              { icon:'🎯', title:'320 000+ candidats actifs', desc:'Filtrés par secteur, ville et niveau d\'expérience.', href:'/employers' },
-              { icon:'⚡', title:'Publiez en 5 minutes', desc:'Interface simple. Diffusion immédiate sur tous nos canaux.', href:'/employers/new' },
-              { icon:'📊', title:'Tableau de bord complet', desc:'Suivez vos candidatures et performances en temps réel.', href:'/employers' },
+              { icon:'🎯', title:'320 000+ candidats actifs', desc:'Filtrés par secteur, ville et niveau d\'expérience.', href:'/employeur' },
+              { icon:'⚡', title:'Publiez en 5 minutes', desc:'Interface simple. Diffusion immédiate sur tous nos canaux.', href:'/employeur/new' },
+              { icon:'📊', title:'Tableau de bord complet', desc:'Suivez vos candidatures et performances en temps réel.', href:'/employeur' },
             ].map(card=>(
               <a key={card.title} href={card.href} style={{ textDecoration:'none' }}>
                 <div style={{ background:'white', border:'1.5px solid #f0f0f0', borderRadius:14, padding:'22px', boxShadow:'0 1px 4px rgba(0,0,0,0.04)', transition:'all .2s', cursor:'pointer' }} className="emp-card">
