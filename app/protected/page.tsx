@@ -1,7 +1,8 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function ProtectedPage() {
+async function ProtectedContent() {
   const supabase = await createClient();
 
   const {
@@ -27,9 +28,7 @@ export default async function ProtectedPage() {
           <p className="mb-2 text-sm uppercase tracking-widest text-slate-300">
             Espace candidat
           </p>
-          <h1 className="text-3xl font-black">
-            Bienvenue, {fullName}
-          </h1>
+          <h1 className="text-3xl font-black">Bienvenue, {fullName}</h1>
           <p className="mt-3 text-slate-300">
             Votre compte est confirmé et vous êtes connecté.
           </p>
@@ -60,6 +59,7 @@ export default async function ProtectedPage() {
 
         <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-bold text-slate-900">Informations du compte</h2>
+
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-400">Nom</p>
@@ -90,5 +90,25 @@ export default async function ProtectedPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ProtectedFallback() {
+  return (
+    <div className="min-h-screen bg-slate-50 p-6 md:p-10">
+      <div className="mx-auto max-w-5xl">
+        <div className="rounded-3xl border border-slate-200 bg-white p-8 text-sm text-slate-500">
+          Chargement de votre espace...
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ProtectedPage() {
+  return (
+    <Suspense fallback={<ProtectedFallback />}>
+      <ProtectedContent />
+    </Suspense>
   );
 }
