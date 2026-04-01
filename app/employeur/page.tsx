@@ -1,83 +1,132 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+}
+
+interface JobForm {
+  title: string; company: string; city: string; sector: string;
+  contract_type: string; salary: string; description: string;
+  original_url: string; logo_url: string;
+}
+const EMPTY: JobForm = { title:"", company:"", city:"", sector:"", contract_type:"", salary:"", description:"", original_url:"", logo_url:"" };
+const CITIES    = ["Casablanca","Rabat","Tanger","Marrakech","Agadir","Fès","Meknès","Oujda","Kenitra","Tétouan","Autre"];
+const SECTORS   = ["Informatique","Finance","Commerce","Marketing","RH","Ingénierie","Santé","Logistique","Tourisme","Juridique","Éducation","BTP","Industrie","Autre"];
+const CONTRACTS = ["CDI","CDD","Stage","Alternance","Freelance","Temps partiel","Intérim"];
+
+// ── CRITICAL: defined OUTSIDE the parent component so they never remount ───
+// This prevents the "can only type one character" bug caused by component
+// redefinition on every parent re-render.
+function Field({ label, required, children }: { label:string; required?:boolean; children:React.ReactNode }) {
+  return (
+    <div>
+      <label style={{ fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6 }}>
+        {label}{required && <span style={{ color:"#ef4444", marginLeft:3 }}>*</span>}
+      </label>
+      {children}
+    </div>
   );
 }
 
-// ── TYPES ──────────────────────────────────────────────────────────────────
-interface JobForm {
-  title:         string;
-  company:       string;
-  city:          string;
-  sector:        string;
-  contract_type: string;
-  salary:        string;
-  description:   string;
-  original_url:  string;
-  logo_url:      string;
-}
-
-const EMPTY_FORM: JobForm = {
-  title:"", company:"", city:"", sector:"", contract_type:"",
-  salary:"", description:"", original_url:"", logo_url:"",
+const IS: React.CSSProperties = {
+  border:"1.5px solid #e5e7eb", borderRadius:9, padding:"11px 14px",
+  width:"100%", fontSize:14, fontFamily:"inherit", color:"#0f172a",
+  background:"white", outline:"none",
 };
 
-const CITIES = ["Casablanca","Rabat","Tanger","Marrakech","Agadir","Fès","Meknès","Oujda","Kenitra","Tétouan","Autre"];
-const SECTORS = ["Informatique","Finance","Commerce","Marketing","RH","Ingénierie","Santé","Logistique","Tourisme","Juridique","Éducation","BTP","Industrie","Autre"];
-const CONTRACTS = ["CDI","CDD","Stage","Alternance","Freelance","Temps partiel","Intérim"];
+function AuthPanel({ onSuccess }: { onSuccess:(u:any)=>void }) {
+  const [mode, setMode]       = useState<"login"|"signup">("login");
+  const [email, setEmail]     = useState("");
+  const [pass, setPass]       = useState("");
+  const [name, setName]       = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string|null>(null);
 
-export default function EmployeurPage() {
-  const [user,      setUser]      = useState<any>(null);
-  const [loading,   setLoading]   = useState(true);
-  const [form,      setForm]      = useState<JobForm>(EMPTY_FORM);
-  const [submitting,setSubmitting] = useState(false);
-  const [success,   setSuccess]   = useState(false);
-  const [error,     setError]     = useState<string|null>(null);
-  const [activeTab, setActiveTab] = useState<"publish"|"login">("publish");
-  const [authForm,  setAuthForm]  = useState({ email:"", password:"", name:"" });
-  const [authMode,  setAuthMode]  = useState<"login"|"signup">("login");
-  const [authLoading,setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState<string|null>(null);
-
-  useEffect(() => {
-    const sb = getSupabase();
-    sb.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      setLoading(false);
-    });
-  }, []);
-
-  const handleAuth = async () => {
-    setAuthLoading(true); setAuthError(null);
+  const submit = async () => {
+    if (!email || !pass) { setError("Email et mot de passe requis."); return; }
+    setLoading(true); setError(null);
     const sb = getSupabase();
     try {
-      if (authMode === "login") {
-        const { data, error } = await sb.auth.signInWithPassword({ email: authForm.email, password: authForm.password });
+      if (mode === "login") {
+        const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
         if (error) throw error;
-        setUser(data.user);
-        setActiveTab("publish");
+        onSuccess(data.user);
       } else {
-        const { data, error } = await sb.auth.signUp({
-          email: authForm.email, password: authForm.password,
-          options: { data: { name: authForm.name } }
-        });
+        const { data, error } = await sb.auth.signUp({ email, password: pass, options:{ data:{ name } } });
         if (error) throw error;
-        setUser(data.user);
-        setActiveTab("publish");
+        if (!data.user) throw new Error("Vérifiez votre email pour confirmer votre compte.");
+        onSuccess(data.user);
       }
-    } catch(e: any) {
-      setAuthError(e.message);
-    } finally {
-      setAuthLoading(false);
-    }
+    } catch(e:any) { setError(e.message); }
+    finally { setLoading(false); }
   };
 
-  const handleSubmit = async () => {
+  return (
+    <div style={{ background:"white", border:"1.5px solid #f0f0f0", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,.06)", maxWidth:460, margin:"0 auto" }}>
+      <div style={{ padding:"32px 32px 28px" }}>
+        <div style={{ fontSize:28, marginBottom:12 }}>🏢</div>
+        <h2 style={{ fontSize:20, fontWeight:800, marginBottom:6 }}>Espace Recruteur</h2>
+        <p style={{ fontSize:13, color:"#6b7280", marginBottom:24 }}>Connectez-vous pour publier et gérer vos offres d'emploi.</p>
+
+        <div style={{ display:"flex", gap:4, background:"#f3f4f6", borderRadius:9, padding:4, marginBottom:22 }}>
+          {(["login","signup"] as const).map((m)=>(
+            <button key={m} onClick={()=>{setMode(m);setError(null);}}
+              style={{ flex:1, padding:"9px", borderRadius:7, border:"none", fontFamily:"inherit", fontSize:13, fontWeight:600, cursor:"pointer",
+                background:mode===m?"white":"transparent", color:mode===m?"#0f172a":"#6b7280",
+                boxShadow:mode===m?"0 1px 3px rgba(0,0,0,.1)":"none" }}>
+              {m==="login"?"Connexion":"Inscription"}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          {mode==="signup" && (
+            <div>
+              <label style={{ fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6 }}>Nom de l'entreprise</label>
+              <input style={IS} placeholder="Capgemini Maroc" value={name} onChange={e=>setName(e.target.value)}/>
+            </div>
+          )}
+          <div>
+            <label style={{ fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6 }}>Email *</label>
+            <input type="email" style={IS} placeholder="rh@entreprise.ma" value={email}
+              onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+          </div>
+          <div>
+            <label style={{ fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6 }}>Mot de passe *</label>
+            <input type="password" style={IS} placeholder="••••••••" value={pass}
+              onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/>
+          </div>
+          {error && <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626" }}>⚠ {error}</div>}
+          <button disabled={loading} onClick={submit}
+            style={{ background:"#16a34a", color:"white", padding:"12px", borderRadius:9, border:"none", fontFamily:"inherit", fontSize:14, fontWeight:700, cursor:loading?"not-allowed":"pointer", opacity:loading?0.7:1 }}>
+            {loading ? "…" : mode==="login" ? "Se connecter →" : "Créer mon compte →"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN PAGE ──────────────────────────────────────────────────────────────
+export default function EmployeurPage() {
+  const [user,       setUser]       = useState<any>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [form,       setForm]       = useState<JobForm>(EMPTY);
+  const [submitting, setSubmitting] = useState(false);
+  const [success,    setSuccess]    = useState(false);
+  const [error,      setError]      = useState<string|null>(null);
+
+  useEffect(() => {
+    getSupabase().auth.getUser().then(({ data:{ user } }) => { setUser(user); setLoading(false); });
+  }, []);
+
+  const set = (k: keyof JobForm) =>
+    (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) =>
+      setForm(p => ({ ...p, [k]: e.target.value }));
+
+  const handleSubmit = useCallback(async () => {
     setError(null);
     if (!form.title.trim())   { setError("Le titre du poste est requis."); return; }
     if (!form.company.trim()) { setError("Le nom de l'entreprise est requis."); return; }
@@ -87,7 +136,7 @@ export default function EmployeurPage() {
     setSubmitting(true);
     try {
       const sb = getSupabase();
-      const { error: err } = await sb.from("jobs").insert({
+      const payload: any = {
         title:         form.title.trim(),
         company:       form.company.trim(),
         city:          form.city,
@@ -95,37 +144,25 @@ export default function EmployeurPage() {
         contract_type: form.contract_type,
         salary:        form.salary.trim() || null,
         description:   form.description.trim() || null,
-        original_url:  form.original_url.trim() || `https://talentmaroc.shop/jobs`,
+        original_url:  form.original_url.trim() || "https://talentmaroc.shop",
         logo_url:      form.logo_url.trim() || null,
         posted_at:     new Date().toLocaleDateString("fr-FR"),
-        featured:      false,
-        source:        "employer_direct",
-        employer_id:   user?.id || null,
-      });
+      };
+      // Add employer_id only after running employer-migration.sql
+      // payload.employer_id = user?.id;
+      // payload.source = "employer_direct";
+
+      const { error: err } = await sb.from("jobs").insert(payload);
       if (err) throw err;
       setSuccess(true);
-      setForm(EMPTY_FORM);
-    } catch(e: any) {
+      setForm(EMPTY);
+      window.scrollTo({ top:0, behavior:"smooth" });
+    } catch(e:any) {
       setError(e.message || "Erreur lors de la publication.");
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const F = ({ label, id, required, children }: { label:string; id:string; required?:boolean; children:React.ReactNode }) => (
-    <div>
-      <label style={{ fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6 }}>
-        {label} {required && <span style={{ color:"#ef4444" }}>*</span>}
-      </label>
-      {children}
-    </div>
-  );
-
-  const inputStyle: React.CSSProperties = {
-    border:"1.5px solid #e5e7eb", borderRadius:9, padding:"11px 14px",
-    width:"100%", fontSize:14, fontFamily:"inherit", color:"#0f172a",
-    background:"white", transition:"border-color .18s", outline:"none",
-  };
+  }, [form, user]);
 
   if (loading) return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh", fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
@@ -143,17 +180,12 @@ export default function EmployeurPage() {
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         .au{animation:fadeUp .4s cubic-bezier(.16,1,.3,1) both}
-        input:focus,select:focus,textarea:focus{border-color:#16a34a!important;box-shadow:0 0 0 3px rgba(22,163,74,.1)!important;outline:none}
-        .tab-btn{padding:10px 22px;border-radius:9px;border:none;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all .18s}
+        input:focus,select:focus,textarea:focus{border-color:#16a34a!important;box-shadow:0 0 0 3px rgba(22,163,74,.1)!important;outline:none!important}
         .nl{color:#4b5563;text-decoration:none;font-size:14px;font-weight:600;padding:7px 12px;border-radius:8px;transition:all .18s}
         .nl:hover{color:#0f172a;background:#f3f4f6}
-        .btn-green{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:#16a34a;color:white;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all .18s}
-        .btn-green:hover{background:#15803d;transform:translateY(-1px);box-shadow:0 6px 20px rgba(22,163,74,.25)}
-        .btn-green:disabled{background:#d1d5db;cursor:not-allowed;transform:none;box-shadow:none}
       `}</style>
 
       <div style={{ background:"#f8fafc", minHeight:"100vh" }}>
-
         {/* NAVBAR */}
         <nav style={{ background:"rgba(255,255,255,.96)", backdropFilter:"blur(12px)", borderBottom:"1.5px solid #f0f0f0", padding:"0 24px", height:62, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100 }}>
           <a href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
@@ -162,9 +194,10 @@ export default function EmployeurPage() {
           </a>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             <a href="/" className="nl">Emplois</a>
-            {user && <a href="/employeur/dashboard" className="nl">Dashboard →</a>}
+            {user && <a href="/employeur/dashboard" style={{ color:"#16a34a", fontSize:14, fontWeight:700, padding:"7px 14px", background:"#f0fdf4", borderRadius:8, textDecoration:"none" }}>Dashboard →</a>}
             {user && (
-              <button onClick={()=>{ getSupabase().auth.signOut(); setUser(null); }} className="nl" style={{ border:"none", cursor:"pointer", background:"none" }}>
+              <button onClick={()=>{ getSupabase().auth.signOut(); setUser(null); setSuccess(false); }}
+                style={{ background:"none", border:"1.5px solid #e5e7eb", borderRadius:8, padding:"7px 14px", fontSize:13, fontWeight:600, color:"#374151", cursor:"pointer", fontFamily:"inherit" }}>
                 Déconnexion
               </button>
             )}
@@ -172,197 +205,111 @@ export default function EmployeurPage() {
         </nav>
 
         {/* HERO */}
-        <div style={{ background:"linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%)", padding:"56px 24px 60px", textAlign:"center" }}>
-          <div className="au" style={{ display:"inline-flex", alignItems:"center", gap:7, background:"rgba(22,163,74,.15)", border:"1px solid rgba(22,163,74,.3)", borderRadius:100, padding:"5px 14px", marginBottom:18 }}>
-            <span style={{ width:6, height:6, borderRadius:"50%", background:"#4ade80", display:"inline-block" }}/>
-            <span style={{ fontSize:12, fontWeight:700, color:"#4ade80" }}>Recruteurs — Publiez gratuitement</span>
-          </div>
-          <h1 className="au" style={{ fontSize:"clamp(26px,4vw,42px)", fontWeight:800, color:"white", lineHeight:1.15, marginBottom:14, letterSpacing:"-0.02em", animationDelay:".07s" }}>
-            Trouvez vos talents<br/>au Maroc rapidement
+        <div style={{ background:"linear-gradient(135deg,#0f172a,#1e3a5f)", padding:"52px 24px 56px", textAlign:"center" }}>
+          <h1 className="au" style={{ fontSize:"clamp(24px,4vw,38px)", fontWeight:800, color:"white", lineHeight:1.15, marginBottom:10, letterSpacing:"-0.02em" }}>
+            {user ? `Bonjour ${user.user_metadata?.name || user.email?.split("@")[0]} 👋` : "Recrutez vos talents au Maroc"}
           </h1>
-          <p className="au" style={{ fontSize:15, color:"rgba(255,255,255,.6)", maxWidth:460, margin:"0 auto 28px", lineHeight:1.7, animationDelay:".14s" }}>
-            Publiez votre offre en 5 minutes. Visibilité immédiate auprès de 320 000+ candidats actifs.
+          <p className="au" style={{ fontSize:14, color:"rgba(255,255,255,.55)", maxWidth:420, margin:"0 auto", lineHeight:1.7, animationDelay:".1s" }}>
+            {user ? "Publiez une offre ou gérez vos annonces depuis votre dashboard." : "Créez un compte pour publier vos offres et gérer vos recrutements."}
           </p>
-          <div className="au" style={{ display:"flex", gap:12, justifyContent:"center", flexWrap:"wrap", animationDelay:".2s" }}>
-            {[["⚡ Mise en ligne instantanée"], ["🎯 Candidats qualifiés"], ["📊 Dashboard temps réel"]].map(([t])=>(
-              <div key={t} style={{ background:"rgba(255,255,255,.08)", border:"1px solid rgba(255,255,255,.12)", borderRadius:100, padding:"6px 16px", fontSize:12, fontWeight:600, color:"rgba(255,255,255,.75)" }}>{t}</div>
-            ))}
-          </div>
         </div>
 
-        {/* MAIN */}
         <div style={{ maxWidth:820, margin:"0 auto", padding:"36px 20px 80px" }}>
-
-          {/* Auth tabs if not logged in */}
-          {!user && (
-            <div className="au" style={{ background:"white", border:"1.5px solid #f0f0f0", borderRadius:14, overflow:"hidden", marginBottom:24, boxShadow:"0 1px 4px rgba(0,0,0,.04)" }}>
-              <div style={{ display:"flex", borderBottom:"1.5px solid #f0f0f0" }}>
-                {[["publish","📋 Publier une offre"],["login","🔐 Se connecter"]].map(([t,l])=>(
-                  <button key={t} className="tab-btn" onClick={()=>setActiveTab(t as any)}
-                    style={{ flex:1, borderRadius:0, background:activeTab===t?"#f0fdf4":"white", color:activeTab===t?"#15803d":"#6b7280", borderBottom:activeTab===t?"2px solid #16a34a":"none" }}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-              {activeTab==="login" && (
-                <div style={{ padding:"28px 32px" }}>
-                  <div style={{ display:"flex", gap:8, background:"#f3f4f6", borderRadius:9, padding:4, marginBottom:20, width:"fit-content" }}>
-                    {[["login","Connexion"],["signup","Inscription"]].map(([m,l])=>(
-                      <button key={m} onClick={()=>setAuthMode(m as any)}
-                        style={{ padding:"8px 20px", borderRadius:7, border:"none", fontFamily:"inherit", fontSize:13, fontWeight:600, cursor:"pointer", background:authMode===m?"white":"transparent", color:authMode===m?"#0f172a":"#6b7280", boxShadow:authMode===m?"0 1px 3px rgba(0,0,0,.1)":"none" }}>
-                        {l}
-                      </button>
-                    ))}
+          {!user ? (
+            <div className="au"><AuthPanel onSuccess={u=>setUser(u)}/></div>
+          ) : (
+            <div className="au">
+              {success && (
+                <div style={{ background:"#f0fdf4", border:"1.5px solid #bbf7d0", borderRadius:12, padding:"18px 22px", marginBottom:24, display:"flex", alignItems:"center", gap:14 }}>
+                  <span style={{ fontSize:24 }}>🎉</span>
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:800, color:"#15803d", marginBottom:2 }}>Offre publiée avec succès !</div>
+                    <div style={{ fontSize:13, color:"#15803d" }}>Visible par les candidats · <a href="/employeur/dashboard" style={{ fontWeight:700 }}>Voir mon dashboard →</a></div>
                   </div>
-                  <div style={{ display:"flex", flexDirection:"column", gap:14, maxWidth:400 }}>
-                    {authMode==="signup" && (
-                      <div>
-                        <label style={{ fontSize:13, fontWeight:600, display:"block", marginBottom:6 }}>Nom de l'entreprise</label>
-                        <input style={inputStyle} placeholder="Capgemini Maroc" value={authForm.name} onChange={e=>setAuthForm(p=>({...p,name:e.target.value}))}/>
-                      </div>
-                    )}
-                    <div>
-                      <label style={{ fontSize:13, fontWeight:600, display:"block", marginBottom:6 }}>Email</label>
-                      <input type="email" style={inputStyle} placeholder="rh@entreprise.ma" value={authForm.email} onChange={e=>setAuthForm(p=>({...p,email:e.target.value}))}/>
-                    </div>
-                    <div>
-                      <label style={{ fontSize:13, fontWeight:600, display:"block", marginBottom:6 }}>Mot de passe</label>
-                      <input type="password" style={inputStyle} placeholder="••••••••" value={authForm.password} onChange={e=>setAuthForm(p=>({...p,password:e.target.value}))}/>
-                    </div>
-                    {authError && <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626" }}>⚠ {authError}</div>}
-                    <button className="btn-green" onClick={handleAuth} disabled={authLoading} style={{ alignSelf:"flex-start" }}>
-                      {authLoading ? "..." : authMode==="login" ? "Se connecter →" : "Créer mon compte →"}
+                  <button onClick={()=>setSuccess(false)} style={{ marginLeft:"auto", background:"none", border:"none", fontSize:18, color:"#9ca3af", cursor:"pointer" }}>×</button>
+                </div>
+              )}
+
+              <div style={{ background:"white", border:"1.5px solid #f0f0f0", borderRadius:14, overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.04)", marginBottom:16 }}>
+                <div style={{ padding:"20px 28px", borderBottom:"1.5px solid #f0f0f0", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
+                  <div>
+                    <h2 style={{ fontSize:16, fontWeight:800 }}>Publier une nouvelle offre</h2>
+                    <p style={{ fontSize:13, color:"#6b7280", marginTop:2 }}>Remplissez les champs et cliquez sur Publier</p>
+                  </div>
+                  <span style={{ fontSize:12, background:"#f0fdf4", color:"#15803d", border:"1px solid #bbf7d0", padding:"4px 12px", borderRadius:100 }}>
+                    ✓ {user.email}
+                  </span>
+                </div>
+
+                <div style={{ padding:"28px", display:"flex", flexDirection:"column", gap:20 }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                    <Field label="Intitulé du poste" required>
+                      <input style={IS} placeholder="Développeur Full Stack" value={form.title} onChange={set("title")}/>
+                    </Field>
+                    <Field label="Entreprise" required>
+                      <input style={IS} placeholder="Capgemini Maroc" value={form.company} onChange={set("company")}/>
+                    </Field>
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                    <Field label="Ville" required>
+                      <select style={IS} value={form.city} onChange={set("city")}>
+                        <option value="">Sélectionnez...</option>
+                        {CITIES.map(c=><option key={c}>{c}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Secteur">
+                      <select style={IS} value={form.sector} onChange={set("sector")}>
+                        <option value="">Sélectionnez...</option>
+                        {SECTORS.map(s=><option key={s}>{s}</option>)}
+                      </select>
+                    </Field>
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                    <Field label="Type de contrat" required>
+                      <select style={IS} value={form.contract_type} onChange={set("contract_type")}>
+                        <option value="">Sélectionnez...</option>
+                        {CONTRACTS.map(c=><option key={c}>{c}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Salaire">
+                      <input style={IS} placeholder="8 000 – 12 000 DH / mois" value={form.salary} onChange={set("salary")}/>
+                    </Field>
+                  </div>
+                  <Field label="Description du poste">
+                    <textarea style={{ ...IS, resize:"vertical", lineHeight:1.65 } as React.CSSProperties} rows={7}
+                      placeholder={"Missions :\n• Mission 1\n\nProfil recherché :\n• Critère 1\n\nAvantages :\n• ..."}
+                      value={form.description} onChange={set("description")}/>
+                  </Field>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                    <Field label="Lien de candidature">
+                      <input style={IS} placeholder="https://votresite.ma/postuler" value={form.original_url} onChange={set("original_url")}/>
+                    </Field>
+                    <Field label="URL du logo">
+                      <input style={IS} placeholder="https://...logo.png" value={form.logo_url} onChange={set("logo_url")}/>
+                      {form.logo_url && <img src={form.logo_url} alt="" style={{ width:36, height:36, borderRadius:6, objectFit:"contain", marginTop:8, border:"1px solid #e5e7eb" }} onError={e=>(e.currentTarget.style.display="none")}/>}
+                    </Field>
+                  </div>
+                  {error && <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"12px 16px", fontSize:13, color:"#dc2626" }}>⚠ {error}</div>}
+                  <div style={{ display:"flex", justifyContent:"flex-end", gap:10, paddingTop:4 }}>
+                    <button onClick={()=>{ setForm(EMPTY); setError(null); }}
+                      style={{ background:"none", border:"1.5px solid #e5e7eb", borderRadius:9, padding:"11px 20px", fontSize:14, fontWeight:600, color:"#374151", cursor:"pointer", fontFamily:"inherit" }}>
+                      Réinitialiser
+                    </button>
+                    <button onClick={handleSubmit} disabled={submitting}
+                      style={{ background:"#16a34a", color:"white", padding:"11px 24px", borderRadius:9, border:"none", fontFamily:"inherit", fontSize:14, fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:7, opacity:submitting?0.7:1 }}>
+                      {submitting ? "Publication…" : "📢 Publier l'offre →"}
                     </button>
                   </div>
                 </div>
-              )}
+              </div>
+              <div style={{ textAlign:"center" }}>
+                <a href="/employeur/dashboard" style={{ fontSize:13, color:"#16a34a", fontWeight:600, textDecoration:"none" }}>📊 Gérer mes offres et candidatures →</a>
+              </div>
             </div>
           )}
-
-          {/* Success banner */}
-          {success && (
-            <div className="au" style={{ background:"#f0fdf4", border:"1.5px solid #bbf7d0", borderRadius:12, padding:"20px 24px", marginBottom:24, display:"flex", alignItems:"center", gap:14 }}>
-              <span style={{ fontSize:28 }}>🎉</span>
-              <div>
-                <div style={{ fontSize:15, fontWeight:800, color:"#15803d", marginBottom:4 }}>Offre publiée avec succès !</div>
-                <div style={{ fontSize:13, color:"#15803d" }}>Votre offre est maintenant visible par les candidats. <a href="/employeur/dashboard" style={{ fontWeight:700, color:"#15803d" }}>Voir mon dashboard →</a></div>
-              </div>
-              <button onClick={()=>setSuccess(false)} style={{ marginLeft:"auto", background:"none", border:"none", fontSize:20, color:"#9ca3af", cursor:"pointer" }}>×</button>
-            </div>
-          )}
-
-          {/* Job form */}
-          <div className="au" style={{ background:"white", border:"1.5px solid #f0f0f0", borderRadius:14, overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.04)" }}>
-            <div style={{ padding:"22px 28px", borderBottom:"1.5px solid #f0f0f0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <div>
-                <h2 style={{ fontSize:17, fontWeight:800 }}>Publier une offre d'emploi</h2>
-                <p style={{ fontSize:13, color:"#6b7280", marginTop:3 }}>Diffusion immédiate sur TalentMaroc</p>
-              </div>
-              {user && (
-                <div style={{ fontSize:12, color:"#6b7280", background:"#f0fdf4", border:"1px solid #bbf7d0", padding:"5px 12px", borderRadius:100 }}>
-                  ✓ Connecté · <strong style={{ color:"#15803d" }}>{user.email}</strong>
-                </div>
-              )}
-            </div>
-
-            <div style={{ padding:"28px 28px", display:"flex", flexDirection:"column", gap:20 }}>
-
-              {/* Row 1: title + company */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-                <F label="Intitulé du poste" id="title" required>
-                  <input style={inputStyle} placeholder="Développeur Full Stack" value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))}/>
-                </F>
-                <F label="Entreprise" id="company" required>
-                  <input style={inputStyle} placeholder="Capgemini Maroc" value={form.company} onChange={e=>setForm(p=>({...p,company:e.target.value}))}/>
-                </F>
-              </div>
-
-              {/* Row 2: city + sector */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-                <F label="Ville" id="city" required>
-                  <select style={inputStyle} value={form.city} onChange={e=>setForm(p=>({...p,city:e.target.value}))}>
-                    <option value="">Sélectionnez...</option>
-                    {CITIES.map(c=><option key={c}>{c}</option>)}
-                  </select>
-                </F>
-                <F label="Secteur" id="sector">
-                  <select style={inputStyle} value={form.sector} onChange={e=>setForm(p=>({...p,sector:e.target.value}))}>
-                    <option value="">Sélectionnez...</option>
-                    {SECTORS.map(s=><option key={s}>{s}</option>)}
-                  </select>
-                </F>
-              </div>
-
-              {/* Row 3: contract + salary */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-                <F label="Type de contrat" id="contract" required>
-                  <select style={inputStyle} value={form.contract_type} onChange={e=>setForm(p=>({...p,contract_type:e.target.value}))}>
-                    <option value="">Sélectionnez...</option>
-                    {CONTRACTS.map(c=><option key={c}>{c}</option>)}
-                  </select>
-                </F>
-                <F label="Salaire" id="salary">
-                  <input style={inputStyle} placeholder="8 000 – 12 000 DH / mois" value={form.salary} onChange={e=>setForm(p=>({...p,salary:e.target.value}))}/>
-                </F>
-              </div>
-
-              {/* Description */}
-              <F label="Description du poste" id="desc">
-                <textarea style={{ ...inputStyle, resize:"vertical", lineHeight:1.65 }} rows={7}
-                  placeholder={"Missions :\n• Mission 1\n• Mission 2\n\nProfil recherché :\n• Critère 1\n• Critère 2\n\nAvantages :\n• ..."}
-                  value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))}/>
-              </F>
-
-              {/* URL + Logo */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-                <F label="Lien de candidature" id="url">
-                  <input style={inputStyle} placeholder="https://votresite.ma/jobs/..." value={form.original_url} onChange={e=>setForm(p=>({...p,original_url:e.target.value}))}/>
-                </F>
-                <F label="URL du logo" id="logo">
-                  <input style={inputStyle} placeholder="https://...png" value={form.logo_url} onChange={e=>setForm(p=>({...p,logo_url:e.target.value}))}/>
-                  {form.logo_url && <img src={form.logo_url} alt="Logo" style={{ width:36, height:36, borderRadius:6, objectFit:"contain", marginTop:8, border:"1px solid #e5e7eb" }} onError={e=>(e.currentTarget.style.display="none")}/>}
-                </F>
-              </div>
-
-              {/* Error */}
-              {error && (
-                <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"12px 16px", fontSize:13, color:"#dc2626", display:"flex", gap:8, alignItems:"center" }}>
-                  ⚠ {error}
-                </div>
-              )}
-
-              {/* Submit */}
-              <div style={{ display:"flex", justifyContent:"flex-end", gap:10, paddingTop:4 }}>
-                <button onClick={()=>setForm(EMPTY_FORM)} style={{ background:"none", border:"1.5px solid #e5e7eb", borderRadius:9, padding:"11px 20px", fontSize:14, fontWeight:600, color:"#374151", cursor:"pointer", fontFamily:"inherit" }}>
-                  Réinitialiser
-                </button>
-                <button className="btn-green" onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? "Publication…" : "📢 Publier l'offre →"}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Features grid */}
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))", gap:14, marginTop:28 }}>
-            {[
-              { icon:"⚡", title:"Mise en ligne instantanée", desc:"Votre offre est visible dès la soumission, sans validation manuelle." },
-              { icon:"🎯", title:"Candidats ciblés", desc:"Nos algorithmes présentent votre offre aux profils correspondants." },
-              { icon:"📊", title:"Dashboard complet", desc:"Suivez les vues, candidatures et performances de vos offres." },
-              { icon:"🔒", title:"Données sécurisées", desc:"Vos données entreprise sont protégées et jamais revendues." },
-            ].map(f=>(
-              <div key={f.title} style={{ background:"white", border:"1.5px solid #f0f0f0", borderRadius:12, padding:"20px", boxShadow:"0 1px 3px rgba(0,0,0,.04)" }}>
-                <div style={{ fontSize:24, marginBottom:10 }}>{f.icon}</div>
-                <div style={{ fontSize:13, fontWeight:700, marginBottom:5 }}>{f.title}</div>
-                <div style={{ fontSize:12, color:"#6b7280", lineHeight:1.6 }}>{f.desc}</div>
-              </div>
-            ))}
-          </div>
         </div>
-
-        {/* Footer */}
         <footer style={{ background:"#0f172a", padding:"20px 24px", textAlign:"center" }}>
-          <span style={{ fontSize:12, color:"rgba(255,255,255,.25)" }}>© 2026 Talent Maroc · <a href="/privacy" style={{ color:"rgba(255,255,255,.35)", textDecoration:"none" }}>Confidentialité</a> · <a href="/terms" style={{ color:"rgba(255,255,255,.35)", textDecoration:"none" }}>CGU</a></span>
+          <span style={{ fontSize:12, color:"rgba(255,255,255,.25)" }}>© 2026 Talent Maroc</span>
         </footer>
       </div>
     </>
