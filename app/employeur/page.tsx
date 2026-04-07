@@ -11,14 +11,15 @@ interface JobForm {
   contract_type: string; salary: string; description: string;
   original_url: string; logo_url: string;
 }
-const EMPTY: JobForm = { title:"", company:"", city:"", sector:"", contract_type:"", salary:"", description:"", original_url:"", logo_url:"" };
+const EMPTY: JobForm = {
+  title:"", company:"", city:"", sector:"", contract_type:"",
+  salary:"", description:"", original_url:"", logo_url:"",
+};
 const CITIES    = ["Casablanca","Rabat","Tanger","Marrakech","Agadir","Fès","Meknès","Oujda","Kenitra","Tétouan","Autre"];
 const SECTORS   = ["Informatique","Finance","Commerce","Marketing","RH","Ingénierie","Santé","Logistique","Tourisme","Juridique","Éducation","BTP","Industrie","Autre"];
 const CONTRACTS = ["CDI","CDD","Stage","Alternance","Freelance","Temps partiel","Intérim"];
 
-// ── CRITICAL: defined OUTSIDE the parent component so they never remount ───
-// This prevents the "can only type one character" bug caused by component
-// redefinition on every parent re-render.
+// ── OUTSIDE COMPONENT: prevents remount/typing bug ─────────────────────────
 function Field({ label, required, children }: { label:string; required?:boolean; children:React.ReactNode }) {
   return (
     <div>
@@ -29,13 +30,13 @@ function Field({ label, required, children }: { label:string; required?:boolean;
     </div>
   );
 }
-
 const IS: React.CSSProperties = {
   border:"1.5px solid #e5e7eb", borderRadius:9, padding:"11px 14px",
   width:"100%", fontSize:14, fontFamily:"inherit", color:"#0f172a",
   background:"white", outline:"none",
 };
 
+// ── AUTH PANEL — also outside ──────────────────────────────────────────────
 function AuthPanel({ onSuccess }: { onSuccess:(u:any)=>void }) {
   const [mode, setMode]       = useState<"login"|"signup">("login");
   const [email, setEmail]     = useState("");
@@ -54,7 +55,9 @@ function AuthPanel({ onSuccess }: { onSuccess:(u:any)=>void }) {
         if (error) throw error;
         onSuccess(data.user);
       } else {
-        const { data, error } = await sb.auth.signUp({ email, password: pass, options:{ data:{ name } } });
+        const { data, error } = await sb.auth.signUp({
+          email, password: pass, options: { data: { name } }
+        });
         if (error) throw error;
         if (!data.user) throw new Error("Vérifiez votre email pour confirmer votre compte.");
         onSuccess(data.user);
@@ -64,23 +67,24 @@ function AuthPanel({ onSuccess }: { onSuccess:(u:any)=>void }) {
   };
 
   return (
-    <div style={{ background:"white", border:"1.5px solid #f0f0f0", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,.06)", maxWidth:460, margin:"0 auto" }}>
-      <div style={{ padding:"32px 32px 28px" }}>
-        <div style={{ fontSize:28, marginBottom:12 }}>🏢</div>
-        <h2 style={{ fontSize:20, fontWeight:800, marginBottom:6 }}>Espace Recruteur</h2>
-        <p style={{ fontSize:13, color:"#6b7280", marginBottom:24 }}>Connectez-vous pour publier et gérer vos offres d'emploi.</p>
-
-        <div style={{ display:"flex", gap:4, background:"#f3f4f6", borderRadius:9, padding:4, marginBottom:22 }}>
-          {(["login","signup"] as const).map((m)=>(
+    <div style={{ background:"white", border:"1.5px solid #f0f0f0", borderRadius:16, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,.08)", maxWidth:480, margin:"0 auto" }}>
+      <div style={{ padding:"36px 36px 32px" }}>
+        <div style={{ fontSize:32, marginBottom:14, textAlign:"center" }}>🏢</div>
+        <h2 style={{ fontSize:22, fontWeight:800, marginBottom:6, textAlign:"center" }}>Espace Recruteur</h2>
+        <p style={{ fontSize:13, color:"#6b7280", marginBottom:28, textAlign:"center", lineHeight:1.6 }}>
+          Connectez-vous pour publier vos offres et gérer vos recrutements.
+        </p>
+        {/* Toggle */}
+        <div style={{ display:"flex", gap:4, background:"#f3f4f6", borderRadius:10, padding:4, marginBottom:24 }}>
+          {(["login","signup"] as const).map(m=>(
             <button key={m} onClick={()=>{setMode(m);setError(null);}}
-              style={{ flex:1, padding:"9px", borderRadius:7, border:"none", fontFamily:"inherit", fontSize:13, fontWeight:600, cursor:"pointer",
+              style={{ flex:1, padding:"10px", borderRadius:8, border:"none", fontFamily:"inherit", fontSize:13, fontWeight:600, cursor:"pointer",
                 background:mode===m?"white":"transparent", color:mode===m?"#0f172a":"#6b7280",
-                boxShadow:mode===m?"0 1px 3px rgba(0,0,0,.1)":"none" }}>
-              {m==="login"?"Connexion":"Inscription"}
+                boxShadow:mode===m?"0 1px 4px rgba(0,0,0,.1)":"none", transition:"all .18s" }}>
+              {m==="login" ? "Connexion" : "Inscription"}
             </button>
           ))}
         </div>
-
         <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
           {mode==="signup" && (
             <div>
@@ -98,9 +102,11 @@ function AuthPanel({ onSuccess }: { onSuccess:(u:any)=>void }) {
             <input type="password" style={IS} placeholder="••••••••" value={pass}
               onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/>
           </div>
-          {error && <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626" }}>⚠ {error}</div>}
+          {error && (
+            <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626" }}>⚠ {error}</div>
+          )}
           <button disabled={loading} onClick={submit}
-            style={{ background:"#16a34a", color:"white", padding:"12px", borderRadius:9, border:"none", fontFamily:"inherit", fontSize:14, fontWeight:700, cursor:loading?"not-allowed":"pointer", opacity:loading?0.7:1 }}>
+            style={{ background:"#16a34a", color:"white", padding:"13px", borderRadius:10, border:"none", fontFamily:"inherit", fontSize:14, fontWeight:700, cursor:loading?"not-allowed":"pointer", opacity:loading?0.7:1, marginTop:4 }}>
             {loading ? "…" : mode==="login" ? "Se connecter →" : "Créer mon compte →"}
           </button>
         </div>
@@ -119,12 +125,16 @@ export default function EmployeurPage() {
   const [error,      setError]      = useState<string|null>(null);
 
   useEffect(() => {
-    getSupabase().auth.getUser().then(({ data:{ user } }) => { setUser(user); setLoading(false); });
+    getSupabase().auth.getUser().then(({ data:{ user } }) => {
+      setUser(user); setLoading(false);
+    });
   }, []);
 
-  const set = (k: keyof JobForm) =>
+  // Stable setter — doesn't cause remount
+  const set = useCallback((k: keyof JobForm) =>
     (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) =>
-      setForm(p => ({ ...p, [k]: e.target.value }));
+      setForm(prev => ({ ...prev, [k]: e.target.value })),
+  []);
 
   const handleSubmit = useCallback(async () => {
     setError(null);
@@ -136,7 +146,7 @@ export default function EmployeurPage() {
     setSubmitting(true);
     try {
       const sb = getSupabase();
-      const payload: any = {
+      const { error: err } = await sb.from("jobs").insert({
         title:         form.title.trim(),
         company:       form.company.trim(),
         city:          form.city,
@@ -147,12 +157,10 @@ export default function EmployeurPage() {
         original_url:  form.original_url.trim() || "https://talentmaroc.shop",
         logo_url:      form.logo_url.trim() || null,
         posted_at:     new Date().toLocaleDateString("fr-FR"),
-      };
-      // Add employer_id only after running employer-migration.sql
-      // payload.employer_id = user?.id;
-      // payload.source = "employer_direct";
-
-      const { error: err } = await sb.from("jobs").insert(payload);
+        employer_id:   user?.id || null,
+        source:        "employer_direct",
+        featured:      false,
+      });
       if (err) throw err;
       setSuccess(true);
       setForm(EMPTY);
@@ -183,6 +191,7 @@ export default function EmployeurPage() {
         input:focus,select:focus,textarea:focus{border-color:#16a34a!important;box-shadow:0 0 0 3px rgba(22,163,74,.1)!important;outline:none!important}
         .nl{color:#4b5563;text-decoration:none;font-size:14px;font-weight:600;padding:7px 12px;border-radius:8px;transition:all .18s}
         .nl:hover{color:#0f172a;background:#f3f4f6}
+        @media(max-width:640px){.two-col{grid-template-columns:1fr!important}}
       `}</style>
 
       <div style={{ background:"#f8fafc", minHeight:"100vh" }}>
@@ -194,7 +203,11 @@ export default function EmployeurPage() {
           </a>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             <a href="/" className="nl">Emplois</a>
-            {user && <a href="/employeur/dashboard" style={{ color:"#16a34a", fontSize:14, fontWeight:700, padding:"7px 14px", background:"#f0fdf4", borderRadius:8, textDecoration:"none" }}>Dashboard →</a>}
+            {user && (
+              <a href="/employeur/dashboard" style={{ fontSize:13, fontWeight:700, color:"#16a34a", background:"#f0fdf4", border:"1px solid #bbf7d0", padding:"7px 14px", borderRadius:8, textDecoration:"none" }}>
+                📊 Dashboard →
+              </a>
+            )}
             {user && (
               <button onClick={()=>{ getSupabase().auth.signOut(); setUser(null); setSuccess(false); }}
                 style={{ background:"none", border:"1.5px solid #e5e7eb", borderRadius:8, padding:"7px 14px", fontSize:13, fontWeight:600, color:"#374151", cursor:"pointer", fontFamily:"inherit" }}>
@@ -210,23 +223,28 @@ export default function EmployeurPage() {
             {user ? `Bonjour ${user.user_metadata?.name || user.email?.split("@")[0]} 👋` : "Recrutez vos talents au Maroc"}
           </h1>
           <p className="au" style={{ fontSize:14, color:"rgba(255,255,255,.55)", maxWidth:420, margin:"0 auto", lineHeight:1.7, animationDelay:".1s" }}>
-            {user ? "Publiez une offre ou gérez vos annonces depuis votre dashboard." : "Créez un compte pour publier vos offres et gérer vos recrutements."}
+            {user ? "Publiez une offre ou gérez vos recrutements depuis votre dashboard." : "Créez un compte recruteur pour accéder à la plateforme."}
           </p>
         </div>
 
         <div style={{ maxWidth:820, margin:"0 auto", padding:"36px 20px 80px" }}>
-          {!user ? (
+
+          {/* NOT LOGGED IN → show auth only */}
+          {!user && (
             <div className="au"><AuthPanel onSuccess={u=>setUser(u)}/></div>
-          ) : (
+          )}
+
+          {/* LOGGED IN → show form */}
+          {user && (
             <div className="au">
               {success && (
                 <div style={{ background:"#f0fdf4", border:"1.5px solid #bbf7d0", borderRadius:12, padding:"18px 22px", marginBottom:24, display:"flex", alignItems:"center", gap:14 }}>
                   <span style={{ fontSize:24 }}>🎉</span>
                   <div>
                     <div style={{ fontSize:14, fontWeight:800, color:"#15803d", marginBottom:2 }}>Offre publiée avec succès !</div>
-                    <div style={{ fontSize:13, color:"#15803d" }}>Visible par les candidats · <a href="/employeur/dashboard" style={{ fontWeight:700 }}>Voir mon dashboard →</a></div>
+                    <div style={{ fontSize:13, color:"#15803d" }}>Visible par les candidats · <a href="/employeur/dashboard" style={{ fontWeight:700, color:"#15803d" }}>Gérer mes offres →</a></div>
                   </div>
-                  <button onClick={()=>setSuccess(false)} style={{ marginLeft:"auto", background:"none", border:"none", fontSize:18, color:"#9ca3af", cursor:"pointer" }}>×</button>
+                  <button onClick={()=>setSuccess(false)} style={{ marginLeft:"auto", background:"none", border:"none", fontSize:20, color:"#9ca3af", cursor:"pointer", lineHeight:1 }}>×</button>
                 </div>
               )}
 
@@ -234,15 +252,13 @@ export default function EmployeurPage() {
                 <div style={{ padding:"20px 28px", borderBottom:"1.5px solid #f0f0f0", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
                   <div>
                     <h2 style={{ fontSize:16, fontWeight:800 }}>Publier une nouvelle offre</h2>
-                    <p style={{ fontSize:13, color:"#6b7280", marginTop:2 }}>Remplissez les champs et cliquez sur Publier</p>
+                    <p style={{ fontSize:13, color:"#6b7280", marginTop:2 }}>Tous les champs marqués * sont obligatoires</p>
                   </div>
-                  <span style={{ fontSize:12, background:"#f0fdf4", color:"#15803d", border:"1px solid #bbf7d0", padding:"4px 12px", borderRadius:100 }}>
-                    ✓ {user.email}
-                  </span>
+                  <span style={{ fontSize:12, background:"#f0fdf4", color:"#15803d", border:"1px solid #bbf7d0", padding:"4px 12px", borderRadius:100 }}>✓ {user.email}</span>
                 </div>
 
                 <div style={{ padding:"28px", display:"flex", flexDirection:"column", gap:20 }}>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                  <div className="two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
                     <Field label="Intitulé du poste" required>
                       <input style={IS} placeholder="Développeur Full Stack" value={form.title} onChange={set("title")}/>
                     </Field>
@@ -250,7 +266,7 @@ export default function EmployeurPage() {
                       <input style={IS} placeholder="Capgemini Maroc" value={form.company} onChange={set("company")}/>
                     </Field>
                   </div>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                  <div className="two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
                     <Field label="Ville" required>
                       <select style={IS} value={form.city} onChange={set("city")}>
                         <option value="">Sélectionnez...</option>
@@ -264,7 +280,7 @@ export default function EmployeurPage() {
                       </select>
                     </Field>
                   </div>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                  <div className="two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
                     <Field label="Type de contrat" required>
                       <select style={IS} value={form.contract_type} onChange={set("contract_type")}>
                         <option value="">Sélectionnez...</option>
@@ -280,30 +296,37 @@ export default function EmployeurPage() {
                       placeholder={"Missions :\n• Mission 1\n\nProfil recherché :\n• Critère 1\n\nAvantages :\n• ..."}
                       value={form.description} onChange={set("description")}/>
                   </Field>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                  <div className="two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
                     <Field label="Lien de candidature">
                       <input style={IS} placeholder="https://votresite.ma/postuler" value={form.original_url} onChange={set("original_url")}/>
                     </Field>
                     <Field label="URL du logo">
                       <input style={IS} placeholder="https://...logo.png" value={form.logo_url} onChange={set("logo_url")}/>
-                      {form.logo_url && <img src={form.logo_url} alt="" style={{ width:36, height:36, borderRadius:6, objectFit:"contain", marginTop:8, border:"1px solid #e5e7eb" }} onError={e=>(e.currentTarget.style.display="none")}/>}
+                      {form.logo_url && (
+                        <img src={form.logo_url} alt="" style={{ width:36, height:36, borderRadius:6, objectFit:"contain", marginTop:8, border:"1px solid #e5e7eb" }}
+                          onError={e=>(e.currentTarget.style.display="none")}/>
+                      )}
                     </Field>
                   </div>
-                  {error && <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"12px 16px", fontSize:13, color:"#dc2626" }}>⚠ {error}</div>}
+                  {error && (
+                    <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"12px 16px", fontSize:13, color:"#dc2626" }}>⚠ {error}</div>
+                  )}
                   <div style={{ display:"flex", justifyContent:"flex-end", gap:10, paddingTop:4 }}>
                     <button onClick={()=>{ setForm(EMPTY); setError(null); }}
                       style={{ background:"none", border:"1.5px solid #e5e7eb", borderRadius:9, padding:"11px 20px", fontSize:14, fontWeight:600, color:"#374151", cursor:"pointer", fontFamily:"inherit" }}>
                       Réinitialiser
                     </button>
                     <button onClick={handleSubmit} disabled={submitting}
-                      style={{ background:"#16a34a", color:"white", padding:"11px 24px", borderRadius:9, border:"none", fontFamily:"inherit", fontSize:14, fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:7, opacity:submitting?0.7:1 }}>
+                      style={{ background:"#16a34a", color:"white", padding:"11px 24px", borderRadius:9, border:"none", fontFamily:"inherit", fontSize:14, fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:7, opacity:submitting?0.7:1, transition:"all .18s" }}>
                       {submitting ? "Publication…" : "📢 Publier l'offre →"}
                     </button>
                   </div>
                 </div>
               </div>
               <div style={{ textAlign:"center" }}>
-                <a href="/employeur/dashboard" style={{ fontSize:13, color:"#16a34a", fontWeight:600, textDecoration:"none" }}>📊 Gérer mes offres et candidatures →</a>
+                <a href="/employeur/dashboard" style={{ fontSize:13, color:"#16a34a", fontWeight:600, textDecoration:"none" }}>
+                  📊 Gérer mes offres et candidatures →
+                </a>
               </div>
             </div>
           )}
