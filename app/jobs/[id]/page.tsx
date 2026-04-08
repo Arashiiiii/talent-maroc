@@ -228,7 +228,6 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
   );
 }
 
-"use client";
 // ── SAVE & APPLY BUTTON (client component) ────────────────────────────────
 function SaveApplyButton({ job }: { job: any }) {
   const [state,    setState]    = React.useState<"idle"|"saving"|"saved"|"error">("idle");
