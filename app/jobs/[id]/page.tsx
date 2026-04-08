@@ -53,13 +53,17 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
   const { data: job, error } = await supabase
     .from('jobs').select('*').eq('id', id).single();
 
-  if (error || !job) notFound();
+  // Only call notFound() when the job genuinely doesn't exist (PGRST116 = 0 rows)
+  // Other errors (RLS, network) should surface rather than silently 404
+  if (!job) notFound();
+  if (error && error.code !== 'PGRST116') notFound();
 
+  // Use simple .eq('city') to avoid PostgREST breaking on special chars in company names
   const { data: similarJobs } = await supabase
     .from('jobs')
     .select('id,title,company,city,created_at,posted_at,logo_url')
     .neq('id', id)
-    .or(`company.eq.${job.company},city.eq.${job.city}`)
+    .eq('city', job.city || '')
     .order('created_at', { ascending: false })
     .limit(3);
 
