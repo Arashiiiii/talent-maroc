@@ -177,7 +177,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
       </div>
 
       {/* ── RIGHT: sidebar ─────────────────────────────────────────── */}
-      <div className="sidebar-col" style={{ width:268, flexShrink:0, position:'sticky', top:78, alignSelf:'flex-start' }}>
+      <div id="postuler" className="sidebar-col" style={{ width:268, flexShrink:0, position:'sticky', top:78, alignSelf:'flex-start' }}>
 
         <div style={{ background:'white', border:'1.5px solid #f0f0f0', borderRadius:14, padding:'22px 18px', marginBottom:12, boxShadow:'0 1px 4px rgba(0,0,0,0.04)' }}>
           <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:14, fontWeight:800, color:'#0f172a', marginBottom:3 }}>{job.title}</div>
@@ -223,7 +223,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
         <a href={job.original_url} target="_blank" rel="noopener noreferrer" className="cta-btn">
           Postuler sur le site <ExternalLink size={16}/>
         </a>
-        <a href="#" onClick={e=>{e.preventDefault();document.querySelector('.sidebar-col')?.scrollIntoView({behavior:'smooth'});}}
+        <a href="#postuler"
           style={{display:'block',textAlign:'center',fontSize:12,color:'#6b7280',marginTop:6,textDecoration:'none'}}>
           📋 Sauvegarder la candidature
         </a>
