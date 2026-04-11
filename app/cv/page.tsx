@@ -40,7 +40,7 @@ interface Template {
 
 type PlanTier = "starter" | "pro" | "cadre";
 interface Plan { name: string; price: string; paddlePriceId: string; tier: PlanTier; }
-type Step = 1|2|3|4;
+type Step = 1|2|3|4|5;
 type Mode = "upload"|"ai";
 
 // ── SAMPLE CV DATA (used in previews) ──────────────────────────────────────
