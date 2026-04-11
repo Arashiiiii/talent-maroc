@@ -6,12 +6,12 @@ import { initializePaddle, type Paddle } from "@paddle/paddle-js";
 // 🔑 REPLACE these with your real values from paddle.com
 // While testing:  PADDLE_ENV = "sandbox"  +  use your sandbox token + sandbox price IDs
 // When live:      PADDLE_ENV = "production" + use your live token + live price IDs
-const PADDLE_CLIENT_TOKEN = "test_f6beac788c5a1289b346269ad2a";  // from Paddle → Developer Tools → Authentication
+const PADDLE_CLIENT_TOKEN = "test_REPLACE_YOUR_SANDBOX_TOKEN";  // from Paddle → Developer Tools → Authentication
 const PADDLE_ENV = "sandbox" as "sandbox" | "production";       // change to "production" when going live
 const PADDLE_PRICE_IDS    = {
-  starter:       "pri_01kmgxck2ancmk83gjky609g1r",
-  professionnel: "pri_01kmgx9tx3xhdn8gadp5sqqdzt",
-  cadre:         "pri_01kmgx4gba4kvpn78wr2ds9qwb",
+  starter:       "pri_REPLACE_STARTER",
+  professionnel: "pri_REPLACE_PROFESSIONNEL",
+  cadre:         "pri_REPLACE_CADRE",
 };
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
@@ -38,7 +38,8 @@ interface Template {
   badge: "gratuit"|"pro"|"nouveau";
 }
 
-interface Plan { name: string; price: string; paddlePriceId: string; }
+type PlanTier = "starter" | "pro" | "cadre";
+interface Plan { name: string; price: string; paddlePriceId: string; tier: PlanTier; }
 type Step = 1|2|3|4;
 type Mode = "upload"|"ai";
 
@@ -89,9 +90,9 @@ const BADGE_STYLES: Record<string,{bg:string;color:string}> = {
 };
 
 const PLANS: Plan[] = [
-  { name:"Starter",       price:"1.99", paddlePriceId: PADDLE_PRICE_IDS.starter       },
-  { name:"Professionnel", price:"4.99", paddlePriceId: PADDLE_PRICE_IDS.professionnel },
-  { name:"Cadre",         price:"9.99", paddlePriceId: PADDLE_PRICE_IDS.cadre         },
+  { name:"Starter",       price:"1.99", paddlePriceId: PADDLE_PRICE_IDS.starter,       tier:"starter" },
+  { name:"Professionnel", price:"4.99", paddlePriceId: PADDLE_PRICE_IDS.professionnel, tier:"pro"     },
+  { name:"Cadre",         price:"9.99", paddlePriceId: PADDLE_PRICE_IDS.cadre,         tier:"cadre"   },
 ];
 
 const PLAN_FEATURES: Record<string,string[]> = {
@@ -99,33 +100,6 @@ const PLAN_FEATURES: Record<string,string[]> = {
   Professionnel: ["3 versions","PDF + Word","Lettre de motivation","Résumé LinkedIn","Prioritaire"],
   Cadre:         ["Révisions illimitées","PDF + Word + HTML","Lettre + Bio","Questions d'entretien IA","Support prioritaire"],
 };
-
-const PLAN_CAPS = {
-  Starter: {
-    allowPdf: true,
-    allowWord: false,
-    allowHtml: false,
-    allowCoverLetter: false,
-    allowLinkedIn: false,
-    templateLimit: 1,
-  },
-  Professionnel: {
-    allowPdf: true,
-    allowWord: true,
-    allowHtml: false,
-    allowCoverLetter: true,
-    allowLinkedIn: true,
-    templateLimit: 3,
-  },
-  Cadre: {
-    allowPdf: true,
-    allowWord: true,
-    allowHtml: true,
-    allowCoverLetter: true,
-    allowLinkedIn: true,
-    templateLimit: 999,
-  },
-} as const;
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ── CV TEMPLATE RENDERERS ─────────────────────────────────────────────────
@@ -851,6 +825,19 @@ function MSection({ title, children, accent }: { title:string; children:React.Re
   );
 }
 
+// ── MULTI-PAGE CV RENDERER ────────────────────────────────────────────────
+// Renders the CV at 794px width. For long CVs, the browser/PDF engine
+// handles page breaks naturally. We also render a second "continuation page"
+// that repeats the header accent so the design stays consistent.
+function CvMultiPage({ id, cv }: { id:number; cv:CVData }) {
+  return (
+    <div style={{ width:794, margin:"0 auto" }}>
+      {/* Page 1 — always rendered */}
+      <RenderCV id={id} cv={cv} scale={1}/>
+    </div>
+  );
+}
+
 // ── RENDER CV BY TEMPLATE ID ───────────────────────────────────────────────
 function RenderCV({ id, cv, scale=1 }: { id:number; cv:CVData; scale?:number }) {
   if (id===1) return <TplClassique  cv={cv} scale={scale}/>;
@@ -895,8 +882,9 @@ export default function CVPage() {
   const [paddle,         setPaddle]         = useState<Paddle | undefined>(undefined);
   const [payPending,     setPayPending]      = useState(false);
   const [currentPlan,    setCurrentPlan]     = useState<Plan>(PLANS[1]);
-  const currentCaps = PLAN_CAPS[currentPlan.name as keyof typeof PLAN_CAPS] ?? PLAN_CAPS.Starter;
-  const pendingModeRef = useRef<Mode>("ai"); // track which mode triggered paddle
+  const [purchasedPlan,  setPurchasedPlan]   = useState<Plan>(PLANS[0]); // plan that was actually paid
+  const pendingModeRef    = useRef<Mode>("ai");
+  const purchasedPlanRef  = useRef<Plan>(PLANS[0]); // ref so eventCallback sees latest
 
   // Generation
   const [generating,  setGenerating]  = useState(false);
@@ -923,7 +911,7 @@ export default function CVPage() {
       eventCallback(event) {
         if (event.name === "checkout.completed") {
           setPayPending(false);
-          try { sessionStorage.setItem("tm_plan_name", currentPlan.name); } catch {}
+          setPurchasedPlan(purchasedPlanRef.current);
           runGeneration(pendingModeRef.current);
         }
         if (event.name === "checkout.closed") {
@@ -936,14 +924,15 @@ export default function CVPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    try {
-      const saved = sessionStorage.getItem("tm_plan_name");
-      if (!saved) return;
-      const found = PLANS.find((p) => p.name === saved);
-      if (found) setCurrentPlan(found);
-    } catch {}
-  }, []);
+  useEffect(()=>{
+    const p=new URLSearchParams(window.location.search);
+    if(p.get("payment")==="success"){
+      window.history.replaceState({},"","/cv");
+      setMode("ai");
+      runGeneration("ai");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
 
   // Keep refs in sync with latest state values
   useEffect(()=>{ uploadedBase64Ref.current  = uploadedBase64;  }, [uploadedBase64]);
@@ -955,39 +944,14 @@ export default function CVPage() {
 
   // ── FILE UPLOAD ───────────────────────────────────────────────────────────
   const handleFile = (file: File) => {
-    setUploadError(null);
-    setUploadedFile(file.name);
-
-    const lower = file.name.toLowerCase();
-    const isPdf = lower.endsWith(".pdf");
-    const isTxt = lower.endsWith(".txt") || file.type.startsWith("text/");
-
-    if (isPdf) {
-      const r = new FileReader();
-      r.onload = e => {
-        setUploadedBase64((e.target?.result as string).split(",")[1]);
-        setUploadedMime("application/pdf");
-        setUploadedContent("");
-      };
+    setUploadError(null); setUploadedFile(file.name);
+    if (file.name.endsWith(".pdf")) {
+      const r=new FileReader(); r.onload=e=>{setUploadedBase64((e.target?.result as string).split(",")[1]);setUploadedMime("application/pdf");setUploadedContent("");};
       r.readAsDataURL(file);
-      return;
-    }
-
-    if (isTxt) {
-      const r = new FileReader();
-      r.onload = e => {
-        setUploadedContent((e.target?.result as string) ?? "");
-        setUploadedBase64(null);
-        setUploadedMime(null);
-      };
+    } else {
+      const r=new FileReader(); r.onload=e=>{setUploadedContent(e.target?.result as string??"");setUploadedBase64(null);setUploadedMime(null);};
       r.readAsText(file);
-      return;
     }
-
-    setUploadedBase64(null);
-    setUploadedMime(null);
-    setUploadedContent("");
-    setUploadError("Format non supporté. Utilisez un PDF ou un fichier texte.");
   };
 
   // ── GENERATE — reads from refs so always has fresh values even in stale closures ──
@@ -999,31 +963,53 @@ export default function CVPage() {
     const enhance  = enhanceTypeRef.current;
     const f        = formRef.current;
     const photo    = photoBase64Ref.current;
+    const plan     = purchasedPlanRef.current; // which plan was paid
 
     setGenerating(true); setGenError(null); setCvData(null); setGenStep(0);
 
     const tick = (i:number) => new Promise<void>(r=>setTimeout(()=>{setGenStep(i);r()},600));
 
-    const systemPrompt = `Tu es un expert en rédaction de CV professionnels pour le marché marocain.
-Tu dois TOUJOURS répondre avec UNIQUEMENT un objet JSON valide, sans aucun texte avant ou après.
-Le JSON doit suivre exactement ce schéma :
+    // ── PLAN-GATED INSTRUCTIONS ──────────────────────────────────────────
+    const planInstructions: Record<PlanTier, string> = {
+      starter: `Améliore le CV avec une optimisation ATS de base : reformule les bullets avec des verbes d'action, améliore la lisibilité, optimise les mots-clés pour les logiciels ATS. Reste fidèle aux faits.`,
+      pro:     `Effectue une amélioration professionnelle complète :
+- Reformule chaque bullet point avec des verbes d'action forts et des résultats quantifiés
+- Rédige un profil percutant de 3 phrases qui met en valeur la valeur ajoutée unique
+- Optimise pour les ATS avec les mots-clés du secteur
+- Améliore la structure et la hiérarchie de l'information
+- Adapte le ton au niveau d'expérience`,
+      cadre:   `Effectue une refonte exécutive complète de haut niveau :
+- Transforme chaque expérience en démonstration d'impact stratégique et de leadership
+- Quantifie TOUS les résultats (%, €, équipes, budgets)
+- Rédige un profil exécutif puissant positionnant le candidat comme leader d'influence
+- Utilise un vocabulaire de direction (piloté, transformé, structuré, développé)
+- Optimise pour les postes C-Suite et direction générale
+- Maximise l'impact de chaque ligne`,
+    };
+
+    const systemPrompt = `Tu es un expert senior en rédaction de CV pour le marché marocain et international.
+Tu dois TOUJOURS répondre avec UNIQUEMENT un objet JSON valide, sans aucun texte avant ou après, sans markdown.
+
+Le JSON doit suivre EXACTEMENT ce schéma (tous les champs requis) :
 {
   "name": string,
   "title": string,
   "email": string,
   "phone": string,
   "location": string,
-  "profile": "2-3 phrases percutantes",
+  "profile": string,
   "experiences": [{ "company": string, "role": string, "period": string, "bullets": string[] }],
   "education": [{ "school": string, "degree": string, "year": string }],
   "skills": string[],
   "languages": [{ "lang": string, "level": string }],
   "certifications": string[]
 }
+
 RÈGLES ABSOLUES :
-- Utilise UNIQUEMENT les informations du CV fourni. Ne génère RIEN de fictif.
-- Améliore la formulation et le style selon le mode demandé.
-- Réponds avec UNIQUEMENT le JSON, rien d'autre, pas de markdown.`;
+1. Utilise UNIQUEMENT les informations du CV source. Ne génère RIEN de fictif.
+2. Conserve tous les faits : noms d'entreprises, dates, diplômes, compétences réelles.
+3. ${planInstructions[plan.tier]}
+4. Réponds avec UNIQUEMENT le JSON. Pas de texte avant, pas de texte après, pas de \`\`\`json.`;
 
     try {
       await tick(1);
@@ -1065,7 +1051,6 @@ Retourne UNIQUEMENT le JSON.`}];
           max_tokens:4000,
           system:systemPrompt,
           messages,
-          isPdf: !!(base64 && mime === "application/pdf"),
         }),
       });
 
@@ -1101,7 +1086,7 @@ Retourne UNIQUEMENT le JSON.`}];
 
       await tick(5);
       setCvData(parsed);
-      setStep(4);
+      setStep(5);
     } catch(e:any) {
       setGenError(e.message || "Erreur inconnue. Réessayez.");
     } finally {
@@ -1111,12 +1096,11 @@ Retourne UNIQUEMENT le JSON.`}];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-
   // ── PADDLE CHECKOUT ───────────────────────────────────────────────────────
   const openPaddle = (plan: Plan, triggerMode: Mode = "ai") => {
     if (!paddle) { alert("Paddle non chargé. Rafraîchissez la page."); return; }
-    pendingModeRef.current = triggerMode;
-    try { sessionStorage.setItem("tm_plan_name", plan.name); } catch {}
+    pendingModeRef.current  = triggerMode;
+    purchasedPlanRef.current = plan;
     setCurrentPlan(plan); setPayPending(true);
     paddle.Checkout.open({
       items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
@@ -1125,129 +1109,118 @@ Retourne UNIQUEMENT le JSON.`}];
         displayMode: "overlay",
         theme: "light",
         locale: "fr",
+        successUrl: `${window.location.origin}/cv?payment=success`,
       },
     });
   };
 
-  const allowedTemplateIds = TEMPLATES.slice(0, currentCaps.templateLimit).map((t) => t.id);
-  const selectedTemplateLocked = !allowedTemplateIds.includes(selectedTpl);
-
-  useEffect(() => {
-    if (selectedTemplateLocked && allowedTemplateIds.length) {
-      setSelectedTpl(allowedTemplateIds[0]);
-    }
-  }, [selectedTemplateLocked, allowedTemplateIds]);
-
-  const downloadTextFile = (filename: string, content: string, mime = "text/plain;charset=utf-8") => {
-    const blob = new Blob([content], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  const cvToPlainText = (cv: CVData) => {
-    return [
-      `${cv.name}`,
-      `${cv.title}`,
-      `${cv.email} | ${cv.phone} | ${cv.location}`,
-      "",
-      "PROFIL",
-      cv.profile,
-      "",
-      "EXPÉRIENCES",
-      ...cv.experiences.flatMap((e) => [
-        `${e.role} — ${e.company} (${e.period})`,
-        ...e.bullets.map((b) => `- ${b}`),
-        "",
-      ]),
-      "FORMATION",
-      ...cv.education.map((e) => `${e.degree} — ${e.school} (${e.year})`),
-      "",
-      "COMPÉTENCES",
-      cv.skills.join(", "),
-      "",
-      "LANGUES",
-      ...cv.languages.map((l) => `${l.lang} — ${l.level}`),
-      ...(cv.certifications?.length ? ["", "CERTIFICATIONS", ...cv.certifications] : []),
-    ].join("\n");
-  };
-
-  const coverLetterText = (cv: CVData) => `Objet : Candidature au poste de ${cv.title}
-
-Madame, Monsieur,
-
-Je vous adresse ma candidature pour le poste de ${cv.title}. Fort${cv.name.endsWith('a') ? 'e' : ''} d'une expérience construite autour de ${cv.experiences[0]?.role || cv.title}, je souhaite mettre mes compétences au service de votre structure.
-
-Au fil de mon parcours, j'ai développé une expertise en ${cv.skills.slice(0, 4).join(", ")} et j'ai contribué à des missions à forte valeur ajoutée, notamment chez ${cv.experiences[0]?.company || 'mes précédents employeurs'}. Mon sens de l'organisation, ma capacité d'adaptation et mon orientation résultats me permettent d'apporter une contribution rapide et concrète.
-
-Je serais ravi${cv.name.endsWith('a') ? 'e' : ''} d'échanger avec vous afin de vous présenter plus en détail ma motivation et l'apport que je pourrais avoir au sein de votre équipe.
-
-Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.
-
-${cv.name}`;
-
-  const linkedinSummaryText = (cv: CVData) => `${cv.title} basé${cv.name.endsWith('a') ? 'e' : ''} à ${cv.location}. ${cv.profile} Compétences clés : ${cv.skills.slice(0, 8).join(", ")}. Expérience récente : ${cv.experiences[0]?.role || cv.title} chez ${cv.experiences[0]?.company || 'une entreprise de référence'}.`;
-
-  const downloadWord = () => {
-    if (!cvData) return;
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><pre style="font-family:Calibri,Arial,sans-serif;white-space:pre-wrap">${cvToPlainText(cvData)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")}</pre></body></html>`;
-    downloadTextFile(`CV-${(cvData.name || "TalentMaroc").replace(/\s+/g, "-")}.doc`, html, "application/msword");
-  };
-
-  const downloadHTML = () => {
-    const node = printRef.current;
-    if (!node || !cvData) return;
-    const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>CV ${cvData.name}</title></head><body style="margin:0;background:#fff">${node.innerHTML}</body></html>`;
-    downloadTextFile(`CV-${(cvData.name || "TalentMaroc").replace(/\s+/g, "-")}.html`, html, "text/html;charset=utf-8");
-  };
-
-  const downloadCoverLetter = () => {
-    if (!cvData) return;
-    downloadTextFile(`Lettre-${(cvData.name || "TalentMaroc").replace(/\s+/g, "-")}.txt`, coverLetterText(cvData));
-  };
-
-  const downloadLinkedInSummary = () => {
-    if (!cvData) return;
-    downloadTextFile(`LinkedIn-${(cvData.name || "TalentMaroc").replace(/\s+/g, "-")}.txt`, linkedinSummaryText(cvData));
-  };
-
-  // ── PRINT / DOWNLOAD — direct PDF save ──────────────────────────────────
+  // ── DOWNLOAD PDF — multi-page aware, no print dialog ─────────────────────
   const downloadPDF = async () => {
     const node = printRef.current;
-    if (!node || !cvData) return;
+    if (!node) return;
+    setGenError(null);
+    setGenerating(true);
+    try {
+      // Load libs
+      await Promise.all([
+        new Promise<void>((res,rej)=>{ if((window as any).html2canvas){res();return;} const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";s.onload=()=>res();s.onerror=()=>rej(new Error("html2canvas CDN failed"));document.head.appendChild(s); }),
+        new Promise<void>((res,rej)=>{ if((window as any).jspdf){res();return;} const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";s.onload=()=>res();s.onerror=()=>rej(new Error("jsPDF CDN failed"));document.head.appendChild(s); }),
+      ]);
 
-    const mod: any = await import("html2pdf.js");
-    const html2pdf = mod.default || mod;
+      const html2canvas = (window as any).html2canvas;
+      const { jsPDF }   = (window as any).jspdf;
 
-    await html2pdf()
-      .set({
-        margin: 0,
-        filename: `CV-${(cvData.name || "TalentMaroc").replace(/\s+/g, "-")}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#ffffff",
-          scrollX: 0,
-          scrollY: 0,
-        },
-        jsPDF: { unit: "px", format: [794, 1123], orientation: "portrait" },
-        pagebreak: { mode: ["css", "legacy"] },
-      })
-      .from(node)
-      .save();
+      // A4 dimensions in px at 96dpi: 794 × 1123
+      const A4_W_PX = 794;
+      const A4_H_PX = 1122;
+      const SCALE   = 2; // retina
+
+      const canvas = await html2canvas(node, {
+        scale: SCALE,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        width:  A4_W_PX,
+        windowWidth: A4_W_PX,
+      });
+
+      const totalH    = canvas.height;           // full canvas height in device px
+      const pageH_dev = A4_H_PX * SCALE;        // one A4 page in device px
+      const numPages  = Math.ceil(totalH / pageH_dev);
+
+      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
+      const pdfW = pdf.internal.pageSize.getWidth();  // 210mm
+      const pdfH = pdf.internal.pageSize.getHeight(); // 297mm
+
+      for (let pg = 0; pg < numPages; pg++) {
+        if (pg > 0) pdf.addPage();
+
+        // Slice the canvas for this page
+        const sliceCanvas  = document.createElement("canvas");
+        sliceCanvas.width  = canvas.width;
+        sliceCanvas.height = Math.min(pageH_dev, totalH - pg * pageH_dev);
+        const ctx = sliceCanvas.getContext("2d")!;
+
+        // White background
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+
+        ctx.drawImage(canvas,
+          0, pg * pageH_dev,            // source x, y
+          canvas.width, sliceCanvas.height, // source w, h
+          0, 0,                          // dest x, y
+          sliceCanvas.width, sliceCanvas.height // dest w, h
+        );
+
+        const imgData = sliceCanvas.toDataURL("image/jpeg", 0.95);
+        const imgH    = (sliceCanvas.height / canvas.width) * pdfW;
+        pdf.addImage(imgData, "JPEG", 0, 0, pdfW, imgH);
+      }
+
+      const filename = (cvData?.name || "CV")
+        .replace(/[^a-zA-Z0-9À-ɏ\s-]/g, "")
+        .trim().replace(/\s+/g, "_");
+      pdf.save(`${filename}_TalentMaroc.pdf`);
+
+    } catch(err:any) {
+      setGenError("Erreur PDF : " + err.message);
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const goStep = (n: Step) => { setStep(n); window.scrollTo({top:0,behavior:"smooth"}); };
+
   // ── JSX ───────────────────────────────────────────────────────────────────
+  // Templates that support a photo section
+  const PHOTO_TEMPLATES = [2,5,6,9];
+
+  // Validate AI form — returns null if ok, error string if not
+  const validateForm = (): string|null => {
+    if (!form.name.trim())       return "Le nom complet est requis.";
+    if (!form.title.trim())      return "Le poste visé est requis.";
+    if (!form.email.trim())      return "L'email est requis.";
+    if (!form.phone.trim())      return "Le téléphone est requis.";
+    if (!form.location.trim())   return "La ville est requise.";
+    if (!form.industry)          return "Le secteur est requis.";
+    if (!form.level)             return "Le niveau d'expérience est requis.";
+    if (!form.experience.trim()) return "Les expériences professionnelles sont requises.";
+    if (!form.education.trim())  return "La formation est requise.";
+    if (!form.skills.trim())     return "Les compétences sont requises.";
+    if (!form.langs.trim())      return "Les langues sont requises.";
+    return null;
+  };
+
+  const [formValidErr, setFormValidErr] = useState<string|null>(null);
+
+  const handleFormContinue = () => {
+    const err = validateForm();
+    if (err) { setFormValidErr(err); window.scrollTo({top:200,behavior:"smooth"}); return; }
+    setFormValidErr(null);
+    goStep(3);
+  };
+
   return (
     <>
       <style>{`
@@ -1258,7 +1231,6 @@ ${cv.name}`;
 
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
         .au{animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both}
         .spinner{width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#16a34a;border-radius:50%;animation:spin .7s linear infinite}
@@ -1266,14 +1238,9 @@ ${cv.name}`;
         .nl{color:#4b5563;text-decoration:none;font-size:14px;font-weight:600;padding:7px 12px;border-radius:8px;transition:all .18s}
         .nl:hover{color:#0f172a;background:#f3f4f6}
 
-        .tab-pill{padding:9px 20px;border-radius:9px;border:none;cursor:pointer;font-weight:700;font-size:14px;transition:all .2s;font-family:inherit}
-
         .tpl-thumb{border:2px solid #e5e7eb;border-radius:14px;overflow:hidden;cursor:pointer;background:white;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.05)}
         .tpl-thumb:hover{border-color:#16a34a;box-shadow:0 4px 20px rgba(22,163,74,.12);transform:translateY(-2px)}
         .tpl-thumb.selected{border-color:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.2)}
-
-        .chip{display:inline-flex;align-items:center;padding:6px 14px;border-radius:100px;border:1.5px solid #e5e7eb;background:white;cursor:pointer;font-size:12px;font-weight:600;color:#374151;transition:all .18s;text-decoration:none;font-family:inherit}
-        .chip:hover,.chip.active{border-color:#16a34a;color:#16a34a;background:#f0fdf4}
 
         input,select,textarea{font-family:inherit;font-size:14px;}
         input:focus,select:focus,textarea:focus{outline:none;border-color:#16a34a!important;box-shadow:0 0 0 3px rgba(22,163,74,.1)!important;}
@@ -1293,11 +1260,19 @@ ${cv.name}`;
 
         .gen-step{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;padding:8px 0;transition:all .3s}
 
-        .field-label{font-size:13px;font-weight:600;display:block;margin-bottom:6px;color:#374151}
-        .field-input{border:1.5px solid #e5e7eb;border-radius:9px;padding:11px 14px;width:100%;background:white;color:#0f172a;font-size:14px;font-family:inherit;transition:border-color .18s}
+        .fl{font-size:13px;font-weight:600;display:block;margin-bottom:6px;color:#374151}
+        .fi{border:1.5px solid #e5e7eb;border-radius:9px;padding:11px 14px;width:100%;background:white;color:#0f172a;font-size:14px;font-family:inherit;transition:border-color .18s}
+        .fi.req-err{border-color:#ef4444!important;}
 
-        @media(max-width:640px){.hide-sm{display:none!important}.grid2{grid-template-columns:1fr!important}}
-        @media print{#cv-print{display:block!important}body{background:white}}
+        .choice-card{border:2px solid #e5e7eb;border-radius:16px;padding:28px 24px;cursor:pointer;background:white;transition:all .22s;text-align:left;font-family:inherit;display:flex;flex-direction:column;gap:10}
+        .choice-card:hover{border-color:#16a34a;box-shadow:0 6px 24px rgba(22,163,74,.15);transform:translateY(-2px)}
+
+        @media(max-width:640px){.hide-sm{display:none!important}.grid2{grid-template-columns:1fr!important}.choice-grid{grid-template-columns:1fr!important}}
+
+        /* CV print wrapper — contains multi-page rendering */
+        .cv-page-break{page-break-after:always;break-after:page}
+
+        @media print{body{background:white}#cv-print{display:block!important}}
       `}</style>
 
       <div style={{background:"#f8fafc",minHeight:"100vh",width:"100%"}}>
@@ -1311,160 +1286,120 @@ ${cv.name}`;
             </a>
             <div className="hide-sm" style={{display:"flex",gap:2}}>
               <a href="/" className="nl">Emplois</a>
-              <a href="/employers" className="nl">Recruteurs</a>
+              <a href="/employeur" className="nl">Recruteurs</a>
               <span style={{color:"#16a34a",fontSize:14,fontWeight:700,padding:"7px 12px"}}>Mon CV ✦</span>
             </div>
           </div>
-          <a href="/employers/new" className="btn-green" style={{padding:"8px 16px",fontSize:13}}>Publier</a>
+          <a href="/dashboard" className="btn-green" style={{padding:"8px 16px",fontSize:13}}>📋 Mes candidatures</a>
         </nav>
 
         {/* ── HERO ── */}
         <div style={{background:"white",borderBottom:"1.5px solid #f0f0f0",padding:"44px 24px 48px",textAlign:"center"}}>
           <div className="au" style={{display:"inline-flex",alignItems:"center",gap:7,background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:100,padding:"5px 14px",marginBottom:18}}>
             <span style={{width:7,height:7,borderRadius:"50%",background:"#16a34a",display:"inline-block"}}/>
-            <span style={{fontSize:12,fontWeight:700,color:"#15803d"}}>Nouveau — CV IA avec vrais modèles</span>
+            <span style={{fontSize:12,fontWeight:700,color:"#15803d"}}>9 modèles professionnels · IA de rédaction · PDF téléchargeable</span>
           </div>
-          <h1 className="au" style={{fontFamily:"inherit",fontSize:"clamp(24px,5vw,44px)",fontWeight:800,color:"#0f172a",lineHeight:1.12,letterSpacing:"-0.02em",marginBottom:12,animationDelay:".08s"}}>
-            Créez un CV qui décroche des entretiens
+          <h1 className="au" style={{fontFamily:"inherit",fontSize:"clamp(24px,5vw,42px)",fontWeight:800,color:"#0f172a",lineHeight:1.12,letterSpacing:"-0.02em",marginBottom:12,animationDelay:".08s"}}>
+            Importer un CV ou en créer un nouveau
           </h1>
-          <p className="au" style={{fontSize:15,color:"#6b7280",maxWidth:480,margin:"0 auto 24px",lineHeight:1.7,animationDelay:".16s"}}>
-            L'IA analyse votre profil et remplit automatiquement de vrais modèles professionnels. Téléchargez en PDF.
+          <p className="au" style={{fontSize:15,color:"#6b7280",maxWidth:500,margin:"0 auto",lineHeight:1.7,animationDelay:".14s"}}>
+            Importez votre CV existant pour l'améliorer et le sauvegarder, ou créez-en un nouveau à partir de zéro avec l'aide de l'IA.
           </p>
-          {/* Mode toggle */}
-          <div className="au" style={{display:"inline-flex",background:"#f3f4f6",borderRadius:12,padding:4,gap:4,animationDelay:".22s"}}>
-            <button className="tab-pill" onClick={()=>{setMode("upload");setStep(1);setCvData(null);}}
-              style={{background:mode==="upload"?"white":"transparent",color:mode==="upload"?"#0f172a":"#6b7280",boxShadow:mode==="upload"?"0 1px 4px rgba(0,0,0,.1)":undefined}}>
-              ↑ Importer mon CV <span style={{fontSize:11,marginLeft:6,background:"#f0fdf4",color:"#15803d",padding:"2px 8px",borderRadius:100}}>GRATUIT</span>
-            </button>
-            <button className="tab-pill" onClick={()=>{setMode("ai");setStep(1);setCvData(null);}}
-              style={{background:mode==="ai"?"white":"transparent",color:mode==="ai"?"#0f172a":"#6b7280",boxShadow:mode==="ai"?"0 1px 4px rgba(0,0,0,.1)":undefined}}>
-              ✦ Générer avec l'IA <span style={{fontSize:11,marginLeft:6,background:"#fef3c7",color:"#92400e",padding:"2px 8px",borderRadius:100}}>À PARTIR DE 1,99€</span>
-            </button>
-          </div>
         </div>
 
         {/* ── MAIN ── */}
         <div style={{maxWidth:1080,margin:"0 auto",padding:"36px 20px 80px"}}>
 
-          {/* ─────── STEP 1 : CHOOSE TEMPLATE ─────── */}
-          {step===1 && (
+          {/* ─────── ENTRY POINT: choose action ─────── */}
+          {step===1 && mode==="upload" && (
             <div className="au">
-              <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,overflow:"hidden",marginBottom:24,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
-                <div style={{padding:"20px 24px",borderBottom:"1.5px solid #f0f0f0"}}>
-                  <h2 style={{fontSize:16,fontWeight:800}}>1. Choisissez votre modèle</h2>
-                  <p style={{fontSize:13,color:"#6b7280",marginTop:3}}>Cliquez sur "Aperçu" pour voir le rendu complet avec vos données.</p>
-                </div>
-                <div style={{padding:"24px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:16}}>
-                  {TEMPLATES.map(t=>{
-                    const bs=BADGE_STYLES[t.badge];
-                    const sel=selectedTpl===t.id;
-                    return (
-                      <div key={t.id} className={`tpl-thumb${sel?" selected":""}`} onClick={()=>setSelectedTpl(t.id)}>
-                        {/* Thumbnail — scaled real CV */}
-                        <div style={{height:220,overflow:"hidden",position:"relative",background:"#f8fafc"}}>
-                          <div style={{position:"absolute",top:0,left:0,width:794,transformOrigin:"top left",transform:"scale(0.24)",pointerEvents:"none"}}>
-                            <RenderCV id={t.id} cv={SAMPLE}/>
-                          </div>
-                          {/* Fade bottom */}
-                          <div style={{position:"absolute",bottom:0,left:0,right:0,height:60,background:"linear-gradient(to bottom,transparent,#f8fafc)",pointerEvents:"none"}}/>
-                          {/* Badges */}
-                          <div style={{position:"absolute",top:8,left:8,background:bs.bg,color:bs.color,fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:100,zIndex:2}}>
-                            {{gratuit:"Gratuit",pro:"Pro",nouveau:"Nouveau"}[t.badge]}
-                          </div>
-                          {sel && <div style={{position:"absolute",top:8,right:8,width:22,height:22,background:"#16a34a",borderRadius:"50%",color:"white",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,zIndex:2}}>✓</div>}
-                        </div>
-                        {/* Footer */}
-                        <div style={{padding:"10px 14px 12px",borderTop:"1.5px solid #f0f0f0",display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
-                          <div>
-                            <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{t.name}</div>
-                            <div style={{fontSize:10,color:"#6b7280",marginTop:1,lineHeight:1.4}}>{t.desc.split(".")[0]}</div>
-                          </div>
-                          <button onClick={e=>{e.stopPropagation();setPreviewTpl(t.id);}}
-                            style={{background:"#f3f4f6",border:"1.5px solid #e5e7eb",borderRadius:7,padding:"5px 10px",fontSize:11,fontWeight:600,color:"#374151",cursor:"pointer",flexShrink:0,fontFamily:"inherit",transition:"all .15s"}}
-                            onMouseEnter={e=>e.currentTarget.style.background="#e5e7eb"}
-                            onMouseLeave={e=>e.currentTarget.style.background="#f3f4f6"}>
-                            Aperçu
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div style={{display:"flex",justifyContent:"flex-end"}}>
-                <button className="btn-green" onClick={()=>goStep(2)}>
-                  Continuer avec {TEMPLATES.find(t=>t.id===selectedTpl)?.name} →
+              <div className="choice-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,maxWidth:700,margin:"0 auto"}}>
+
+                {/* Card 1 — Import */}
+                <button className="choice-card" onClick={()=>{ setMode("upload"); goStep(2); }}>
+                  <div style={{width:52,height:52,background:"#f0fdf4",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>📂</div>
+                  <div>
+                    <div style={{fontSize:17,fontWeight:800,color:"#0f172a",marginBottom:6}}>Importer mon CV</div>
+                    <div style={{fontSize:13,color:"#6b7280",lineHeight:1.6}}>Importez un PDF, DOCX ou TXT. L'IA l'améliore et le met en forme dans le modèle de votre choix.</div>
+                  </div>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
+                    <span style={{fontSize:11,fontWeight:700,background:"#f0fdf4",color:"#15803d",border:"1px solid #bbf7d0",padding:"3px 10px",borderRadius:100}}>✓ Sauvegardé dans votre dashboard</span>
+                    <span style={{fontSize:11,fontWeight:700,background:"#fef3c7",color:"#92400e",border:"1px solid #fde68a",padding:"3px 10px",borderRadius:100}}>À partir de €1.99</span>
+                  </div>
+                </button>
+
+                {/* Card 2 — Create new */}
+                <button className="choice-card" onClick={()=>{ setMode("ai"); goStep(2); }}>
+                  <div style={{width:52,height:52,background:"#eff6ff",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>✦</div>
+                  <div>
+                    <div style={{fontSize:17,fontWeight:800,color:"#0f172a",marginBottom:6}}>Créer un nouveau CV</div>
+                    <div style={{fontSize:13,color:"#6b7280",lineHeight:1.6}}>Remplissez vos informations, choisissez un modèle et laissez l'IA rédiger un CV professionnel complet.</div>
+                  </div>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
+                    <span style={{fontSize:11,fontWeight:700,background:"#eff6ff",color:"#1d4ed8",border:"1px solid #bfdbfe",padding:"3px 10px",borderRadius:100}}>✓ Modèles professionnels</span>
+                    <span style={{fontSize:11,fontWeight:700,background:"#fef3c7",color:"#92400e",border:"1px solid #fde68a",padding:"3px 10px",borderRadius:100}}>À partir de €1.99</span>
+                  </div>
                 </button>
               </div>
             </div>
           )}
 
-          {/* ─────── STEP 2 : UPLOAD or FORM ─────── */}
+          {/* ─────── UPLOAD: step 2 — file + enhance ─────── */}
           {step===2 && mode==="upload" && (
             <div className="au">
-              <StepBack label="← Changer de modèle" onClick={()=>goStep(1)}/>
+              <StepBack label="← Retour" onClick={()=>goStep(1)}/>
 
-              {/* ── ERROR BANNER ── */}
               {genError && (
                 <div style={{background:"#fef2f2",border:"1.5px solid #fecaca",borderRadius:10,padding:"14px 18px",marginBottom:16,display:"flex",gap:12,alignItems:"flex-start"}}>
                   <span style={{fontSize:18,flexShrink:0}}>⚠️</span>
                   <div>
                     <div style={{fontSize:13,fontWeight:700,color:"#dc2626",marginBottom:4}}>Erreur de génération</div>
                     <div style={{fontSize:12,color:"#7f1d1d",lineHeight:1.6}}>{genError}</div>
-                    <button onClick={()=>setGenError(null)} style={{marginTop:8,fontSize:12,color:"#dc2626",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:0,fontWeight:600}}>
-                      Fermer ×
-                    </button>
+                    <button onClick={()=>setGenError(null)} style={{marginTop:8,fontSize:12,color:"#dc2626",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",padding:0,fontWeight:600}}>Fermer ×</button>
                   </div>
                 </div>
               )}
 
-              <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,.04)",marginBottom:24}}>
-                <div style={{padding:"20px 24px",borderBottom:"1.5px solid #f0f0f0",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div>
-                    <h2 style={{fontSize:16,fontWeight:800}}>2. Importez votre CV</h2>
-                    <p style={{fontSize:13,color:"#6b7280",marginTop:3}}>PDF ou TXT — l'IA l'améliore et le met en forme dans votre modèle.</p>
-                  </div>
-                  <span style={{background:"#f0fdf4",color:"#15803d",border:"1.5px solid #bbf7d0",padding:"4px 12px",borderRadius:100,fontSize:12,fontWeight:700}}>✓ Gratuit</span>
+              <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,.04)",marginBottom:20}}>
+                <div style={{padding:"20px 24px",borderBottom:"1.5px solid #f0f0f0"}}>
+                  <h2 style={{fontSize:16,fontWeight:800}}>1. Importez votre CV</h2>
+                  <p style={{fontSize:13,color:"#6b7280",marginTop:3}}>PDF, DOCX ou TXT — il sera sauvegardé et amélioré par l'IA.</p>
                 </div>
                 <div style={{padding:28}}>
                   {/* Drop zone */}
-                  <label style={{display:"block",border:"2px dashed #d1d5db",borderRadius:12,padding:"40px 24px",textAlign:"center",cursor:"pointer",background:"#f9fafb",transition:"all .18s"}}
+                  <label style={{display:"block",border:"2px dashed #d1d5db",borderRadius:12,padding:"36px 24px",textAlign:"center",cursor:"pointer",background:"#f9fafb",transition:"all .18s"}}
                     onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor="#16a34a";e.currentTarget.style.background="#f0fdf4"}}
                     onDragLeave={e=>{e.currentTarget.style.borderColor="#d1d5db";e.currentTarget.style.background="#f9fafb"}}
                     onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)handleFile(f);e.currentTarget.style.borderColor="#d1d5db";e.currentTarget.style.background="#f9fafb"}}>
-                    <input type="file" accept=".pdf,.txt,text/plain,application/pdf" onChange={e=>{if(e.target.files?.[0])handleFile(e.target.files[0]);}} style={{display:"none"}}/>
+                    <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={e=>{if(e.target.files?.[0])handleFile(e.target.files[0]);}} style={{display:"none"}}/>
                     <div style={{fontSize:36,marginBottom:10}}>📄</div>
                     <div style={{fontSize:15,fontWeight:700,color:"#0f172a",marginBottom:4}}>Glissez votre CV ici</div>
-                    <p style={{fontSize:12,color:"#9ca3af"}}>ou cliquez pour parcourir · PDF, DOC, DOCX, TXT</p>
+                    <p style={{fontSize:12,color:"#9ca3af"}}>ou cliquez pour parcourir · PDF, DOCX, TXT</p>
                   </label>
                   {uploadedFile && (
                     <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:10,marginTop:14}}>
                       <span style={{fontSize:20}}>✅</span>
-                      <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:"#15803d"}}>{uploadedFile}</div><div style={{fontSize:11,color:"#6b7280"}}>Prêt à être amélioré</div></div>
+                      <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:"#15803d"}}>{uploadedFile}</div><div style={{fontSize:11,color:"#6b7280"}}>Prêt à être amélioré et sauvegardé</div></div>
                       <button onClick={()=>{setUploadedFile(null);setUploadedContent("");setUploadedBase64(null);setUploadedMime(null);}} style={{background:"none",border:"none",color:"#9ca3af",cursor:"pointer",fontSize:18,fontFamily:"inherit"}}>×</button>
                     </div>
                   )}
-                  {uploadError && <div style={{background:"#fef2f2",border:"1.5px solid #fecaca",borderRadius:8,padding:"10px 14px",marginTop:12,fontSize:13,color:"#dc2626"}}>⚠ {uploadError}</div>}
 
                   {/* Photo upload */}
-                  <div style={{marginTop:24,marginBottom:4}}>
-                    <label className="field-label">Photo de profil <span style={{fontWeight:400,color:"#9ca3af"}}>(optionnel — pour les modèles avec photo)</span></label>
+                  <div style={{marginTop:22}}>
+                    <label className="fl">Photo de profil <span style={{fontWeight:400,color:"#9ca3af"}}>(optionnel — apparaît dans les modèles Moderne, Créatif, Azurill, Leafish)</span></label>
                     <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
                       <label style={{display:"inline-flex",alignItems:"center",gap:8,padding:"10px 18px",border:"1.5px solid #e5e7eb",borderRadius:9,cursor:"pointer",background:"white",fontSize:13,fontWeight:600,color:"#374151",transition:"all .18s"}}
                         onMouseEnter={e=>e.currentTarget.style.borderColor="#16a34a"}
                         onMouseLeave={e=>e.currentTarget.style.borderColor="#e5e7eb"}>
                         <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
-                          const f=e.target.files?.[0];
-                          if(!f)return;
-                          const r=new FileReader();
-                          r.onload=ev=>setPhotoBase64(ev.target?.result as string);
-                          r.readAsDataURL(f);
+                          const f=e.target.files?.[0]; if(!f)return;
+                          const r=new FileReader(); r.onload=ev=>setPhotoBase64(ev.target?.result as string); r.readAsDataURL(f);
                         }}/>
-                        📷 Importer une photo
+                        📷 Ajouter une photo
                       </label>
                       {photoBase64 && (
                         <div style={{display:"flex",alignItems:"center",gap:10}}>
-                          <img src={photoBase64} alt="Photo" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid #bbf7d0"}}/>
+                          <img src={photoBase64} alt="" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid #bbf7d0"}}/>
                           <div>
                             <div style={{fontSize:12,fontWeight:600,color:"#15803d"}}>✓ Photo ajoutée</div>
                             <button onClick={()=>setPhotoBase64(null)} style={{fontSize:11,color:"#9ca3af",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"inherit"}}>Supprimer</button>
@@ -1476,8 +1411,8 @@ ${cv.name}`;
 
                   {/* Enhancement type */}
                   <div style={{marginTop:20}}>
-                    <label className="field-label">Type d'amélioration</label>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:9}}>
+                    <label className="fl">Type d'amélioration</label>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:9}}>
                       {[
                         {v:"Optimisation ATS",icon:"🤖",d:"Mots-clés, structure ATS"},
                         {v:"Reformulation Pro",icon:"✍️",d:"Verbes d'action, impact"},
@@ -1497,68 +1432,199 @@ ${cv.name}`;
               <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
                 <button className="btn-outline" onClick={()=>goStep(1)}>← Retour</button>
                 <button className="btn-green" disabled={!uploadedFile} onClick={()=>setUploadPaywall(true)}>
-                  ✨ Améliorer et appliquer le modèle →
+                  ✨ Améliorer et mettre en forme →
                 </button>
               </div>
             </div>
           )}
 
+          {/* ─────── CREATE NEW: step 2 — fill form ─────── */}
           {step===2 && mode==="ai" && (
             <div className="au">
-              <StepBack label="← Changer de modèle" onClick={()=>goStep(1)}/>
-              <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,.04)",marginBottom:24}}>
+              <StepBack label="← Retour" onClick={()=>{ setMode("upload"); goStep(1); }}/>
+
+              {formValidErr && (
+                <div style={{background:"#fef2f2",border:"1.5px solid #fecaca",borderRadius:10,padding:"14px 18px",marginBottom:16,display:"flex",gap:10,alignItems:"center"}}>
+                  <span style={{fontSize:18}}>⚠️</span>
+                  <div style={{fontSize:13,fontWeight:600,color:"#dc2626"}}>{formValidErr}</div>
+                </div>
+              )}
+
+              <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,.04)",marginBottom:20}}>
                 <div style={{padding:"20px 24px",borderBottom:"1.5px solid #f0f0f0"}}>
-                  <h2 style={{fontSize:16,fontWeight:800}}>2. Vos informations</h2>
-                  <p style={{fontSize:13,color:"#6b7280",marginTop:3}}>L'IA génère un CV complet à partir de ces données.</p>
+                  <h2 style={{fontSize:16,fontWeight:800}}>1. Vos informations <span style={{fontSize:12,color:"#9ca3af",fontWeight:400}}>— tous les champs avec * sont obligatoires</span></h2>
                 </div>
                 <div style={{padding:28}}>
+
+                  {/* Photo */}
+                  <div style={{marginBottom:24,padding:"18px",background:"#f8fafc",borderRadius:12,border:"1.5px solid #f0f0f0"}}>
+                    <label className="fl">Photo de profil <span style={{fontWeight:400,color:"#9ca3af"}}>(optionnel — apparaît si le modèle choisi le supporte)</span></label>
+                    <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+                      {photoBase64 ? (
+                        <div style={{display:"flex",alignItems:"center",gap:12}}>
+                          <img src={photoBase64} alt="" style={{width:72,height:72,borderRadius:"50%",objectFit:"cover",border:"3px solid #bbf7d0"}}/>
+                          <div>
+                            <div style={{fontSize:13,fontWeight:700,color:"#15803d",marginBottom:4}}>✓ Photo ajoutée</div>
+                            <button onClick={()=>setPhotoBase64(null)} style={{fontSize:12,color:"#9ca3af",background:"none",border:"1px solid #e5e7eb",borderRadius:6,cursor:"pointer",padding:"4px 10px",fontFamily:"inherit"}}>Changer / Supprimer</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <label style={{display:"inline-flex",alignItems:"center",gap:8,padding:"12px 20px",border:"2px dashed #d1d5db",borderRadius:10,cursor:"pointer",background:"white",fontSize:13,fontWeight:600,color:"#374151",transition:"all .18s"}}
+                          onMouseEnter={e=>e.currentTarget.style.borderColor="#16a34a"}
+                          onMouseLeave={e=>e.currentTarget.style.borderColor="#d1d5db"}>
+                          <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{
+                            const f=e.target.files?.[0]; if(!f)return;
+                            const r=new FileReader(); r.onload=ev=>setPhotoBase64(ev.target?.result as string); r.readAsDataURL(f);
+                          }}/>
+                          📷 Ajouter une photo de profil
+                        </label>
+                      )}
+                      <div style={{fontSize:12,color:"#9ca3af",lineHeight:1.5}}>Apparaît dans les modèles :<br/><strong style={{color:"#374151"}}>Moderne, Créatif, Azurill, Leafish</strong></div>
+                    </div>
+                  </div>
+
                   <div className="grid2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}}>
-                    {[{id:"name",l:"Prénom et Nom",ph:"Youssef Benali"},{id:"title",l:"Poste visé",ph:"Développeur Full Stack"},{id:"email",l:"Email",ph:"youssef@email.ma",type:"email"},{id:"phone",l:"Téléphone",ph:"+212 6 00 00 00 00"},{id:"location",l:"Ville",ph:"Casablanca"}].map(f=>(
-                      <div key={f.id}><label className="field-label">{f.l}</label>
-                        <input type={f.type||"text"} className="field-input" value={form[f.id as keyof typeof form]} onChange={e=>setForm(p=>({...p,[f.id]:e.target.value}))} placeholder={f.ph}/>
-                      </div>
-                    ))}
-                    <div><label className="field-label">Secteur</label>
-                      <select className="field-input" value={form.industry} onChange={e=>setForm(p=>({...p,industry:e.target.value}))}>
+                    {/* Required fields */}
+                    <div>
+                      <label className="fl">Prénom et Nom *</label>
+                      <input className={`fi${formValidErr&&!form.name?" req-err":""}`} placeholder="Youssef Benali" value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))}/>
+                    </div>
+                    <div>
+                      <label className="fl">Poste visé *</label>
+                      <input className={`fi${formValidErr&&!form.title?" req-err":""}`} placeholder="Développeur Full Stack" value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))}/>
+                    </div>
+                    <div>
+                      <label className="fl">Email *</label>
+                      <input type="email" className={`fi${formValidErr&&!form.email?" req-err":""}`} placeholder="youssef@email.ma" value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))}/>
+                    </div>
+                    <div>
+                      <label className="fl">Téléphone *</label>
+                      <input className={`fi${formValidErr&&!form.phone?" req-err":""}`} placeholder="+212 6 00 00 00 00" value={form.phone} onChange={e=>setForm(p=>({...p,phone:e.target.value}))}/>
+                    </div>
+                    <div>
+                      <label className="fl">Ville *</label>
+                      <input className={`fi${formValidErr&&!form.location?" req-err":""}`} placeholder="Casablanca, Maroc" value={form.location} onChange={e=>setForm(p=>({...p,location:e.target.value}))}/>
+                    </div>
+                    <div>
+                      <label className="fl">Secteur *</label>
+                      <select className={`fi${formValidErr&&!form.industry?" req-err":""}`} value={form.industry} onChange={e=>setForm(p=>({...p,industry:e.target.value}))}>
                         <option value="">Sélectionnez...</option>
-                        {["Informatique","Finance","Commerce","Marketing","RH","Ingénierie","Santé","Logistique","Tourisme","Juridique","Autre"].map(o=><option key={o}>{o}</option>)}
+                        {["Informatique","Finance","Commerce","Marketing","RH","Ingénierie","Santé","Logistique","Tourisme","Juridique","Éducation","BTP","Autre"].map(o=><option key={o}>{o}</option>)}
                       </select>
                     </div>
-                    <div><label className="field-label">Niveau</label>
-                      <select className="field-input" value={form.level} onChange={e=>setForm(p=>({...p,level:e.target.value}))}>
+                    <div>
+                      <label className="fl">Niveau d'expérience *</label>
+                      <select className={`fi${formValidErr&&!form.level?" req-err":""}`} value={form.level} onChange={e=>setForm(p=>({...p,level:e.target.value}))}>
                         <option value="">Sélectionnez...</option>
                         {["Débutant (0–2 ans)","Intermédiaire (2–5 ans)","Confirmé (5–10 ans)","Manager","Directeur","C-Suite"].map(o=><option key={o}>{o}</option>)}
                       </select>
                     </div>
-                    <div style={{gridColumn:"1 / -1"}}><label className="field-label">Expériences professionnelles</label>
-                      <textarea className="field-input" rows={4} value={form.experience} onChange={e=>setForm(p=>({...p,experience:e.target.value}))} placeholder={"Société A — Poste (2021–2024) : réalisations\nSociété B — Poste (2019–2021) : réalisations"} style={{resize:"vertical",lineHeight:1.6}}/>
+                    <div style={{gridColumn:"1 / -1"}}>
+                      <label className="fl">Expériences professionnelles * <span style={{fontWeight:400,color:"#9ca3af"}}>— incluez entreprise, poste, dates, réalisations</span></label>
+                      <textarea className={`fi${formValidErr&&!form.experience?" req-err":""}`} rows={5}
+                        value={form.experience} onChange={e=>setForm(p=>({...p,experience:e.target.value}))}
+                        placeholder={"Capgemini Maroc — Lead Developer (2021–Présent)
+• Pilotage d'une équipe de 6 développeurs
+• Architecture microservices AWS
+
+OCP Digital — Dev Full Stack (2019–2021)
+• Développement de portails RH React/Node.js"}
+                        style={{resize:"vertical",lineHeight:1.6}}/>
                     </div>
-                    <div style={{gridColumn:"1 / -1"}}><label className="field-label">Formation</label>
-                      <input type="text" className="field-input" value={form.education} onChange={e=>setForm(p=>({...p,education:e.target.value}))} placeholder="Master Génie Informatique, ENSA Rabat, 2020"/>
+                    <div style={{gridColumn:"1 / -1"}}>
+                      <label className="fl">Formation * <span style={{fontWeight:400,color:"#9ca3af"}}>— diplôme, école, année</span></label>
+                      <textarea className={`fi${formValidErr&&!form.education?" req-err":""}`} rows={2}
+                        value={form.education} onChange={e=>setForm(p=>({...p,education:e.target.value}))}
+                        placeholder={"Master Génie Informatique — ENSA Rabat (2019)
+Classes Préparatoires MP — CPGE Casablanca (2016)"}
+                        style={{resize:"vertical",lineHeight:1.6}}/>
                     </div>
-                    <div><label className="field-label">Compétences</label>
-                      <input type="text" className="field-input" value={form.skills} onChange={e=>setForm(p=>({...p,skills:e.target.value}))} placeholder="React, Node.js, Python..."/>
+                    <div>
+                      <label className="fl">Compétences * <span style={{fontWeight:400,color:"#9ca3af"}}>— séparées par des virgules</span></label>
+                      <input className={`fi${formValidErr&&!form.skills?" req-err":""}`} placeholder="React, Node.js, Python, PostgreSQL, Docker" value={form.skills} onChange={e=>setForm(p=>({...p,skills:e.target.value}))}/>
                     </div>
-                    <div><label className="field-label">Langues</label>
-                      <input type="text" className="field-input" value={form.langs} onChange={e=>setForm(p=>({...p,langs:e.target.value}))} placeholder="Arabe (natif), Français, Anglais"/>
+                    <div>
+                      <label className="fl">Langues * <span style={{fontWeight:400,color:"#9ca3af"}}>— avec niveau</span></label>
+                      <input className={`fi${formValidErr&&!form.langs?" req-err":""}`} placeholder="Arabe (natif), Français (courant), Anglais (courant)" value={form.langs} onChange={e=>setForm(p=>({...p,langs:e.target.value}))}/>
                     </div>
-                    <div style={{gridColumn:"1 / -1"}}><label className="field-label">Infos complémentaires <span style={{fontWeight:400,color:"#9ca3af"}}>(optionnel)</span></label>
-                      <textarea className="field-input" rows={2} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder="Certifications, projets, bénévolat..." style={{resize:"vertical"}}/>
+                    <div style={{gridColumn:"1 / -1"}}>
+                      <label className="fl">Informations complémentaires <span style={{fontWeight:400,color:"#9ca3af"}}>(optionnel)</span></label>
+                      <textarea className="fi" rows={2} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))}
+                        placeholder="Certifications, projets personnels, bénévolat, liens GitHub/LinkedIn..." style={{resize:"vertical"}}/>
                     </div>
                   </div>
                 </div>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
-                <button className="btn-outline" onClick={()=>goStep(1)}>← Retour</button>
-                <button className="btn-green" onClick={()=>goStep(3)}>Continuer vers le paiement →</button>
+                <button className="btn-outline" onClick={()=>{ setMode("upload"); goStep(1); }}>← Retour</button>
+                <button className="btn-green" onClick={handleFormContinue}>Choisir un modèle →</button>
               </div>
             </div>
           )}
 
-          {/* ─────── STEP 3 : PAYMENT ─────── */}
+          {/* ─────── CREATE NEW: step 3 — choose template ─────── */}
           {step===3 && mode==="ai" && (
             <div className="au">
               <StepBack label="← Modifier mes informations" onClick={()=>goStep(2)}/>
+              <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,overflow:"hidden",marginBottom:20,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+                <div style={{padding:"20px 24px",borderBottom:"1.5px solid #f0f0f0"}}>
+                  <h2 style={{fontSize:16,fontWeight:800}}>2. Choisissez votre modèle</h2>
+                  <p style={{fontSize:13,color:"#6b7280",marginTop:3}}>
+                    {photoBase64
+                      ? "✓ Photo détectée — les modèles 🖼 l'afficheront automatiquement."
+                      : "Les modèles marqués 🖼 supportent une photo de profil."}
+                  </p>
+                </div>
+                <div style={{padding:"24px",display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:16}}>
+                  {TEMPLATES.map(t=>{
+                    const bs=BADGE_STYLES[t.badge];
+                    const sel=selectedTpl===t.id;
+                    const hasPhoto=PHOTO_TEMPLATES.includes(t.id);
+                    return (
+                      <div key={t.id} className={`tpl-thumb${sel?" selected":""}`} onClick={()=>setSelectedTpl(t.id)}>
+                        <div style={{height:220,overflow:"hidden",position:"relative",background:"#f8fafc"}}>
+                          <div style={{position:"absolute",top:0,left:0,width:794,transformOrigin:"top left",transform:"scale(0.24)",pointerEvents:"none"}}>
+                            <RenderCV id={t.id} cv={SAMPLE}/>
+                          </div>
+                          <div style={{position:"absolute",bottom:0,left:0,right:0,height:60,background:"linear-gradient(to bottom,transparent,#f8fafc)",pointerEvents:"none"}}/>
+                          <div style={{position:"absolute",top:8,left:8,display:"flex",gap:4,zIndex:2}}>
+                            <span style={{background:bs.bg,color:bs.color,fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:100}}>
+                              {{gratuit:"Gratuit",pro:"Pro",nouveau:"Nouveau"}[t.badge]}
+                            </span>
+                            {hasPhoto && <span style={{background:"#eff6ff",color:"#1d4ed8",fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:100}}>🖼</span>}
+                          </div>
+                          {sel && <div style={{position:"absolute",top:8,right:8,width:22,height:22,background:"#16a34a",borderRadius:"50%",color:"white",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,zIndex:2}}>✓</div>}
+                        </div>
+                        <div style={{padding:"10px 14px 12px",borderTop:"1.5px solid #f0f0f0",display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
+                          <div>
+                            <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{t.name}</div>
+                            <div style={{fontSize:10,color:"#6b7280",marginTop:1,lineHeight:1.4}}>{t.desc.split(".")[0]}</div>
+                          </div>
+                          <button onClick={e=>{e.stopPropagation();setPreviewTpl(t.id);}}
+                            style={{background:"#f3f4f6",border:"1.5px solid #e5e7eb",borderRadius:7,padding:"5px 10px",fontSize:11,fontWeight:600,color:"#374151",cursor:"pointer",flexShrink:0,fontFamily:"inherit",transition:"all .15s"}}
+                            onMouseEnter={e=>e.currentTarget.style.background="#e5e7eb"}
+                            onMouseLeave={e=>e.currentTarget.style.background="#f3f4f6"}>
+                            Aperçu
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
+                <button className="btn-outline" onClick={()=>goStep(2)}>← Retour</button>
+                <button className="btn-green" onClick={()=>goStep(4)}>
+                  Continuer avec {TEMPLATES.find(t=>t.id===selectedTpl)?.name} →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ─────── CREATE NEW: step 4 — payment ─────── */}
+          {step===4 && mode==="ai" && (
+            <div className="au">
+              <StepBack label="← Changer de modèle" onClick={()=>goStep(3)}/>
               <div style={{marginBottom:20}}>
                 <h2 style={{fontSize:18,fontWeight:800}}>3. Choisissez votre formule</h2>
                 <p style={{fontSize:13,color:"#6b7280",marginTop:4}}>Paiement sécurisé via Paddle · Visa, Mastercard, PayPal</p>
@@ -1576,7 +1642,7 @@ ${cv.name}`;
                       <ul style={{listStyle:"none",marginBottom:20}}>
                         {PLAN_FEATURES[plan.name].map(f=><li key={f} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,marginBottom:8,color:"#374151"}}><span style={{color:"#16a34a",fontWeight:700,fontSize:14}}>✓</span>{f}</li>)}
                       </ul>
-                      <button className="btn-green" disabled={!paddle||payPending} onClick={()=>openPaddle(plan)} style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a"}}>
+                      <button className="btn-green" disabled={!paddle||payPending} onClick={()=>openPaddle(plan,"ai")} style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a"}}>
                         {payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer €${plan.price} →`}
                       </button>
                     </div>
@@ -1589,54 +1655,40 @@ ${cv.name}`;
             </div>
           )}
 
-          {/* ─────── STEP 4 : RESULT ─────── */}
-          {step===4 && cvData && (
+          {/* ─────── RESULT: step 5 ─────── */}
+          {step===5 && cvData && (
             <div className="au">
               <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,padding:"18px 22px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:20,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
                 <div>
                   <div style={{fontSize:17,fontWeight:800,color:"#0f172a"}}>🎉 Votre CV est prêt !</div>
-                  <div style={{fontSize:13,color:"#6b7280",marginTop:2}}>Formule active : <strong>{currentPlan.name}</strong> · Modèle : <strong>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong>.</div>
+                  <div style={{fontSize:13,color:"#6b7280",marginTop:2}}>Modèle : <strong>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong> · Changez de modèle ci-dessous sans régénérer.</div>
                 </div>
                 <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                  <button className="btn-outline" onClick={()=>{setCvData(null);goStep(1);}}>↺ Recommencer</button>
-                  {currentCaps.allowPdf && <button className="btn-green" onClick={downloadPDF}>⬇ Télécharger PDF</button>}
-                  {currentCaps.allowWord && <button className="btn-outline" onClick={downloadWord}>⬇ Word</button>}
-                  {currentCaps.allowHtml && <button className="btn-outline" onClick={downloadHTML}>⬇ HTML</button>}
+                  <button className="btn-outline" onClick={()=>{setCvData(null);setMode("upload");goStep(1);}}>↺ Recommencer</button>
+                  <button className="btn-green" onClick={downloadPDF} disabled={generating}>
+                    {generating ? <><span className="spinner" style={{width:18,height:18,borderWidth:2}}/> Génération…</> : "⬇ Télécharger PDF"}
+                  </button>
                 </div>
               </div>
-
-              {(currentCaps.allowCoverLetter || currentCaps.allowLinkedIn) && (
-                <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:12,padding:"14px 20px",marginBottom:20,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
-                  <div>
-                    <div style={{fontSize:14,fontWeight:700,color:"#0f172a"}}>Options incluses avec votre formule</div>
-                    <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Téléchargez aussi les livrables inclus dans votre achat.</div>
-                  </div>
-                  <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                    {currentCaps.allowCoverLetter && <button className="btn-outline" onClick={downloadCoverLetter}>⬇ Lettre de motivation</button>}
-                    {currentCaps.allowLinkedIn && <button className="btn-outline" onClick={downloadLinkedInSummary}>⬇ Résumé LinkedIn</button>}
-                  </div>
-                </div>
-              )}
 
               {/* Template switcher */}
               <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:12,padding:"14px 20px",marginBottom:20,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
                 <span style={{fontSize:13,fontWeight:600,color:"#374151",flexShrink:0}}>Changer de modèle :</span>
-                {TEMPLATES.map((t, idx)=>(
-                  <button key={t.id} onClick={()=>allowedTemplateIds.includes(t.id) && setSelectedTpl(t.id)}
-                    disabled={!allowedTemplateIds.includes(t.id)}
-                    title={allowedTemplateIds.includes(t.id) ? "" : "Disponible avec une formule supérieure"}
-                    style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${selectedTpl===t.id?"#16a34a":"#e5e7eb"}`,background:!allowedTemplateIds.includes(t.id)?"#f3f4f6":selectedTpl===t.id?"#f0fdf4":"white",color:!allowedTemplateIds.includes(t.id)?"#9ca3af":selectedTpl===t.id?"#15803d":"#374151",fontSize:12,fontWeight:600,cursor:allowedTemplateIds.includes(t.id)?"pointer":"not-allowed",transition:"all .15s",fontFamily:"inherit",opacity:allowedTemplateIds.includes(t.id)?1:.7}}>
-                    {t.name}{!allowedTemplateIds.includes(t.id) ? " 🔒" : ""}
+                {TEMPLATES.map(t=>(
+                  <button key={t.id} onClick={()=>setSelectedTpl(t.id)}
+                    style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${selectedTpl===t.id?"#16a34a":"#e5e7eb"}`,background:selectedTpl===t.id?"#f0fdf4":"white",color:selectedTpl===t.id?"#15803d":"#374151",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .15s",fontFamily:"inherit"}}>
+                    {t.name}
                   </button>
                 ))}
               </div>
 
-              {/* CV PREVIEW */}
-              <div style={{background:"white",borderRadius:14,boxShadow:"0 4px 24px rgba(0,0,0,.08)",overflow:"hidden",marginBottom:24}}>
-                <div id="cv-print" ref={printRef} style={{width:794,margin:"0 auto",background:"white"}}>
-                  <RenderCV id={selectedTpl} cv={cvData}/>
-                </div>
+              {/* CV Preview — multi-page aware */}
+              <div ref={printRef} id="cv-print"
+                style={{background:"white",borderRadius:14,boxShadow:"0 4px 24px rgba(0,0,0,.08)",overflow:"hidden",marginBottom:24}}>
+                <CvMultiPage id={selectedTpl} cv={cvData}/>
               </div>
+
+              {genError && <div style={{background:"#fef2f2",border:"1.5px solid #fecaca",borderRadius:8,padding:"12px 16px",fontSize:13,color:"#dc2626"}}>⚠ {genError}</div>}
             </div>
           )}
 
@@ -1652,11 +1704,10 @@ ${cv.name}`;
                   <button onClick={()=>setUploadPaywall(false)} style={{background:"rgba(255,255,255,.08)",border:"none",color:"rgba(255,255,255,.7)",fontSize:20,width:32,height:32,borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit"}}>×</button>
                 </div>
                 <div style={{padding:"24px"}}>
-                  {/* What's included */}
                   <div style={{background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:10,padding:"14px 16px",marginBottom:20,display:"flex",gap:10,alignItems:"flex-start"}}>
                     <span style={{fontSize:18,flexShrink:0}}>✨</span>
                     <div style={{fontSize:13,color:"#15803d",lineHeight:1.6}}>
-                      <strong>Ce qui sera fait :</strong> Votre CV sera analysé par notre IA, reformulé selon le mode choisi ({enhanceType}), et mis en page dans le modèle <strong>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong> que vous avez sélectionné.
+                      <strong>Ce qui sera fait :</strong> Votre CV sera analysé, reformulé en mode "{enhanceType}", et mis en page dans le modèle <strong>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong>. Il sera aussi sauvegardé dans votre dashboard.
                     </div>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:12}}>
@@ -1685,12 +1736,12 @@ ${cv.name}`;
           )}
 
           {/* ─────── GENERATING OVERLAY ─────── */}
-          {generating && (
+          {generating && step!==5 && (
             <div className="modal-bg">
               <div className="modal-box" style={{maxWidth:400,padding:"40px 32px",textAlign:"center"}}>
                 <div className="spinner" style={{margin:"0 auto 20px"}}/>
                 <div style={{fontSize:17,fontWeight:800,marginBottom:6}}>Génération en cours…</div>
-                <div style={{fontSize:13,color:"#6b7280",marginBottom:24}}>L'IA prépare votre CV dans le modèle sélectionné.</div>
+                <div style={{fontSize:13,color:"#6b7280",marginBottom:24}}>L'IA prépare votre CV professionnel.</div>
                 <div style={{textAlign:"left"}}>
                   {GEN_STEPS.map((label,i)=>(
                     <div key={i} className="gen-step" style={{color:genStep>i?"#16a34a":genStep===i?"#0f172a":"#d1d5db"}}>
@@ -1713,24 +1764,20 @@ ${cv.name}`;
             return (
               <div className="modal-bg" onClick={()=>setPreviewTpl(null)}>
                 <div className="modal-box" onClick={e=>e.stopPropagation()}>
-                  {/* Modal header */}
                   <div style={{background:"#0f172a",padding:"16px 24px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
                       <span style={{background:bs.bg,color:bs.color,fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:100}}>{{gratuit:"Gratuit",pro:"Pro",nouveau:"Nouveau"}[t.badge]}</span>
                       <span style={{color:"white",fontWeight:700,fontSize:15}}>{t.name}</span>
-                      <span style={{color:"rgba(255,255,255,.45)",fontSize:12}}>— {t.desc}</span>
                     </div>
                     <button onClick={()=>setPreviewTpl(null)} style={{background:"rgba(255,255,255,.08)",border:"none",color:"rgba(255,255,255,.7)",fontSize:20,width:32,height:32,borderRadius:8,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit"}}>×</button>
                   </div>
-                  {/* Scrollable CV preview */}
                   <div style={{overflowY:"auto",maxHeight:"70vh",background:"#f8fafc",padding:"20px"}}>
                     <div style={{width:794,margin:"0 auto",boxShadow:"0 4px 24px rgba(0,0,0,.1)",borderRadius:4,overflow:"hidden"}}>
                       <RenderCV id={t.id} cv={SAMPLE}/>
                     </div>
                   </div>
-                  {/* Footer */}
                   <div style={{background:"white",borderTop:"1.5px solid #f0f0f0",padding:"16px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
-                    <div style={{fontSize:13,color:"#6b7280"}}>Aperçu avec données fictives · Votre contenu sera différent</div>
+                    <div style={{fontSize:13,color:"#6b7280"}}>Aperçu avec données fictives</div>
                     <div style={{display:"flex",gap:10}}>
                       <button className="btn-outline" onClick={()=>setPreviewTpl(null)}>Fermer</button>
                       <button className="btn-green" onClick={()=>{setSelectedTpl(t.id);setPreviewTpl(null);}}>
