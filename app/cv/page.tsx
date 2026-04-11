@@ -9,9 +9,9 @@ import { initializePaddle, type Paddle } from "@paddle/paddle-js";
 const PADDLE_CLIENT_TOKEN = "test_REPLACE_YOUR_SANDBOX_TOKEN";  // from Paddle → Developer Tools → Authentication
 const PADDLE_ENV = "sandbox" as "sandbox" | "production";       // change to "production" when going live
 const PADDLE_PRICE_IDS    = {
-  starter:       "pri_REPLACE_STARTER",
-  professionnel: "pri_REPLACE_PROFESSIONNEL",
-  cadre:         "pri_REPLACE_CADRE",
+  starter:       "pri_01kmgxck2ancmk83gjky609g1r",
+  professionnel: "pri_01kmgx9tx3xhdn8gadp5sqqdzt",
+  cadre:         "pri_01kmgx4gba4kvpn78wr2ds9qwb",
 };
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
@@ -1575,30 +1575,33 @@ Retourne UNIQUEMENT le JSON.`}];
                     const sel=selectedTpl===t.id;
                     const hasPhoto=PHOTO_TEMPLATES.includes(t.id);
                     return (
-                      <div key={t.id} className={`tpl-thumb${sel?" selected":""}`} onClick={()=>setSelectedTpl(t.id)}>
+                      <div key={t.id} className={`tpl-thumb${sel?" selected":""}`}
+                        style={{position:"relative"}}
+                        onClick={()=>setSelectedTpl(t.id)}>
                         <div style={{height:220,overflow:"hidden",position:"relative",background:"#f8fafc"}}>
-                          <div style={{position:"absolute",top:0,left:0,width:794,transformOrigin:"top left",transform:"scale(0.24)",pointerEvents:"none"}}>
+                          {/* Scaled preview — pointerEvents none so clicks reach parent */}
+                          <div style={{position:"absolute",top:0,left:0,width:794,transformOrigin:"top left",transform:"scale(0.24)",pointerEvents:"none",userSelect:"none"}}>
                             <RenderCV id={t.id} cv={SAMPLE}/>
                           </div>
-                          <div style={{position:"absolute",bottom:0,left:0,right:0,height:60,background:"linear-gradient(to bottom,transparent,#f8fafc)",pointerEvents:"none"}}/>
-                          <div style={{position:"absolute",top:8,left:8,display:"flex",gap:4,zIndex:2}}>
+                          {/* Full transparent overlay to guarantee clicks register */}
+                          <div style={{position:"absolute",inset:0,zIndex:1,cursor:"pointer"}}/>
+                          <div style={{position:"absolute",bottom:0,left:0,right:0,height:60,background:"linear-gradient(to bottom,transparent,#f8fafc)",pointerEvents:"none",zIndex:2}}/>
+                          <div style={{position:"absolute",top:8,left:8,display:"flex",gap:4,zIndex:3,pointerEvents:"none"}}>
                             <span style={{background:bs.bg,color:bs.color,fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:100}}>
                               {{gratuit:"Gratuit",pro:"Pro",nouveau:"Nouveau"}[t.badge]}
                             </span>
                             {hasPhoto && <span style={{background:"#eff6ff",color:"#1d4ed8",fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:100}}>🖼</span>}
                           </div>
-                          {sel && <div style={{position:"absolute",top:8,right:8,width:22,height:22,background:"#16a34a",borderRadius:"50%",color:"white",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,zIndex:2}}>✓</div>}
+                          {sel && <div style={{position:"absolute",top:8,right:8,width:22,height:22,background:"#16a34a",borderRadius:"50%",color:"white",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,zIndex:3,pointerEvents:"none"}}>✓</div>}
                         </div>
                         <div style={{padding:"10px 14px 12px",borderTop:"1.5px solid #f0f0f0",display:"flex",alignItems:"center",justifyContent:"space-between",gap:6}}>
                           <div>
-                            <div style={{fontSize:13,fontWeight:700,color:"#0f172a"}}>{t.name}</div>
+                            <div style={{fontSize:13,fontWeight:700,color:sel?"#15803d":"#0f172a"}}>{t.name}</div>
                             <div style={{fontSize:10,color:"#6b7280",marginTop:1,lineHeight:1.4}}>{t.desc.split(".")[0]}</div>
                           </div>
                           <button onClick={e=>{e.stopPropagation();setPreviewTpl(t.id);}}
-                            style={{background:"#f3f4f6",border:"1.5px solid #e5e7eb",borderRadius:7,padding:"5px 10px",fontSize:11,fontWeight:600,color:"#374151",cursor:"pointer",flexShrink:0,fontFamily:"inherit",transition:"all .15s"}}
-                            onMouseEnter={e=>e.currentTarget.style.background="#e5e7eb"}
-                            onMouseLeave={e=>e.currentTarget.style.background="#f3f4f6"}>
-                            Aperçu
+                            style={{background:sel?"#f0fdf4":"#f3f4f6",border:`1.5px solid ${sel?"#bbf7d0":"#e5e7eb"}`,borderRadius:7,padding:"5px 10px",fontSize:11,fontWeight:600,color:sel?"#15803d":"#374151",cursor:"pointer",flexShrink:0,fontFamily:"inherit",transition:"all .15s"}}>
+                            {sel ? "✓ Sélectionné" : "Aperçu"}
                           </button>
                         </div>
                       </div>
@@ -1609,7 +1612,7 @@ Retourne UNIQUEMENT le JSON.`}];
               <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:12}}>
                 <button className="btn-outline" onClick={()=>goStep(2)}>← Retour</button>
                 <button className="btn-green" onClick={()=>goStep(4)}>
-                  Continuer avec {TEMPLATES.find(t=>t.id===selectedTpl)?.name} →
+                  ✓ Continuer avec ce modèle →
                 </button>
               </div>
             </div>
