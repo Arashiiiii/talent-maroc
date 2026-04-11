@@ -6,7 +6,7 @@ import { initializePaddle, type Paddle } from "@paddle/paddle-js";
 // 🔑 REPLACE these with your real values from paddle.com
 // While testing:  PADDLE_ENV = "sandbox"  +  use your sandbox token + sandbox price IDs
 // When live:      PADDLE_ENV = "production" + use your live token + live price IDs
-const PADDLE_CLIENT_TOKEN = "test_REPLACE_YOUR_SANDBOX_TOKEN";  // from Paddle → Developer Tools → Authentication
+const PADDLE_CLIENT_TOKEN = "test_f6beac788c5a1289b346269ad2a";  // from Paddle → Developer Tools → Authentication
 const PADDLE_ENV = "sandbox" as "sandbox" | "production";       // change to "production" when going live
 const PADDLE_PRICE_IDS    = {
   starter:       "pri_01kmgxck2ancmk83gjky609g1r",
