@@ -1523,20 +1523,14 @@ Retourne UNIQUEMENT le JSON.`}];
                       <label className="fl">Expériences professionnelles * <span style={{fontWeight:400,color:"#9ca3af"}}>— incluez entreprise, poste, dates, réalisations</span></label>
                       <textarea className={`fi${formValidErr&&!form.experience?" req-err":""}`} rows={5}
                         value={form.experience} onChange={e=>setForm(p=>({...p,experience:e.target.value}))}
-                        placeholder={"Capgemini Maroc — Lead Developer (2021–Présent)
-• Pilotage d'une équipe de 6 développeurs
-• Architecture microservices AWS
-
-OCP Digital — Dev Full Stack (2019–2021)
-• Développement de portails RH React/Node.js"}
+                        placeholder={"Capgemini Maroc — Lead Developer (2021–Présent)\n- Pilotage d'une équipe de 6 développeurs\n- Architecture microservices AWS\n\nOCP Digital — Dev Full Stack (2019–2021)\n- Développement de portails RH React/Node.js"}
                         style={{resize:"vertical",lineHeight:1.6}}/>
                     </div>
                     <div style={{gridColumn:"1 / -1"}}>
                       <label className="fl">Formation * <span style={{fontWeight:400,color:"#9ca3af"}}>— diplôme, école, année</span></label>
                       <textarea className={`fi${formValidErr&&!form.education?" req-err":""}`} rows={2}
                         value={form.education} onChange={e=>setForm(p=>({...p,education:e.target.value}))}
-                        placeholder={"Master Génie Informatique — ENSA Rabat (2019)
-Classes Préparatoires MP — CPGE Casablanca (2016)"}
+                        placeholder={"Master Génie Informatique — ENSA Rabat (2019)\nClasses Préparatoires MP — CPGE Casablanca (2016)"}
                         style={{resize:"vertical",lineHeight:1.6}}/>
                     </div>
                     <div>
