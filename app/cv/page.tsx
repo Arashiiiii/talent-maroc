@@ -912,7 +912,8 @@ export default function CVPage() {
         if (event.name === "checkout.completed") {
           setPayPending(false);
           setPurchasedPlan(purchasedPlanRef.current);
-          runGeneration(pendingModeRef.current);
+          // Small delay ensures Paddle overlay is dismissed before we start generating
+          setTimeout(() => runGeneration(pendingModeRef.current), 300);
         }
         if (event.name === "checkout.closed") {
           setPayPending(false);
@@ -928,8 +929,35 @@ export default function CVPage() {
     const p=new URLSearchParams(window.location.search);
     if(p.get("payment")==="success"){
       window.history.replaceState({},"","/cv");
-      setMode("ai");
-      runGeneration("ai");
+
+      // Restore all state from sessionStorage (page was reloaded by Paddle)
+      const savedForm    = sessionStorage.getItem("cv_form");
+      const savedMode    = sessionStorage.getItem("cv_mode") as Mode || "ai";
+      const savedPlan    = sessionStorage.getItem("cv_plan");
+      const savedTpl     = sessionStorage.getItem("cv_template");
+      const savedEnhance = sessionStorage.getItem("cv_enhance") || "Optimisation ATS";
+      const savedPhoto   = sessionStorage.getItem("cv_photo");
+      const savedB64     = sessionStorage.getItem("cv_upload_b64");
+      const savedMime    = sessionStorage.getItem("cv_upload_mime");
+      const savedText    = sessionStorage.getItem("cv_upload_text");
+
+      // Restore state
+      if (savedForm)    { const f=JSON.parse(savedForm); setForm(f); formRef.current=f; }
+      if (savedMode)    setMode(savedMode);
+      if (savedTpl)     setSelectedTpl(Number(savedTpl));
+      if (savedEnhance) { setEnhanceType(savedEnhance); enhanceTypeRef.current=savedEnhance; }
+      if (savedPhoto)   { setPhotoBase64(savedPhoto); photoBase64Ref.current=savedPhoto; }
+      if (savedB64)     { setUploadedBase64(savedB64); uploadedBase64Ref.current=savedB64; }
+      if (savedMime)    { setUploadedMime(savedMime); uploadedMimeRef.current=savedMime; }
+      if (savedText)    { setUploadedContent(savedText); uploadedContentRef.current=savedText; }
+      if (savedPlan)    { const pl=JSON.parse(savedPlan); purchasedPlanRef.current=pl; setPurchasedPlan(pl); }
+
+      // Clear sessionStorage
+      ["cv_form","cv_mode","cv_plan","cv_template","cv_enhance","cv_photo",
+       "cv_upload_b64","cv_upload_mime","cv_upload_text"].forEach(k=>sessionStorage.removeItem(k));
+
+      // Small delay to let React flush state updates before generating
+      setTimeout(()=>runGeneration(savedMode), 100);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
@@ -1099,12 +1127,25 @@ Retourne UNIQUEMENT le JSON.`}];
   // ── PADDLE CHECKOUT ───────────────────────────────────────────────────────
   const openPaddle = (plan: Plan, triggerMode: Mode = "ai") => {
     if (!paddle) { alert("Paddle non chargé. Rafraîchissez la page."); return; }
-    pendingModeRef.current  = triggerMode;
+    pendingModeRef.current   = triggerMode;
     purchasedPlanRef.current = plan;
     setCurrentPlan(plan); setPayPending(true);
+
+    // Persist all form data to sessionStorage BEFORE Paddle redirects on success
+    // so we can restore it after the page reloads at ?payment=success
+    sessionStorage.setItem("cv_form",         JSON.stringify(formRef.current));
+    sessionStorage.setItem("cv_mode",         triggerMode);
+    sessionStorage.setItem("cv_plan",         JSON.stringify(plan));
+    sessionStorage.setItem("cv_template",     String(selectedTpl));
+    sessionStorage.setItem("cv_enhance",      enhanceTypeRef.current);
+    sessionStorage.setItem("cv_photo",        photoBase64Ref.current || "");
+    sessionStorage.setItem("cv_upload_b64",   uploadedBase64Ref.current || "");
+    sessionStorage.setItem("cv_upload_mime",  uploadedMimeRef.current || "");
+    sessionStorage.setItem("cv_upload_text",  uploadedContentRef.current || "");
+
     paddle.Checkout.open({
       items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
-      ...(form.email ? { customer: { email: form.email } } : {}),
+      ...(formRef.current.email ? { customer: { email: formRef.current.email } } : {}),
       settings: {
         displayMode: "overlay",
         theme: "light",
