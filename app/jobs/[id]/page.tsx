@@ -150,6 +150,38 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
           <SaveApplyButton job={job}/>
         </div>
 
+        {/* CV match banner — visible on all screen sizes */}
+        {(() => {
+          const params = new URLSearchParams();
+          params.set("job_title",    job.title);
+          params.set("job_company",  job.company);
+          params.set("job_city",     job.city || "");
+          if (job.sector)        params.set("job_sector",   job.sector);
+          if (job.contract_type) params.set("job_contract", job.contract_type);
+          if (job.description)   params.set("job_desc",     job.description.slice(0, 600));
+          const cvUrl = `/cv?match=${encodeURIComponent(params.toString())}`;
+          return (
+            <div style={{ background:'linear-gradient(135deg,#0f172a,#1e3a5f)', borderRadius:13, padding:'20px 22px', marginTop:14, display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:5 }}>
+                  <Zap size={13} style={{ color:'#4ade80' }}/>
+                  <span style={{ fontSize:10, fontWeight:800, color:'#4ade80', textTransform:'uppercase', letterSpacing:'0.1em' }}>CV IA Personnalisé</span>
+                </div>
+                <div style={{ fontSize:14, fontWeight:800, color:'white', marginBottom:3 }}>
+                  Maximisez vos chances avec un CV ciblé
+                </div>
+                <div style={{ fontSize:12, color:'rgba(255,255,255,.5)' }}>
+                  L'IA adapte votre CV au profil exact demandé par {job.company}.
+                </div>
+              </div>
+              <a href={cvUrl}
+                style={{ display:'inline-flex', alignItems:'center', gap:7, background:'#16a34a', color:'white', padding:'11px 20px', borderRadius:9, fontSize:13, fontWeight:700, textDecoration:'none', whiteSpace:'nowrap', flexShrink:0 }}>
+                ✦ Créer mon CV pour ce poste →
+              </a>
+            </div>
+          );
+        })()}
+
         {/* Similar jobs */}
         {similarJobs && similarJobs.length > 0 && (
           <div style={{ marginTop:28 }}>
@@ -200,22 +232,42 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
           ))}
         </div>
 
-        {/* CV upsell */}
-        <div style={{ background:'linear-gradient(135deg,#f0fdf4,#dcfce7)', border:'1.5px solid #bbf7d0', borderRadius:12, padding:'16px' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:7 }}>
-            <Zap size={12} style={{ color:'#16a34a' }}/>
-            <span style={{ fontSize:10, fontWeight:700, color:'#15803d', textTransform:'uppercase', letterSpacing:'0.08em' }}>Conseil</span>
-          </div>
-          <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:13, fontWeight:700, color:'#0f172a', marginBottom:5, lineHeight:1.35 }}>
-            Boostez votre candidature
-          </div>
-          <p style={{ fontSize:11, color:'#4b7c59', lineHeight:1.6, marginBottom:11 }}>
-            Un CV optimisé IA double vos chances de décrocher un entretien.
-          </p>
-          <a href="/cv" style={{ display:'block', background:'#16a34a', color:'white', padding:'9px 12px', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none', textAlign:'center', transition:'all .18s' }}>
-            Créer mon CV IA →
-          </a>
-        </div>
+        {/* CV match card */}
+        {(() => {
+          const params = new URLSearchParams();
+          params.set("job_title",    job.title);
+          params.set("job_company",  job.company);
+          params.set("job_city",     job.city || "");
+          if (job.sector)        params.set("job_sector",   job.sector);
+          if (job.contract_type) params.set("job_contract", job.contract_type);
+          if (job.description)   params.set("job_desc",     job.description.slice(0, 600));
+          const cvUrl = `/cv?match=${encodeURIComponent(params.toString())}`;
+          return (
+            <div style={{ background:'linear-gradient(135deg,#0f172a,#1e3a5f)', borderRadius:14, padding:'18px', overflow:'hidden', position:'relative' }}>
+              <div style={{ position:'absolute', top:-20, right:-20, width:80, height:80, background:'rgba(22,163,74,.15)', borderRadius:'50%' }}/>
+              <div style={{ position:'absolute', bottom:-30, left:-10, width:60, height:60, background:'rgba(74,222,128,.08)', borderRadius:'50%' }}/>
+              <div style={{ position:'relative', zIndex:1 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
+                  <Zap size={13} style={{ color:'#4ade80' }}/>
+                  <span style={{ fontSize:10, fontWeight:800, color:'#4ade80', textTransform:'uppercase', letterSpacing:'0.1em' }}>IA · Personnalisé</span>
+                </div>
+                <div style={{ fontSize:14, fontWeight:800, color:'white', marginBottom:6, lineHeight:1.3 }}>
+                  CV ciblé pour ce poste
+                </div>
+                <p style={{ fontSize:11, color:'rgba(255,255,255,.55)', lineHeight:1.6, marginBottom:14 }}>
+                  L'IA crée un CV optimisé spécifiquement pour <strong style={{ color:'rgba(255,255,255,.8)' }}>{job.title}</strong> chez {job.company}.
+                </p>
+                <a href={cvUrl}
+                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:7, background:'#16a34a', color:'white', padding:'10px 14px', borderRadius:9, fontSize:12, fontWeight:700, textDecoration:'none', textAlign:'center', transition:'all .18s' }}>
+                  ✦ Créer mon CV pour ce poste
+                </a>
+                <div style={{ marginTop:10, fontSize:10, color:'rgba(255,255,255,.3)', textAlign:'center' }}>
+                  À partir de €1.99 · PDF téléchargeable
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── MOBILE STICKY BAR ─────────────────────────────────────── */}

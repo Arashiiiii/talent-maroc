@@ -6,12 +6,12 @@ import { initializePaddle, type Paddle } from "@paddle/paddle-js";
 // 🔑 REPLACE these with your real values from paddle.com
 // While testing:  PADDLE_ENV = "sandbox"  +  use your sandbox token + sandbox price IDs
 // When live:      PADDLE_ENV = "production" + use your live token + live price IDs
-const PADDLE_CLIENT_TOKEN = "test_f6beac788c5a1289b346269ad2a";  // from Paddle → Developer Tools → Authentication
+const PADDLE_CLIENT_TOKEN = "test_REPLACE_YOUR_SANDBOX_TOKEN";  // from Paddle → Developer Tools → Authentication
 const PADDLE_ENV = "sandbox" as "sandbox" | "production";       // change to "production" when going live
 const PADDLE_PRICE_IDS    = {
-  starter:       "pri_01kmgxck2ancmk83gjky609g1r",
-  professionnel: "pri_01kmgx9tx3xhdn8gadp5sqqdzt",
-  cadre:         "pri_01kmgx4gba4kvpn78wr2ds9qwb",
+  starter:       "pri_REPLACE_STARTER",
+  professionnel: "pri_REPLACE_PROFESSIONNEL",
+  cadre:         "pri_REPLACE_CADRE",
 };
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
@@ -925,7 +925,45 @@ export default function CVPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Handle ?match= params from job detail page — pre-fill form with job context
   useEffect(()=>{
+    const qs = new URLSearchParams(window.location.search);
+    const match = qs.get("match");
+    if (match) {
+      try {
+        const job = Object.fromEntries(new URLSearchParams(match));
+        // Pre-fill job-specific fields and jump straight to create flow
+        if (job.job_title) {
+          setJobContext({ title: job.job_title, company: job.job_company || "" });
+          setForm(prev => ({
+            ...prev,
+            title:    job.job_title    || prev.title,
+            location: job.job_city     || prev.location,
+            industry: job.job_sector   || prev.industry,
+          }));
+          // Store job context so runGeneration can use it in the prompt
+          sessionStorage.setItem("cv_job_context", JSON.stringify({
+            title:    job.job_title    || "",
+            company:  job.job_company  || "",
+            city:     job.job_city     || "",
+            sector:   job.job_sector   || "",
+            contract: job.job_contract || "",
+            desc:     job.job_desc     || "",
+          }));
+        }
+        // Remove ?match= from URL cleanly
+        window.history.replaceState({}, "", "/cv");
+        // Go straight to "create new" flow
+        setMode("ai");
+        setStep(2);
+      } catch(e) {
+        console.error("Failed to parse match params", e);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
+    useEffect(()=>{
     const p=new URLSearchParams(window.location.search);
     if(p.get("payment")==="success"){
       window.history.replaceState({},"","/cv");
@@ -1060,6 +1098,21 @@ ${instructions}`}];
           throw new Error("Aucun contenu CV trouvé. Veuillez réimporter votre fichier.");
         }
       } else {
+        // Check if this CV is targeted at a specific job
+        let jobCtxStr = "";
+        try {
+          const jc = sessionStorage.getItem("cv_job_context");
+          if (jc) {
+            const jcData = JSON.parse(jc);
+            sessionStorage.removeItem("cv_job_context");
+            if (jcData.title) {
+              jobCtxStr = `\n\nCIBLAGE : Ce CV doit être optimisé pour le poste "${jcData.title}" chez ${jcData.company} (${jcData.city}).` +
+                (jcData.desc ? `\nDescription du poste : ${jcData.desc.slice(0, 400)}` : "") +
+                `\nAdapte le titre, le profil et les mots-clés compétences pour matcher exactement ce poste.`;
+            }
+          }
+        } catch(e) { /* ignore */ }
+
         messages=[{role:"user",content:`Génère un CV professionnel JSON pour :
 Nom : ${f.name} | Poste : ${f.title} | Email : ${f.email} | Tél : ${f.phone} | Ville : ${f.location||"Maroc"}
 Secteur : ${f.industry} | Niveau : ${f.level}
@@ -1067,7 +1120,7 @@ Expériences : ${f.experience}
 Formation : ${f.education}
 Compétences : ${f.skills}
 Langues : ${f.langs}
-Notes : ${f.notes}
+Notes : ${f.notes}${jobCtxStr}
 Retourne UNIQUEMENT le JSON.`}];
       }
 
@@ -1254,6 +1307,7 @@ Retourne UNIQUEMENT le JSON.`}];
   };
 
   const [formValidErr, setFormValidErr] = useState<string|null>(null);
+  const [jobContext,   setJobContext]   = useState<{title:string;company:string}|null>(null);
 
   const handleFormContinue = () => {
     const err = validateForm();
@@ -1491,6 +1545,17 @@ Retourne UNIQUEMENT le JSON.`}];
                 </div>
               )}
 
+              {jobContext && (
+                <div style={{background:"linear-gradient(135deg,#0f172a,#1e3a5f)",borderRadius:12,padding:"14px 18px",marginBottom:14,display:"flex",alignItems:"center",gap:12}}>
+                  <span style={{fontSize:20}}>🎯</span>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:800,color:"white",marginBottom:2}}>CV ciblé pour ce poste</div>
+                    <div style={{fontSize:12,color:"rgba(255,255,255,.6)"}}>
+                      L'IA va optimiser votre CV pour <strong style={{color:"#4ade80"}}>{jobContext.title}</strong> chez <strong style={{color:"rgba(255,255,255,.8)"}}>{jobContext.company}</strong>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,.04)",marginBottom:20}}>
                 <div style={{padding:"20px 24px",borderBottom:"1.5px solid #f0f0f0"}}>
                   <h2 style={{fontSize:16,fontWeight:800}}>1. Vos informations <span style={{fontSize:12,color:"#9ca3af",fontWeight:400}}>— tous les champs avec * sont obligatoires</span></h2>
