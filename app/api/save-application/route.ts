@@ -50,27 +50,47 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 });
     }
 
-    const { data, error } = await sb
-      .from('applications')
-      .upsert({
-        user_id:    user.id,
-        job_id:     job_id || null,
-        job_title,
-        company,
-        city,
-        original_url,
-        logo_url,
-        status,
-        notes,
-        cv_version,
-        applied_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict:       'user_id,job_id',
-        ignoreDuplicates: false,
-      })
-      .select()
-      .single();
+    // Check if application already exists for this user+job
+    let existingId: string | null = null;
+    if (job_id) {
+      const { data: existing } = await sb
+        .from('applications')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('job_id', job_id)
+        .maybeSingle();
+      if (existing) existingId = existing.id;
+    }
+
+    let data, error;
+    if (existingId) {
+      // Update existing
+      ({ data, error } = await sb
+        .from('applications')
+        .update({ status, notes, cv_version, updated_at: new Date().toISOString() })
+        .eq('id', existingId)
+        .select()
+        .single());
+    } else {
+      // Insert new
+      ({ data, error } = await sb
+        .from('applications')
+        .insert({
+          user_id:    user.id,
+          job_id:     job_id || null,
+          job_title,
+          company,
+          city,
+          original_url,
+          logo_url,
+          status,
+          notes,
+          cv_version,
+          applied_at: new Date().toISOString(),
+        })
+        .select()
+        .single());
+    }
 
     if (error) throw error;
     return NextResponse.json({ application: data });
