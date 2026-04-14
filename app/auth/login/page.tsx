@@ -1,11 +1,201 @@
-import { LoginForm } from "@/components/login-form";
+"use client";
+import { useState, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
 
-export default function Page() {
+function getSB() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
+
+// Defined outside to prevent remount/typing bug
+function Field({ label, required, children }: {
+  label: string; required?: boolean; children: React.ReactNode;
+}) {
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <LoginForm />
-      </div>
+    <div>
+      <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
+        {label}{required && <span style={{ color: "#ef4444", marginLeft: 3 }}>*</span>}
+      </label>
+      {children}
     </div>
+  );
+}
+
+const IS: React.CSSProperties = {
+  border: "1.5px solid #e5e7eb", borderRadius: 9, padding: "11px 14px",
+  width: "100%", fontSize: 14, fontFamily: "inherit", color: "#0f172a",
+  background: "white", outline: "none",
+};
+
+export default function AuthLoginPage() {
+  const [mode,     setMode]     = useState<"login" | "signup">("login");
+  const [email,    setEmail]    = useState("");
+  const [password, setPassword] = useState("");
+  const [name,     setName]     = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState<string | null>(null);
+  const [redirectTo, setRedirectTo] = useState("/dashboard");
+  const [fromJob, setFromJob] = useState(false);
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const r = p.get("redirect") || "/dashboard";
+    setRedirectTo(r);
+    setFromJob(r.startsWith("/jobs/"));
+
+    // Already logged in → go straight to destination
+    getSB().auth.getUser().then(({ data: { user } }) => {
+      if (user) window.location.href = r;
+    });
+  }, []);
+
+  const submit = async () => {
+    if (!email || !password) { setError("Email et mot de passe requis."); return; }
+    setLoading(true); setError(null);
+    try {
+      if (mode === "login") {
+        const { error } = await getSB().auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      } else {
+        if (password.length < 6) throw new Error("Le mot de passe doit contenir au moins 6 caractères.");
+        const { data, error } = await getSB().auth.signUp({
+          email, password,
+          options: { data: { name: name || email.split("@")[0] } },
+        });
+        if (error) throw error;
+        // Supabase may need email confirmation — handle gracefully
+        if (!data.session) {
+          setError("Un email de confirmation a été envoyé. Vérifiez votre boîte mail puis reconnectez-vous.");
+          setLoading(false);
+          return;
+        }
+      }
+      window.location.href = redirectTo;
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f8fafc;color:#0f172a}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        .au{animation:fadeUp .4s cubic-bezier(.16,1,.3,1) both}
+        input:focus{border-color:#16a34a!important;box-shadow:0 0 0 3px rgba(22,163,74,.1)!important;outline:none!important}
+      `}</style>
+
+      <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", flexDirection: "column" }}>
+
+        {/* Navbar */}
+        <nav style={{ background: "rgba(255,255,255,.96)", backdropFilter: "blur(12px)", borderBottom: "1.5px solid #f0f0f0", padding: "0 24px", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
+          <a href="/" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}>
+            <div style={{ width: 34, height: 34, background: "#16a34a", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "white" }}>T</div>
+            <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>TalentMaroc</span>
+          </a>
+          <a href="/" style={{ fontSize: 13, color: "#6b7280", fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
+            ← Retour aux offres
+          </a>
+        </nav>
+
+        {/* Main */}
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 20px" }}>
+          <div className="au" style={{ width: "100%", maxWidth: 440 }}>
+
+            {/* Context banner when coming from a job page */}
+            {fromJob && (
+              <div style={{ background: "linear-gradient(135deg,#0f172a,#1e3a5f)", borderRadius: 12, padding: "16px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 40, height: 40, background: "rgba(22,163,74,.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>💼</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "white", marginBottom: 3 }}>Connexion requise pour postuler</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,.55)", lineHeight: 1.5 }}>
+                    Connectez-vous ou créez un compte gratuit. Vous serez redirigé(e) automatiquement vers l'offre après la connexion.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ background: "white", border: "1.5px solid #f0f0f0", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,.08)" }}>
+              <div style={{ padding: "28px 28px 24px" }}>
+                <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 5 }}>
+                  {mode === "login" ? "Connexion" : "Créer un compte"}
+                </h1>
+                <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 24 }}>
+                  {mode === "login"
+                    ? "Accédez à votre espace candidat TalentMaroc."
+                    : "Rejoignez TalentMaroc gratuitement et gérez vos candidatures."}
+                </p>
+
+                {/* Login / Signup toggle */}
+                <div style={{ display: "flex", gap: 4, background: "#f3f4f6", borderRadius: 10, padding: 4, marginBottom: 22 }}>
+                  {(["login", "signup"] as const).map(m => (
+                    <button key={m} onClick={() => { setMode(m); setError(null); }}
+                      style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all .18s",
+                        background: mode === m ? "white" : "transparent",
+                        color: mode === m ? "#0f172a" : "#6b7280",
+                        boxShadow: mode === m ? "0 1px 4px rgba(0,0,0,.1)" : "none" }}>
+                      {m === "login" ? "Connexion" : "Inscription"}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {mode === "signup" && (
+                    <Field label="Prénom et Nom">
+                      <input style={IS} placeholder="Youssef Benali" value={name}
+                        onChange={e => setName(e.target.value)} />
+                    </Field>
+                  )}
+                  <Field label="Email" required>
+                    <input type="email" style={IS} placeholder="youssef@email.ma" value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && submit()} />
+                  </Field>
+                  <Field label="Mot de passe" required>
+                    <input type="password" style={IS}
+                      placeholder={mode === "signup" ? "Minimum 6 caractères" : "••••••••"}
+                      value={password} onChange={e => setPassword(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && submit()} />
+                  </Field>
+
+                  {error && (
+                    <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#dc2626", lineHeight: 1.5 }}>
+                      ⚠ {error}
+                    </div>
+                  )}
+
+                  <button disabled={loading} onClick={submit}
+                    style={{ background: "#16a34a", color: "white", padding: "13px", borderRadius: 10, border: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all .18s", marginTop: 4 }}>
+                    {loading ? "…" : mode === "login" ? "Se connecter →" : "Créer mon compte →"}
+                  </button>
+
+                  {mode === "signup" && (
+                    <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", lineHeight: 1.6 }}>
+                      En créant un compte vous acceptez nos <a href="/terms" style={{ color: "#16a34a" }}>CGU</a> et notre <a href="/privacy" style={{ color: "#16a34a" }}>politique de confidentialité</a>.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Recruiter link */}
+              <div style={{ padding: "14px 28px", background: "#f9fafb", borderTop: "1.5px solid #f0f0f0", textAlign: "center" }}>
+                <span style={{ fontSize: 13, color: "#9ca3af" }}>Vous recrutez ? </span>
+                <a href="/employeur" style={{ fontSize: 13, color: "#16a34a", fontWeight: 700, textDecoration: "none" }}>Espace recruteur →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer style={{ background: "#0f172a", padding: "16px 24px", textAlign: "center" }}>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,.25)" }}>© 2026 Talent Maroc</span>
+        </footer>
+      </div>
+    </>
   );
 }

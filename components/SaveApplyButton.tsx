@@ -32,6 +32,32 @@ export function SaveApplyButton({ job }: { job: any }) {
             email: user.email || "",
             name:  user.user_metadata?.name || "",
           }));
+          // Auto-open form if they just came back from the login page
+          // Works for both direct jobs (form) and external jobs (save+open)
+          const fromLogin = document.referrer.includes("/auth/login");
+          if (fromLogin) {
+            if (isDirectJob) {
+              // Show the on-platform application form
+              setTimeout(() => setShowForm(true), 300);
+            } else {
+              // For external jobs, save the application automatically
+              setTimeout(async () => {
+                try {
+                  await fetch("/api/save-application", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      job_id: job.id, job_title: job.title, company: job.company,
+                      city: job.city, original_url: job.original_url,
+                      logo_url: job.logo_url || null, status: "applied",
+                    }),
+                  });
+                  setState("saved");
+                  window.open(job.original_url, "_blank", "noopener,noreferrer");
+                } catch { /* ignore */ }
+              }, 300);
+            }
+          }
         }
       });
     });
@@ -58,7 +84,7 @@ export function SaveApplyButton({ job }: { job: any }) {
 
   const handleApply = async () => {
     if (authed === false) {
-      window.location.href = `/auth/login?redirect=/jobs/${job.id}`;
+      window.location.href = `/auth/login?redirect=/jobs/${job.id}`; // Returns here after login, isDirectJob logic runs again
       return;
     }
     if (isDirectJob) {
