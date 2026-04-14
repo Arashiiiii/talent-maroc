@@ -2,6 +2,23 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // ── Fast redirects that don't need auth check ──────────────────────────
+  // Kill the Supabase starter /protected page — redirect straight to dashboard
+  if (pathname.startsWith("/protected")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
+
+  // Only run auth check for /dashboard routes
+  if (!pathname.startsWith("/dashboard")) {
+    return NextResponse.next();
+  }
+
+  // ── Auth check for /dashboard ──────────────────────────────────────────
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -22,30 +39,11 @@ export async function proxy(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
-  const { pathname, searchParams } = request.nextUrl;
 
-  // /protected → /dashboard (kill the Supabase starter page forever)
-  if (pathname.startsWith("/protected")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    url.search = "";
-    return NextResponse.redirect(url);
-  }
-
-  // /dashboard requires auth
-  if (pathname.startsWith("/dashboard") && !user) {
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     url.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(url);
-  }
-
-  // Auth pages: skip if already logged in
-  if ((pathname === "/auth/login" || pathname === "/sign-in") && user) {
-    const redirectTo = searchParams.get("redirect") || "/dashboard";
-    const url = request.nextUrl.clone();
-    url.pathname = redirectTo;
-    url.search = "";
     return NextResponse.redirect(url);
   }
 
@@ -53,7 +51,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  // Only run on /dashboard and /protected — never on /auth/* to avoid loops
+  matcher: ["/dashboard/:path*", "/protected/:path*"],
 };
