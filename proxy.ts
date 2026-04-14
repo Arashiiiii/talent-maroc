@@ -1,11 +1,9 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // ── Fast redirects that don't need auth check ──────────────────────────
-  // Kill the Supabase starter /protected page — redirect straight to dashboard
+  // Kill the Supabase starter /protected page
   if (pathname.startsWith("/protected")) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
@@ -13,44 +11,32 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Only run auth check for /dashboard routes
-  if (!pathname.startsWith("/dashboard")) {
-    return NextResponse.next();
-  }
+  // For /dashboard: check if a Supabase session cookie exists
+  // Supabase stores the session in a cookie named sb-<project>-auth-token
+  // We check for ANY sb-*-auth-token cookie to detect a logged-in session
+  if (pathname.startsWith("/dashboard")) {
+    const cookies = request.cookies.getAll();
+    const hasSession = cookies.some(
+      c => c.name.startsWith("sb-") && c.name.endsWith("-auth-token") && c.value
+    );
 
-  // ── Auth check for /dashboard ──────────────────────────────────────────
-  let supabaseResponse = NextResponse.next({ request });
+    // Also check the Supabase access token cookie (used by @supabase/ssr)
+    const hasAccessToken = cookies.some(
+      c => (c.name.includes("access-token") || c.name.includes("auth-token")) && c.value
+    );
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return request.cookies.getAll(); },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
+    if (!hasSession && !hasAccessToken) {
+      // No session cookie at all — definitely not logged in
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/login";
+      url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
     }
-  );
-
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/auth/login";
-    url.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  return NextResponse.next();
 }
 
 export const config = {
-  // Only run on /dashboard and /protected — never on /auth/* to avoid loops
   matcher: ["/dashboard/:path*", "/protected/:path*"],
 };
