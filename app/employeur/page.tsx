@@ -1,180 +1,189 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 function getSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 }
 
-interface JobForm {
-  title: string; company: string; city: string; sector: string;
-  contract_type: string; salary: string; description: string;
-  original_url: string; logo_url: string;
+// ── TYPES ──────────────────────────────────────────────────────────────────
+interface Job {
+  id: string; title: string; company: string; city: string;
+  sector: string|null; contract_type: string|null; salary: string|null;
+  description: string|null; original_url: string|null; logo_url: string|null;
+  created_at: string; posted_at: string|null; employer_id: string|null;
+  featured: boolean|null; source: string|null;
+  apps?: Application[];
 }
-const EMPTY: JobForm = {
-  title:"", company:"", city:"", sector:"", contract_type:"",
-  salary:"", description:"", original_url:"", logo_url:"",
+interface Application {
+  id: string; job_id: string|null; user_id: string;
+  job_title: string; company: string; city: string|null;
+  status: AppStatus; notes: string|null; cv_version: string|null;
+  applied_at: string|null; created_at: string;
+}
+type AppStatus = "saved"|"applied"|"interview"|"offer"|"rejected";
+type DashTab   = "overview"|"jobs"|"candidates";
+
+const STATUS_CFG: Record<AppStatus,{label:string;color:string;bg:string;border:string}> = {
+  saved:     { label:"Sauvegardée",  color:"#374151", bg:"#f9fafb",  border:"#e5e7eb" },
+  applied:   { label:"Postulée",     color:"#1d4ed8", bg:"#eff6ff",  border:"#bfdbfe" },
+  interview: { label:"Entretien",    color:"#92400e", bg:"#fffbeb",  border:"#fde68a" },
+  offer:     { label:"Offre reçue",  color:"#065f46", bg:"#f0fdf4",  border:"#bbf7d0" },
+  rejected:  { label:"Refusée",      color:"#991b1b", bg:"#fef2f2",  border:"#fecaca" },
 };
 const CITIES    = ["Casablanca","Rabat","Tanger","Marrakech","Agadir","Fès","Meknès","Oujda","Kenitra","Tétouan","Autre"];
 const SECTORS   = ["Informatique","Finance","Commerce","Marketing","RH","Ingénierie","Santé","Logistique","Tourisme","Juridique","Éducation","BTP","Industrie","Autre"];
 const CONTRACTS = ["CDI","CDD","Stage","Alternance","Freelance","Temps partiel","Intérim"];
 
-// ── OUTSIDE COMPONENT: prevents remount/typing bug ─────────────────────────
-function Field({ label, required, children }: { label:string; required?:boolean; children:React.ReactNode }) {
+// ── OUTSIDE COMPONENT: prevents typing bug ─────────────────────────────────
+function EF({ label, required, children }: { label:string; required?:boolean; children:React.ReactNode }) {
   return (
     <div>
-      <label style={{ fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6 }}>
-        {label}{required && <span style={{ color:"#ef4444", marginLeft:3 }}>*</span>}
+      <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:5 }}>
+        {label}{required&&<span style={{ color:"#ef4444", marginLeft:3 }}>*</span>}
       </label>
       {children}
     </div>
   );
 }
-const IS: React.CSSProperties = {
-  border:"1.5px solid #e5e7eb", borderRadius:9, padding:"11px 14px",
-  width:"100%", fontSize:14, fontFamily:"inherit", color:"#0f172a",
+const EIS: React.CSSProperties = {
+  border:"1.5px solid #e5e7eb", borderRadius:8, padding:"9px 12px",
+  width:"100%", fontSize:13, fontFamily:"inherit", color:"#0f172a",
   background:"white", outline:"none",
 };
 
-// ── AUTH PANEL — also outside ──────────────────────────────────────────────
-function AuthPanel({ onSuccess }: { onSuccess:(u:any)=>void }) {
-  const [mode, setMode]       = useState<"login"|"signup">("login");
-  const [email, setEmail]     = useState("");
-  const [pass, setPass]       = useState("");
-  const [name, setName]       = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState<string|null>(null);
-
-  const submit = async () => {
-    if (!email || !pass) { setError("Email et mot de passe requis."); return; }
-    setLoading(true); setError(null);
-    const sb = getSupabase();
-    try {
-      if (mode === "login") {
-        const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-        if (error) throw error;
-        onSuccess(data.user);
-      } else {
-        const { data, error } = await sb.auth.signUp({
-          email, password: pass, options: { data: { name } }
-        });
-        if (error) throw error;
-        if (!data.user) throw new Error("Vérifiez votre email pour confirmer votre compte.");
-        onSuccess(data.user);
-      }
-    } catch(e:any) { setError(e.message); }
-    finally { setLoading(false); }
-  };
-
-  return (
-    <div style={{ background:"white", border:"1.5px solid #f0f0f0", borderRadius:16, overflow:"hidden", boxShadow:"0 4px 20px rgba(0,0,0,.08)", maxWidth:480, margin:"0 auto" }}>
-      <div style={{ padding:"36px 36px 32px" }}>
-        <div style={{ fontSize:32, marginBottom:14, textAlign:"center" }}>🏢</div>
-        <h2 style={{ fontSize:22, fontWeight:800, marginBottom:6, textAlign:"center" }}>Espace Recruteur</h2>
-        <p style={{ fontSize:13, color:"#6b7280", marginBottom:28, textAlign:"center", lineHeight:1.6 }}>
-          Connectez-vous pour publier vos offres et gérer vos recrutements.
-        </p>
-        {/* Toggle */}
-        <div style={{ display:"flex", gap:4, background:"#f3f4f6", borderRadius:10, padding:4, marginBottom:24 }}>
-          {(["login","signup"] as const).map(m=>(
-            <button key={m} onClick={()=>{setMode(m);setError(null);}}
-              style={{ flex:1, padding:"10px", borderRadius:8, border:"none", fontFamily:"inherit", fontSize:13, fontWeight:600, cursor:"pointer",
-                background:mode===m?"white":"transparent", color:mode===m?"#0f172a":"#6b7280",
-                boxShadow:mode===m?"0 1px 4px rgba(0,0,0,.1)":"none", transition:"all .18s" }}>
-              {m==="login" ? "Connexion" : "Inscription"}
-            </button>
-          ))}
-        </div>
-        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-          {mode==="signup" && (
-            <div>
-              <label style={{ fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6 }}>Nom de l'entreprise</label>
-              <input style={IS} placeholder="Capgemini Maroc" value={name} onChange={e=>setName(e.target.value)}/>
-            </div>
-          )}
-          <div>
-            <label style={{ fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6 }}>Email *</label>
-            <input type="email" style={IS} placeholder="rh@entreprise.ma" value={email}
-              onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/>
-          </div>
-          <div>
-            <label style={{ fontSize:13, fontWeight:600, color:"#374151", display:"block", marginBottom:6 }}>Mot de passe *</label>
-            <input type="password" style={IS} placeholder="••••••••" value={pass}
-              onChange={e=>setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/>
-          </div>
-          {error && (
-            <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#dc2626" }}>⚠ {error}</div>
-          )}
-          <button disabled={loading} onClick={submit}
-            style={{ background:"#16a34a", color:"white", padding:"13px", borderRadius:10, border:"none", fontFamily:"inherit", fontSize:14, fontWeight:700, cursor:loading?"not-allowed":"pointer", opacity:loading?0.7:1, marginTop:4 }}>
-            {loading ? "…" : mode==="login" ? "Se connecter →" : "Créer mon compte →"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+// ── CSV ────────────────────────────────────────────────────────────────────
+function dlCSV(filename: string, rows: Record<string,any>[]) {
+  if (!rows.length) return;
+  const cols = Object.keys(rows[0]);
+  const esc  = (v: any) => `"${String(v??'').replace(/"/g,'""')}"`;
+  const csv  = [cols.join(","), ...rows.map(r=>cols.map(c=>esc(r[c])).join(","))].join("\n");
+  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
 }
 
-// ── MAIN PAGE ──────────────────────────────────────────────────────────────
-export default function EmployeurPage() {
-  const [user,       setUser]       = useState<any>(null);
-  const [loading,    setLoading]    = useState(true);
-  const [form,       setForm]       = useState<JobForm>(EMPTY);
-  const [submitting, setSubmitting] = useState(false);
-  const [success,    setSuccess]    = useState(false);
-  const [error,      setError]      = useState<string|null>(null);
+// ── MAIN ───────────────────────────────────────────────────────────────────
+export default function EmployeurDashboard() {
+  const [user,    setUser]    = useState<any>(null);
+  const [jobs,    setJobs]    = useState<Job[]>([]);
+  const [allApps, setAllApps] = useState<Application[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab,     setTab]     = useState<DashTab>("overview");
+  const [search,  setSearch]  = useState("");
+  const [jobFilter,  setJobFilter]   = useState("all");
+  const [statusFilter, setStatusFilter] = useState<AppStatus|"all">("all");
+  const [editJob,  setEditJob]  = useState<Job|null>(null);
+  const [editForm, setEditForm] = useState<Partial<Job>>({});
+  const [saving,   setSaving]   = useState(false);
+  const [delId,    setDelId]    = useState<string|null>(null);
+  const [err,      setErr]      = useState<string|null>(null);
 
+  // ── LOAD ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    getSupabase().auth.getUser().then(({ data:{ user } }) => {
-      setUser(user); setLoading(false);
+    const sb = getSupabase();
+    sb.auth.getSession().then(({ data:{ session } }: any) => { const user = session?.user || null;
+      if (!user) { window.location.href="/employeur"; return; }
+      setUser(user);
+      load(user.id);
     });
   }, []);
 
-  // Stable setter — doesn't cause remount
-  const set = useCallback((k: keyof JobForm) =>
-    (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) =>
-      setForm(prev => ({ ...prev, [k]: e.target.value })),
-  []);
+  const load = useCallback(async (uid: string) => {
+    setLoading(true);
+    const sb = getSupabase();
 
-  const handleSubmit = useCallback(async () => {
-    setError(null);
-    if (!form.title.trim())   { setError("Le titre du poste est requis."); return; }
-    if (!form.company.trim()) { setError("Le nom de l'entreprise est requis."); return; }
-    if (!form.city)           { setError("La ville est requise."); return; }
-    if (!form.contract_type)  { setError("Le type de contrat est requis."); return; }
+    // Only fetch THIS employer's jobs (filtered by employer_id)
+    const { data: jobsData, error: jErr } = await sb
+      .from("jobs")
+      .select("*")
+      .eq("employer_id", uid)          // ← KEY FIX: only employer's own jobs
+      .order("created_at", { ascending: false });
 
-    setSubmitting(true);
-    try {
-      const sb = getSupabase();
-      const { error: err } = await sb.from("jobs").insert({
-        title:         form.title.trim(),
-        company:       form.company.trim(),
-        city:          form.city,
-        sector:        form.sector || null,
-        contract_type: form.contract_type,
-        salary:        form.salary.trim() || null,
-        description:   form.description.trim() || null,
-        original_url:  form.original_url.trim() || "https://talentmaroc.shop",
-        logo_url:      form.logo_url.trim() || null,
-        posted_at:     new Date().toLocaleDateString("fr-FR"),
-        employer_id:   user?.id || null,
-        source:        "employer_direct",
-        featured:      false,
-      });
-      if (err) throw err;
-      setSuccess(true);
-      setForm(EMPTY);
-      window.scrollTo({ top:0, behavior:"smooth" });
-    } catch(e:any) {
-      setError(e.message || "Erreur lors de la publication.");
-    } finally {
-      setSubmitting(false);
+    if (jErr) { setErr(jErr.message); setLoading(false); return; }
+    const myJobs: Job[] = jobsData || [];
+
+    // Load applications for these jobs
+    const jobIds = myJobs.map(j=>j.id);
+    let apps: Application[] = [];
+    if (jobIds.length > 0) {
+      const { data: appsData } = await sb
+        .from("applications")
+        .select("*")
+        .in("job_id", jobIds)
+        .order("created_at", { ascending: false });
+      if (appsData) apps = appsData;
     }
-  }, [form, user]);
+
+    // Associate apps to jobs
+    const byJob: Record<string,Application[]> = {};
+    apps.forEach(a => { if (a.job_id) { byJob[a.job_id]??=[]; byJob[a.job_id].push(a); } });
+    setJobs(myJobs.map(j=>({ ...j, apps: byJob[j.id]||[] })));
+    setAllApps(apps);
+    setLoading(false);
+  }, []);
+
+  // ── STATS ──────────────────────────────────────────────────────────────
+  const totalApps  = allApps.length;
+  const interviews = allApps.filter(a=>a.status==="interview").length;
+  const responseRate = totalApps > 0
+    ? Math.round((allApps.filter(a=>["interview","offer"].includes(a.status)).length / totalApps)*100)
+    : 0;
+
+  // ── FILTERS ────────────────────────────────────────────────────────────
+  const filteredJobs = useMemo(()=>{
+    const q=search.toLowerCase();
+    return jobs.filter(j=>!q||j.title.toLowerCase().includes(q)||j.company.toLowerCase().includes(q)||(j.city||"").toLowerCase().includes(q));
+  },[jobs,search]);
+
+  const filteredApps = useMemo(()=>{
+    return allApps.filter(a=>{
+      const matchJob    = jobFilter==="all"||a.job_id===jobFilter;
+      const matchStatus = statusFilter==="all"||a.status===statusFilter;
+      const q=search.toLowerCase();
+      const matchSearch=!q||a.job_title.toLowerCase().includes(q);
+      return matchJob&&matchStatus&&matchSearch;
+    });
+  },[allApps,jobFilter,statusFilter,search]);
+
+  // ── EDIT ───────────────────────────────────────────────────────────────
+  const openEdit=(j:Job)=>{ setEditJob(j); setEditForm({ title:j.title, company:j.company, city:j.city||"", sector:j.sector||"", contract_type:j.contract_type||"", salary:j.salary||"", description:j.description||"", original_url:j.original_url||"", logo_url:j.logo_url||"" }); };
+
+  const saveEdit=async()=>{
+    if(!editJob)return; setSaving(true);
+    const sb=getSupabase();
+    const {error}=await sb.from("jobs").update({ title:editForm.title, company:editForm.company, city:editForm.city, sector:editForm.sector||null, contract_type:editForm.contract_type||null, salary:editForm.salary||null, description:editForm.description||null, original_url:editForm.original_url||null, logo_url:editForm.logo_url||null }).eq("id",editJob.id);
+    if(!error){ setJobs(p=>p.map(j=>j.id===editJob.id?{...j,...editForm}:j)); setEditJob(null); }
+    setSaving(false);
+  };
+
+  // ── DELETE ─────────────────────────────────────────────────────────────
+  const doDelete=async()=>{
+    if(!delId)return;
+    await getSupabase().from("jobs").delete().eq("id",delId);
+    setJobs(p=>p.filter(j=>j.id!==delId));
+    setAllApps(p=>p.filter(a=>a.job_id!==delId));
+    setDelId(null);
+  };
+
+  // ── UPDATE APP STATUS ──────────────────────────────────────────────────
+  const updateStatus=async(id:string,status:AppStatus)=>{
+    await getSupabase().from("applications").update({status}).eq("id",id);
+    const upd=(a:Application)=>a.id===id?{...a,status}:a;
+    setAllApps(p=>p.map(upd));
+    setJobs(p=>p.map(j=>({...j,apps:j.apps?.map(upd)})));
+  };
+
+  const setEF=(k:keyof Job)=>(e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>)=>
+    setEditForm(p=>({...p,[k]:e.target.value}));
 
   if (loading) return (
     <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh", fontFamily:"'Plus Jakarta Sans',sans-serif" }}>
-      <div style={{ width:32, height:32, border:"3px solid #e5e7eb", borderTopColor:"#16a34a", borderRadius:"50%", animation:"spin .7s linear infinite" }}/>
+      <div style={{ textAlign:"center" }}>
+        <div style={{ width:36, height:36, border:"3px solid #e5e7eb", borderTopColor:"#16a34a", borderRadius:"50%", animation:"spin .7s linear infinite", margin:"0 auto 12px" }}/>
+        <div style={{ fontSize:14, color:"#6b7280" }}>Chargement…</div>
+      </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
@@ -189,152 +198,332 @@ export default function EmployeurPage() {
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         .au{animation:fadeUp .4s cubic-bezier(.16,1,.3,1) both}
         input:focus,select:focus,textarea:focus{border-color:#16a34a!important;box-shadow:0 0 0 3px rgba(22,163,74,.1)!important;outline:none!important}
-        .nl{color:#4b5563;text-decoration:none;font-size:14px;font-weight:600;padding:7px 12px;border-radius:8px;transition:all .18s}
+        .tab-nav{display:flex;border-bottom:1.5px solid #f0f0f0}
+        .tab-item{padding:14px 18px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;font-family:inherit;color:#6b7280;border-bottom:2px solid transparent;transition:all .18s}
+        .tab-item.active{color:#16a34a;border-bottom-color:#16a34a}
+        .tab-item:hover:not(.active){color:#0f172a}
+        .card{background:white;border:1.5px solid #f0f0f0;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+        .btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:none;transition:all .18s;text-decoration:none}
+        .btn-green{background:#16a34a;color:white}.btn-green:hover{background:#15803d}
+        .btn-outline{background:white;color:#374151;border:1.5px solid #e5e7eb}.btn-outline:hover{border-color:#16a34a;color:#16a34a}
+        .btn-ghost{background:none;color:#6b7280;padding:6px;border-radius:7px}.btn-ghost:hover{background:#f3f4f6;color:#0f172a}
+        .btn-del{background:none;color:#9ca3af;padding:6px;border-radius:7px;cursor:pointer;font-family:inherit;border:none;display:inline-flex;align-items:center}.btn-del:hover{background:#fef2f2;color:#dc2626}
+        .chip{padding:6px 12px;border-radius:100px;border:1.5px solid #e5e7eb;background:white;cursor:pointer;font-size:11px;font-weight:600;color:#374151;font-family:inherit;transition:all .18s}
+        .chip.active{border-color:#16a34a;color:#16a34a;background:#f0fdf4}
+        .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+        .modal{background:white;border-radius:16px;width:100%;max-width:660px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.2)}
+        .stat-card{background:white;border:1.5px solid #f0f0f0;border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+        .nl{color:#4b5563;text-decoration:none;font-size:13px;font-weight:600;padding:6px 10px;border-radius:7px;transition:all .18s}
         .nl:hover{color:#0f172a;background:#f3f4f6}
-        @media(max-width:640px){.two-col{grid-template-columns:1fr!important}}
+        @media(max-width:640px){.stats-grid{grid-template-columns:1fr 1fr!important}.hide-sm{display:none!important}.edit-grid{grid-template-columns:1fr!important}}
       `}</style>
 
       <div style={{ background:"#f8fafc", minHeight:"100vh" }}>
         {/* NAVBAR */}
-        <nav style={{ background:"rgba(255,255,255,.96)", backdropFilter:"blur(12px)", borderBottom:"1.5px solid #f0f0f0", padding:"0 24px", height:62, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100 }}>
-          <a href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
-            <div style={{ width:34, height:34, background:"#16a34a", borderRadius:9, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:16, color:"white" }}>T</div>
-            <span style={{ color:"#0f172a", fontWeight:800, fontSize:16 }}>TalentMaroc</span>
-          </a>
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <a href="/" className="nl">Emplois</a>
-            {user && (
-              <a href="/employeur/dashboard" style={{ fontSize:13, fontWeight:700, color:"#16a34a", background:"#f0fdf4", border:"1px solid #bbf7d0", padding:"7px 14px", borderRadius:8, textDecoration:"none" }}>
-                📊 Dashboard →
-              </a>
-            )}
-            {user && (
-              <button onClick={()=>{ getSupabase().auth.signOut(); setUser(null); setSuccess(false); }}
-                style={{ background:"none", border:"1.5px solid #e5e7eb", borderRadius:8, padding:"7px 14px", fontSize:13, fontWeight:600, color:"#374151", cursor:"pointer", fontFamily:"inherit" }}>
-                Déconnexion
-              </button>
-            )}
+        <nav style={{ background:"rgba(255,255,255,.96)", backdropFilter:"blur(12px)", borderBottom:"1.5px solid #f0f0f0", padding:"0 20px", height:60, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+            <a href="/" style={{ display:"flex", alignItems:"center", gap:8, textDecoration:"none" }}>
+              <div style={{ width:32, height:32, background:"#16a34a", borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:15, color:"white" }}>T</div>
+              <span style={{ fontWeight:800, fontSize:15, color:"#0f172a" }}>TalentMaroc</span>
+            </a>
+            <span style={{ fontSize:12, fontWeight:700, color:"#16a34a", background:"#f0fdf4", padding:"4px 10px", borderRadius:7 }}>Dashboard Recruteur</span>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <a href="/employeur" className="nl">+ Nouvelle offre</a>
+            <div style={{ width:30, height:30, borderRadius:"50%", background:"#f0fdf4", border:"1.5px solid #bbf7d0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#15803d" }}>
+              {user?.email?.charAt(0).toUpperCase()}
+            </div>
+            <button onClick={()=>{ getSupabase().auth.signOut(); window.location.href="/employeur"; }}
+              style={{ background:"none", border:"1.5px solid #e5e7eb", borderRadius:7, padding:"6px 12px", fontSize:12, fontWeight:600, color:"#374151", cursor:"pointer", fontFamily:"inherit" }}>
+              Déconnexion
+            </button>
           </div>
         </nav>
 
-        {/* HERO */}
-        <div style={{ background:"linear-gradient(135deg,#0f172a,#1e3a5f)", padding:"52px 24px 56px", textAlign:"center" }}>
-          <h1 className="au" style={{ fontSize:"clamp(24px,4vw,38px)", fontWeight:800, color:"white", lineHeight:1.15, marginBottom:10, letterSpacing:"-0.02em" }}>
-            {user ? `Bonjour ${user.user_metadata?.name || user.email?.split("@")[0]} 👋` : "Recrutez vos talents au Maroc"}
-          </h1>
-          <p className="au" style={{ fontSize:14, color:"rgba(255,255,255,.55)", maxWidth:420, margin:"0 auto", lineHeight:1.7, animationDelay:".1s" }}>
-            {user ? "Publiez une offre ou gérez vos recrutements depuis votre dashboard." : "Créez un compte recruteur pour accéder à la plateforme."}
-          </p>
+        {/* HEADER + TABS */}
+        <div style={{ background:"white", borderBottom:"1.5px solid #f0f0f0", padding:"20px 24px 0" }}>
+          <div style={{ maxWidth:1080, margin:"0 auto" }}>
+            <h1 style={{ fontSize:"clamp(17px,2.5vw,22px)", fontWeight:800, marginBottom:3 }}>
+              Bonjour {user?.user_metadata?.name || user?.email?.split("@")[0]} 👋
+            </h1>
+            <p style={{ fontSize:13, color:"#6b7280", marginBottom:16 }}>
+              {jobs.length} offre{jobs.length!==1?"s":""} publiée{jobs.length!==1?"s":""} · {totalApps} candidature{totalApps!==1?"s":""}
+            </p>
+            <div className="tab-nav">
+              {([["overview","📊 Vue d'ensemble"],["jobs","💼 Mes offres"],["candidates","👥 Candidatures"]] as const).map(([t,l])=>(
+                <button key={t} className={`tab-item${tab===t?" active":""}`} onClick={()=>setTab(t)}>{l}</button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div style={{ maxWidth:820, margin:"0 auto", padding:"36px 20px 80px" }}>
+        <div style={{ maxWidth:1080, margin:"0 auto", padding:"24px 20px 80px" }}>
+          {err && <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:10, padding:"12px 16px", marginBottom:16, fontSize:13, color:"#dc2626" }}>⚠ {err}</div>}
 
-          {/* NOT LOGGED IN → show auth only */}
-          {!user && (
-            <div className="au"><AuthPanel onSuccess={u=>setUser(u)}/></div>
+          {/* ── OVERVIEW ── */}
+          {tab==="overview" && (
+            <div className="au">
+              <div className="stats-grid" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:20 }}>
+                {[
+                  {icon:"💼",label:"Mes offres",    val:jobs.length,     color:"#16a34a"},
+                  {icon:"👥",label:"Candidatures",  val:totalApps,       color:"#1d4ed8"},
+                  {icon:"🗓",label:"Entretiens",    val:interviews,      color:"#92400e"},
+                  {icon:"📈",label:"Taux de réponse",val:`${responseRate}%`,color:"#065f46"},
+                ].map((s,i)=>(
+                  <div key={i} className="stat-card">
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                      <span style={{ fontSize:20 }}>{s.icon}</span>
+                      <span style={{ fontSize:24, fontWeight:800, color:s.color }}>{s.val}</span>
+                    </div>
+                    <div style={{ fontSize:11, fontWeight:600, color:"#6b7280" }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pipeline */}
+              <div className="card" style={{ padding:"20px 22px", marginBottom:16 }}>
+                <h3 style={{ fontSize:14, fontWeight:800, marginBottom:14 }}>Pipeline des candidatures</h3>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  {(Object.entries(STATUS_CFG) as [AppStatus,any][]).map(([key,cfg])=>{
+                    const count=allApps.filter(a=>a.status===key).length;
+                    return (
+                      <div key={key} style={{ flex:1, minWidth:90, background:cfg.bg, border:`1.5px solid ${cfg.border}`, borderRadius:10, padding:"12px 14px", textAlign:"center" }}>
+                        <div style={{ fontSize:18, fontWeight:800, color:cfg.color }}>{count}</div>
+                        <div style={{ fontSize:10, fontWeight:600, color:cfg.color, marginTop:2 }}>{cfg.label}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* My recent jobs */}
+              <div className="card" style={{ padding:"20px 22px" }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+                  <h3 style={{ fontSize:14, fontWeight:800 }}>Mes offres récentes</h3>
+                  <button className="btn btn-outline" onClick={()=>setTab("jobs")}>Voir tout →</button>
+                </div>
+                {jobs.length===0 ? (
+                  <div style={{ textAlign:"center", padding:"28px", color:"#9ca3af", fontSize:13 }}>
+                    Aucune offre publiée. <a href="/employeur" style={{ color:"#16a34a", fontWeight:600 }}>Publier →</a>
+                  </div>
+                ) : jobs.slice(0,5).map(j=>(
+                  <div key={j.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 0", borderBottom:"1px solid #f3f4f6", flexWrap:"wrap", gap:8 }}>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700 }}>{j.title}</div>
+                      <div style={{ fontSize:11, color:"#6b7280" }}>{j.company} · {j.city} · {j.contract_type||"—"}</div>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:18, fontWeight:800, color:(j.apps?.length||0)>0?"#16a34a":"#d1d5db" }}>{j.apps?.length||0}</div>
+                        <div style={{ fontSize:10, color:"#9ca3af" }}>candidat{(j.apps?.length||0)!==1?"s":""}</div>
+                      </div>
+                      <button className="btn btn-outline" onClick={()=>dlCSV(`offre_${j.title.replace(/\s+/g,"_")}.csv`,(j.apps||[]).map(a=>({ "User ID":a.user_id, "Poste":a.job_title, "Statut":STATUS_CFG[a.status].label, "Date":a.applied_at||"", "Notes":a.notes||"" })))}>⬇ CSV</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
-          {/* LOGGED IN → show form */}
-          {user && (
+          {/* ── JOBS TAB ── */}
+          {tab==="jobs" && (
             <div className="au">
-              {success && (
-                <div style={{ background:"#f0fdf4", border:"1.5px solid #bbf7d0", borderRadius:12, padding:"18px 22px", marginBottom:24, display:"flex", alignItems:"center", gap:14 }}>
-                  <span style={{ fontSize:24 }}>🎉</span>
-                  <div>
-                    <div style={{ fontSize:14, fontWeight:800, color:"#15803d", marginBottom:2 }}>Offre publiée avec succès !</div>
-                    <div style={{ fontSize:13, color:"#15803d" }}>Visible par les candidats · <a href="/employeur/dashboard" style={{ fontWeight:700, color:"#15803d" }}>Gérer mes offres →</a></div>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:16 }}>
+                <div style={{ position:"relative" }}>
+                  <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#9ca3af" }}>🔍</span>
+                  <input placeholder="Rechercher…" value={search} onChange={e=>setSearch(e.target.value)}
+                    style={{ border:"1.5px solid #e5e7eb", borderRadius:9, padding:"9px 14px 9px 32px", fontSize:13, fontFamily:"inherit", width:220, outline:"none" }}/>
+                </div>
+                <div style={{ display:"flex", gap:8 }}>
+                  <button className="btn btn-outline" onClick={()=>dlCSV("mes_offres.csv",jobs.map(j=>({ Titre:j.title, Entreprise:j.company, Ville:j.city, Contrat:j.contract_type||"", Secteur:j.sector||"", Salaire:j.salary||"", Candidatures:j.apps?.length||0 })))}>
+                    ⬇ Exporter CSV
+                  </button>
+                  <a href="/employeur" className="btn btn-green" style={{ textDecoration:"none" }}>+ Nouvelle offre</a>
+                </div>
+              </div>
+
+              {filteredJobs.length===0 ? (
+                <div style={{ textAlign:"center", padding:"56px", background:"white", border:"2px dashed #e5e7eb", borderRadius:14 }}>
+                  <div style={{ fontSize:36, marginBottom:12 }}>💼</div>
+                  <h3 style={{ fontSize:15, fontWeight:800, marginBottom:8 }}>Aucune offre publiée</h3>
+                  <a href="/employeur" className="btn btn-green" style={{ textDecoration:"none", display:"inline-flex" }}>Publier ma première offre</a>
+                </div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  {filteredJobs.map(j=>(
+                    <div key={j.id} className="card" style={{ padding:"18px 20px" }}>
+                      <div style={{ display:"flex", gap:12, alignItems:"flex-start", flexWrap:"wrap" }}>
+                        <div style={{ width:44, height:44, borderRadius:10, background:"#f3f4f6", flexShrink:0, overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, fontWeight:800, color:"#9ca3af" }}>
+                          {j.logo_url ? <img src={j.logo_url} alt="" style={{ width:"100%", height:"100%", objectFit:"contain" }} onError={e=>(e.currentTarget.style.display="none")}/> : j.company.charAt(0)}
+                        </div>
+                        <div style={{ flex:1, minWidth:160 }}>
+                          <div style={{ fontSize:14, fontWeight:700, marginBottom:3 }}>{j.title}</div>
+                          <div style={{ fontSize:12, color:"#6b7280", display:"flex", gap:10, flexWrap:"wrap" }}>
+                            <span style={{ fontWeight:600, color:"#374151" }}>{j.company}</span>
+                            <span>📍 {j.city}</span>
+                            {j.contract_type&&<span>· {j.contract_type}</span>}
+                            {j.sector&&<span>· {j.sector}</span>}
+                            {j.salary&&<span style={{ color:"#16a34a", fontWeight:600 }}>💰 {j.salary}</span>}
+                          </div>
+                          {(j.apps?.length||0)>0&&(
+                            <div style={{ display:"flex", gap:5, marginTop:8, flexWrap:"wrap" }}>
+                              {(Object.entries(STATUS_CFG) as [AppStatus,any][]).map(([s,c])=>{
+                                const n=j.apps?.filter(a=>a.status===s).length||0;
+                                if(!n)return null;
+                                return <span key={s} style={{ fontSize:10, fontWeight:700, background:c.bg, color:c.color, border:`1px solid ${c.border}`, padding:"2px 8px", borderRadius:100 }}>{c.label}: {n}</span>;
+                              })}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+                          <div style={{ textAlign:"center", minWidth:44 }}>
+                            <div style={{ fontSize:18, fontWeight:800, color:(j.apps?.length||0)>0?"#16a34a":"#d1d5db" }}>{j.apps?.length||0}</div>
+                            <div style={{ fontSize:10, color:"#9ca3af" }}>candidat{(j.apps?.length||0)!==1?"s":""}</div>
+                          </div>
+                          <a href={`/jobs/${j.id}`} target="_blank" className="btn btn-outline" style={{ textDecoration:"none", fontSize:11 }}>👁 Voir</a>
+                          <button className="btn btn-outline" style={{ fontSize:11 }} onClick={()=>dlCSV(`candidats_${j.id}.csv`,(j.apps||[]).map(a=>({ "User ID":a.user_id, "Poste":a.job_title, "Statut":STATUS_CFG[a.status].label, "Date":a.applied_at||"", "Notes":a.notes||"" })))}>⬇ CSV</button>
+                          <button className="btn-ghost btn" onClick={()=>openEdit(j)}>✏️</button>
+                          <button className="btn-del" onClick={()=>setDelId(j.id)}>🗑</button>
+                        </div>
+                      </div>
+                      {j.description&&<div style={{ marginTop:12, paddingTop:12, borderTop:"1px solid #f3f4f6", fontSize:12, color:"#6b7280", lineHeight:1.6 }}>{j.description.slice(0,200)}{j.description.length>200?"…":""}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── CANDIDATES TAB ── */}
+          {tab==="candidates" && (
+            <div className="au">
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:14 }}>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
+                  <div style={{ position:"relative" }}>
+                    <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#9ca3af" }}>🔍</span>
+                    <input placeholder="Rechercher…" value={search} onChange={e=>setSearch(e.target.value)}
+                      style={{ border:"1.5px solid #e5e7eb", borderRadius:9, padding:"9px 14px 9px 32px", fontSize:13, fontFamily:"inherit", width:200, outline:"none" }}/>
                   </div>
-                  <button onClick={()=>setSuccess(false)} style={{ marginLeft:"auto", background:"none", border:"none", fontSize:20, color:"#9ca3af", cursor:"pointer", lineHeight:1 }}>×</button>
+                  <select value={jobFilter} onChange={e=>setJobFilter(e.target.value)}
+                    style={{ border:"1.5px solid #e5e7eb", borderRadius:9, padding:"9px 12px", fontSize:12, fontFamily:"inherit", color:"#374151", outline:"none", background:"white" }}>
+                    <option value="all">Toutes les offres</option>
+                    {jobs.map(j=><option key={j.id} value={j.id}>{j.title}</option>)}
+                  </select>
+                  {(["all","applied","interview","offer","rejected"] as const).map(s=>(
+                    <button key={s} className={`chip${statusFilter===s?" active":""}`} onClick={()=>setStatusFilter(s as any)}>
+                      {s==="all"?`Toutes (${allApps.length})`:`${STATUS_CFG[s as AppStatus]?.label} (${allApps.filter(a=>a.status===s).length})`}
+                    </button>
+                  ))}
+                </div>
+                <button className="btn btn-green" onClick={()=>dlCSV("candidatures.csv",filteredApps.map(a=>({ "User ID":a.user_id, "Poste":a.job_title, "Entreprise":a.company, "Statut":STATUS_CFG[a.status].label, "Date":a.applied_at||"", "Notes":a.notes||"", "CV":a.cv_version||"" })))}>
+                  ⬇ Exporter ({filteredApps.length})
+                </button>
+              </div>
+
+              {filteredApps.length===0 ? (
+                <div style={{ textAlign:"center", padding:"48px", background:"white", border:"2px dashed #e5e7eb", borderRadius:14, color:"#9ca3af", fontSize:13 }}>
+                  Aucune candidature trouvée.
+                </div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {filteredApps.map(a=>{
+                    const sc=STATUS_CFG[a.status];
+                    const job=jobs.find(j=>j.id===a.job_id);
+                    return (
+                      <div key={a.id} className="card" style={{ padding:"14px 18px" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+                          {/* Avatar */}
+                          <div style={{ width:38, height:38, borderRadius:"50%", background:"#f0fdf4", border:"1.5px solid #bbf7d0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#15803d", flexShrink:0 }}>
+                            {a.user_id.charAt(0).toUpperCase()}
+                          </div>
+                          {/* Info */}
+                          <div style={{ flex:1, minWidth:160 }}>
+                            <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:2 }}>
+                              Candidat #{a.user_id.slice(0,8)}
+                            </div>
+                            <div style={{ fontSize:11, color:"#6b7280" }}>
+                              {a.job_title} · {a.city||"—"} · {a.applied_at?new Date(a.applied_at).toLocaleDateString("fr-FR"):new Date(a.created_at).toLocaleDateString("fr-FR")}
+                            </div>
+                            {a.notes&&<div style={{ fontSize:11, color:"#4b5563", marginTop:4, background:"#f9fafb", padding:"3px 8px", borderRadius:5 }}>📝 {a.notes.slice(0,80)}{a.notes.length>80?"…":""}</div>}
+                            {a.cv_version&&<div style={{ fontSize:10, color:"#16a34a", marginTop:2 }}>📄 CV modèle: {a.cv_version}</div>}
+                          </div>
+                          {/* Status */}
+                          <select value={a.status} onChange={e=>updateStatus(a.id,e.target.value as AppStatus)}
+                            style={{ border:`1.5px solid ${sc.border}`, background:sc.bg, color:sc.color, borderRadius:8, padding:"6px 10px", fontSize:11, fontWeight:700, fontFamily:"inherit", cursor:"pointer", outline:"none" }}>
+                            {(Object.entries(STATUS_CFG) as [AppStatus,any][]).map(([s,c])=>(
+                              <option key={s} value={s}>{c.label}</option>
+                            ))}
+                          </select>
+                          {/* Actions */}
+                          <div style={{ display:"flex", gap:4 }}>
+                            {job&&<a href={`/jobs/${job.id}`} target="_blank" className="btn btn-outline" style={{ textDecoration:"none", fontSize:11, padding:"5px 8px" }}>👁</a>}
+                            <button onClick={()=>dlCSV(`candidat_${a.user_id.slice(0,8)}.csv`,[{ "User ID":a.user_id, "Poste":a.job_title, "Statut":sc.label, "Date":a.applied_at||"", "Notes":a.notes||"", "CV":a.cv_version||"" }])}
+                              style={{ fontSize:11, padding:"5px 8px", background:"#f3f4f6", color:"#374151", borderRadius:6, fontWeight:600, border:"none", cursor:"pointer", fontFamily:"inherit" }}>⬇</button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
-              <div style={{ background:"white", border:"1.5px solid #f0f0f0", borderRadius:14, overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.04)", marginBottom:16 }}>
-                <div style={{ padding:"20px 28px", borderBottom:"1.5px solid #f0f0f0", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
-                  <div>
-                    <h2 style={{ fontSize:16, fontWeight:800 }}>Publier une nouvelle offre</h2>
-                    <p style={{ fontSize:13, color:"#6b7280", marginTop:2 }}>Tous les champs marqués * sont obligatoires</p>
-                  </div>
-                  <span style={{ fontSize:12, background:"#f0fdf4", color:"#15803d", border:"1px solid #bbf7d0", padding:"4px 12px", borderRadius:100 }}>✓ {user.email}</span>
-                </div>
-
-                <div style={{ padding:"28px", display:"flex", flexDirection:"column", gap:20 }}>
-                  <div className="two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-                    <Field label="Intitulé du poste" required>
-                      <input style={IS} placeholder="Développeur Full Stack" value={form.title} onChange={set("title")}/>
-                    </Field>
-                    <Field label="Entreprise" required>
-                      <input style={IS} placeholder="Capgemini Maroc" value={form.company} onChange={set("company")}/>
-                    </Field>
-                  </div>
-                  <div className="two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-                    <Field label="Ville" required>
-                      <select style={IS} value={form.city} onChange={set("city")}>
-                        <option value="">Sélectionnez...</option>
-                        {CITIES.map(c=><option key={c}>{c}</option>)}
-                      </select>
-                    </Field>
-                    <Field label="Secteur">
-                      <select style={IS} value={form.sector} onChange={set("sector")}>
-                        <option value="">Sélectionnez...</option>
-                        {SECTORS.map(s=><option key={s}>{s}</option>)}
-                      </select>
-                    </Field>
-                  </div>
-                  <div className="two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-                    <Field label="Type de contrat" required>
-                      <select style={IS} value={form.contract_type} onChange={set("contract_type")}>
-                        <option value="">Sélectionnez...</option>
-                        {CONTRACTS.map(c=><option key={c}>{c}</option>)}
-                      </select>
-                    </Field>
-                    <Field label="Salaire">
-                      <input style={IS} placeholder="8 000 – 12 000 DH / mois" value={form.salary} onChange={set("salary")}/>
-                    </Field>
-                  </div>
-                  <Field label="Description du poste">
-                    <textarea style={{ ...IS, resize:"vertical", lineHeight:1.65 } as React.CSSProperties} rows={7}
-                      placeholder={"Missions :\n• Mission 1\n\nProfil recherché :\n• Critère 1\n\nAvantages :\n• ..."}
-                      value={form.description} onChange={set("description")}/>
-                  </Field>
-                  <div className="two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-                    <Field label="Lien de candidature">
-                      <input style={IS} placeholder="https://votresite.ma/postuler" value={form.original_url} onChange={set("original_url")}/>
-                    </Field>
-                    <Field label="URL du logo">
-                      <input style={IS} placeholder="https://...logo.png" value={form.logo_url} onChange={set("logo_url")}/>
-                      {form.logo_url && (
-                        <img src={form.logo_url} alt="" style={{ width:36, height:36, borderRadius:6, objectFit:"contain", marginTop:8, border:"1px solid #e5e7eb" }}
-                          onError={e=>(e.currentTarget.style.display="none")}/>
-                      )}
-                    </Field>
-                  </div>
-                  {error && (
-                    <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"12px 16px", fontSize:13, color:"#dc2626" }}>⚠ {error}</div>
-                  )}
-                  <div style={{ display:"flex", justifyContent:"flex-end", gap:10, paddingTop:4 }}>
-                    <button onClick={()=>{ setForm(EMPTY); setError(null); }}
-                      style={{ background:"none", border:"1.5px solid #e5e7eb", borderRadius:9, padding:"11px 20px", fontSize:14, fontWeight:600, color:"#374151", cursor:"pointer", fontFamily:"inherit" }}>
-                      Réinitialiser
-                    </button>
-                    <button onClick={handleSubmit} disabled={submitting}
-                      style={{ background:"#16a34a", color:"white", padding:"11px 24px", borderRadius:9, border:"none", fontFamily:"inherit", fontSize:14, fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:7, opacity:submitting?0.7:1, transition:"all .18s" }}>
-                      {submitting ? "Publication…" : "📢 Publier l'offre →"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div style={{ textAlign:"center" }}>
-                <a href="/employeur/dashboard" style={{ fontSize:13, color:"#16a34a", fontWeight:600, textDecoration:"none" }}>
-                  📊 Gérer mes offres et candidatures →
-                </a>
+              <div style={{ marginTop:14, background:"#fffbeb", border:"1.5px solid #fde68a", borderRadius:10, padding:"12px 16px", fontSize:12, color:"#92400e", lineHeight:1.6 }}>
+                💡 <strong>Emails des candidats :</strong> Allez dans <strong>Supabase Dashboard → Authentication → Users</strong> et cherchez par <code style={{ background:"rgba(0,0,0,.06)", padding:"1px 4px", borderRadius:3 }}>user_id</code> pour retrouver l'email correspondant.
               </div>
             </div>
           )}
         </div>
-        <footer style={{ background:"#0f172a", padding:"20px 24px", textAlign:"center" }}>
-          <span style={{ fontSize:12, color:"rgba(255,255,255,.25)" }}>© 2026 Talent Maroc</span>
-        </footer>
       </div>
+
+      {/* ── EDIT MODAL ── */}
+      {editJob&&(
+        <div className="modal-bg" onClick={()=>setEditJob(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div style={{ padding:"20px 24px", borderBottom:"1.5px solid #f0f0f0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div><div style={{ fontSize:15, fontWeight:800 }}>Modifier l'offre</div><div style={{ fontSize:12, color:"#6b7280" }}>{editJob.title}</div></div>
+              <button onClick={()=>setEditJob(null)} style={{ background:"none", border:"none", fontSize:20, color:"#9ca3af", cursor:"pointer" }}>×</button>
+            </div>
+            <div style={{ padding:"22px", display:"flex", flexDirection:"column", gap:14 }}>
+              <div className="edit-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <EF label="Titre" required><input style={EIS} value={editForm.title||""} onChange={setEF("title")}/></EF>
+                <EF label="Entreprise" required><input style={EIS} value={editForm.company||""} onChange={setEF("company")}/></EF>
+              </div>
+              <div className="edit-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <EF label="Ville"><select style={EIS} value={editForm.city||""} onChange={setEF("city")}><option value="">...</option>{CITIES.map(c=><option key={c}>{c}</option>)}</select></EF>
+                <EF label="Secteur"><select style={EIS} value={editForm.sector||""} onChange={setEF("sector")}><option value="">...</option>{SECTORS.map(s=><option key={s}>{s}</option>)}</select></EF>
+              </div>
+              <div className="edit-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <EF label="Contrat"><select style={EIS} value={editForm.contract_type||""} onChange={setEF("contract_type")}><option value="">...</option>{CONTRACTS.map(c=><option key={c}>{c}</option>)}</select></EF>
+                <EF label="Salaire"><input style={EIS} placeholder="8 000 – 12 000 DH" value={editForm.salary||""} onChange={setEF("salary")}/></EF>
+              </div>
+              <EF label="Description"><textarea style={{ ...EIS, resize:"vertical", lineHeight:1.6 } as React.CSSProperties} rows={5} value={editForm.description||""} onChange={setEF("description")}/></EF>
+              <div className="edit-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <EF label="Lien candidature"><input style={EIS} placeholder="https://..." value={editForm.original_url||""} onChange={setEF("original_url")}/></EF>
+                <EF label="URL logo"><input style={EIS} placeholder="https://..." value={editForm.logo_url||""} onChange={setEF("logo_url")}/></EF>
+              </div>
+              <div style={{ display:"flex", justifyContent:"flex-end", gap:10 }}>
+                <button className="btn btn-outline" onClick={()=>setEditJob(null)}>Annuler</button>
+                <button className="btn btn-green" onClick={saveEdit} disabled={saving}>{saving?"Sauvegarde…":"💾 Sauvegarder"}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DELETE CONFIRM ── */}
+      {delId&&(
+        <div className="modal-bg" onClick={()=>setDelId(null)}>
+          <div style={{ background:"white", borderRadius:14, padding:"32px 28px", maxWidth:340, width:"100%", textAlign:"center", boxShadow:"0 20px 50px rgba(0,0,0,.2)" }} onClick={e=>e.stopPropagation()}>
+            <div style={{ fontSize:36, marginBottom:12 }}>🗑</div>
+            <h3 style={{ fontSize:16, fontWeight:800, marginBottom:8 }}>Supprimer cette offre ?</h3>
+            <p style={{ fontSize:13, color:"#6b7280", marginBottom:22 }}>Action irréversible.</p>
+            <div style={{ display:"flex", gap:10, justifyContent:"center" }}>
+              <button className="btn btn-outline" onClick={()=>setDelId(null)}>Annuler</button>
+              <button onClick={doDelete} style={{ background:"#dc2626", color:"white", padding:"9px 18px", borderRadius:8, border:"none", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>Supprimer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

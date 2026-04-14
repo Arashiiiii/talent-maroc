@@ -77,8 +77,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const sb = getSB();
-    sb.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { window.location.href = "/auth/login?redirect=/dashboard"; return; }
+    // Use getSession() — reads from localStorage (browser client)
+    // getUser() hits the network and fails if no cookie session exists
+    sb.auth.getSession().then(({ data: { session } }: any) => {
+      if (!session) { window.location.href = "/auth/login?redirect=/dashboard"; return; }
+      const user = session.user;
       setUser(user);
       setPName(user.user_metadata?.name || "");
       loadApps(user.id);
