@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 function getSB() {
@@ -21,8 +21,8 @@ interface Application {
 }
 
 interface SavedCV {
-  id: string; name: string; type: "generated" | "imported";
-  template: string; created_at: string; thumbnail?: string;
+  id: string; name: string; type: "generated" | "imported" | "uploaded";
+  template: string; created_at: string; url?: string;
 }
 
 const STATUS: Record<AppStatus, { label: string; color: string; bg: string; border: string; icon: string }> = {
@@ -33,7 +33,7 @@ const STATUS: Record<AppStatus, { label: string; color: string; bg: string; bord
   rejected:  { label: "Refusée",      color: "#991b1b", bg: "#fef2f2",  border: "#fecaca",  icon: "✗"  },
 };
 
-// ── COMPONENTS — outside to prevent remount ────────────────────────────────
+// ── OUTSIDE COMPONENT (no remount) ─────────────────────────────────────────
 function Badge({ status }: { status: AppStatus }) {
   const s = STATUS[status];
   return (
@@ -44,13 +44,11 @@ function Badge({ status }: { status: AppStatus }) {
 }
 
 function Logo({ name, url }: { name: string; url?: string | null }) {
-  if (url) {
-    return (
-      <div style={{ width: 42, height: 42, borderRadius: 10, background: "#f8fafc", border: "1.5px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
-        <img src={url} alt="" style={{ width: 32, height: 32, objectFit: "contain" }} onError={e => { e.currentTarget.parentElement!.innerHTML = `<div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#16a34a">${name.charAt(0)}</div>`; }} />
-      </div>
-    );
-  }
+  if (url) return (
+    <div style={{ width: 42, height: 42, borderRadius: 10, background: "#f8fafc", border: "1.5px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+      <img src={url} alt="" style={{ width: 32, height: 32, objectFit: "contain" }} onError={e => { e.currentTarget.parentElement!.innerHTML = `<div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#16a34a">${name.charAt(0)}</div>`; }} />
+    </div>
+  );
   return (
     <div style={{ width: 42, height: 42, borderRadius: 10, background: "#f0fdf4", border: "1.5px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#16a34a", flexShrink: 0 }}>
       {name.charAt(0).toUpperCase()}
@@ -60,33 +58,51 @@ function Logo({ name, url }: { name: string; url?: string | null }) {
 
 // ── MAIN ───────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
-  const [user,    setUser]    = useState<any>(null);
-  const [apps,    setApps]    = useState<Application[]>([]);
-  const [cvs,     setCvs]     = useState<SavedCV[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [tab,     setTab]     = useState<Tab>("overview");
-  const [search,  setSearch]  = useState("");
-  const [sf,      setSf]      = useState<AppStatus | "all">("all");
-  const [editApp, setEditApp] = useState<Application | null>(null);
-  const [editNotes, setEditNotes]   = useState("");
+  const [user,       setUser]       = useState<any>(null);
+  const [apps,       setApps]       = useState<Application[]>([]);
+  const [cvs,        setCvs]        = useState<SavedCV[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [tab,        setTab]        = useState<Tab>("overview");
+  const [search,     setSearch]     = useState("");
+  const [sf,         setSf]         = useState<AppStatus | "all">("all");
+  const [editApp,    setEditApp]    = useState<Application | null>(null);
+  const [editNotes,  setEditNotes]  = useState("");
   const [editStatus, setEditStatus] = useState<AppStatus>("applied");
-  const [saving,  setSaving]  = useState(false);
-  const [pName,   setPName]   = useState("");
-  const [pSaving, setPSaving] = useState(false);
-  const [pMsg,    setPMsg]    = useState<string | null>(null);
+  const [saving,     setSaving]     = useState(false);
+  const [pName,      setPName]      = useState("");
+  const [pSaving,    setPSaving]    = useState(false);
+  const [pMsg,       setPMsg]       = useState<string | null>(null);
+  // CV upload state
+  const [cvUploading,  setCvUploading]  = useState(false);
+  const [cvUploadErr,  setCvUploadErr]  = useState<string | null>(null);
+  const [cvUploadMsg,  setCvUploadMsg]  = useState<string | null>(null);
+  const [storedCvUrl,  setStoredCvUrl]  = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const sb = getSB();
-    // Use getSession() — reads from localStorage (browser client)
-    // getUser() hits the network and fails if no cookie session exists
-    sb.auth.getSession().then(({ data: { session } }: any) => {
-      if (!session) { window.location.href = "/auth/login?redirect=/dashboard"; return; }
-      const user = session.user;
+
+    // Auth state listener — handles global logout across tabs
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT" || !session) {
+        window.location.href = "/auth/login?redirect=/dashboard";
+      }
+    });
+
+    sb.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { window.location.href = "/auth/login?redirect=/dashboard"; return; }
+      // Role guard: employers use their own dashboard
+      if (user.user_metadata?.role === "employer") {
+        window.location.href = "/employeur/dashboard"; return;
+      }
       setUser(user);
       setPName(user.user_metadata?.name || "");
+      setStoredCvUrl(user.user_metadata?.cv_url || null);
       loadApps(user.id);
       loadCVs(user.id);
     });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const loadApps = useCallback(async (uid: string) => {
@@ -102,13 +118,51 @@ export default function DashboardPage() {
     } catch { /* ignore */ }
   }, []);
 
-  // Stats
-  const total  = apps.length;
-  const active = apps.filter(a => ["applied", "interview"].includes(a.status)).length;
+  // ── CV UPLOAD ──────────────────────────────────────────────────────────
+  const handleCVUpload = async (file: File) => {
+    if (!file) return;
+    if (file.type !== "application/pdf") { setCvUploadErr("Seuls les fichiers PDF sont acceptés."); return; }
+    if (file.size > 10 * 1024 * 1024) { setCvUploadErr("Fichier trop volumineux (max 10 Mo)."); return; }
+
+    setCvUploading(true); setCvUploadErr(null); setCvUploadMsg(null);
+    const sb = getSB();
+    const path = `${user.id}/cv_${Date.now()}.pdf`;
+
+    const { error: upErr } = await sb.storage.from("cvs").upload(path, file, { upsert: true, contentType: "application/pdf" });
+    if (upErr) { setCvUploadErr(upErr.message); setCvUploading(false); return; }
+
+    const { data: { publicUrl } } = sb.storage.from("cvs").getPublicUrl(path);
+
+    // Save URL to user metadata
+    const { error: metaErr } = await sb.auth.updateUser({ data: { cv_url: publicUrl, cv_filename: file.name } });
+    if (metaErr) { setCvUploadErr(metaErr.message); setCvUploading(false); return; }
+
+    setStoredCvUrl(publicUrl);
+
+    // Also save to localStorage CVs list
+    const newCV: SavedCV = {
+      id: path,
+      name: file.name.replace(/\.pdf$/i, ""),
+      type: "uploaded",
+      template: "PDF importé",
+      created_at: new Date().toISOString(),
+      url: publicUrl,
+    };
+    const next = [newCV, ...cvs.filter(c => c.type !== "uploaded")];
+    setCvs(next);
+    localStorage.setItem(`tm_cvs_${user.id}`, JSON.stringify(next));
+
+    setCvUploadMsg("CV importé avec succès ✓");
+    setCvUploading(false);
+    setTimeout(() => setCvUploadMsg(null), 4000);
+  };
+
+  // ── STATS ──────────────────────────────────────────────────────────────
+  const total      = apps.length;
+  const active     = apps.filter(a => ["applied", "interview"].includes(a.status)).length;
   const interviews = apps.filter(a => a.status === "interview").length;
   const offers     = apps.filter(a => a.status === "offer").length;
 
-  // Filtered apps
   const filtered = apps.filter(a => {
     const okStatus = sf === "all" || a.status === sf;
     const q = search.toLowerCase();
@@ -143,6 +197,11 @@ export default function DashboardPage() {
     setTimeout(() => setPMsg(null), 3000);
   };
 
+  const signOut = async () => {
+    await getSB().auth.signOut();
+    window.location.href = "/";
+  };
+
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
       <div style={{ textAlign: "center" }}>
@@ -153,7 +212,7 @@ export default function DashboardPage() {
     </div>
   );
 
-  const IS: React.CSSProperties = { border: "1.5px solid #e5e7eb", borderRadius: 9, padding: "10px 13px", width: "100%", fontSize: 13, fontFamily: "inherit", color: "#0f172a", background: "white", outline: "none" };
+  const IS2: React.CSSProperties = { border: "1.5px solid #e5e7eb", borderRadius: 9, padding: "10px 13px", width: "100%", fontSize: 13, fontFamily: "inherit", color: "#0f172a", background: "white", outline: "none" };
 
   return (
     <>
@@ -182,6 +241,8 @@ export default function DashboardPage() {
         .modal{background:white;border-radius:16px;width:100%;max-width:500px;box-shadow:0 24px 60px rgba(0,0,0,.2);overflow:hidden}
         .ghost{background:none;border:none;cursor:pointer;padding:6px;border-radius:7px;color:#9ca3af;font-family:inherit;font-size:13px;display:inline-flex;align-items:center;transition:all .15s}
         .ghost:hover{background:#f3f4f6;color:#374151}
+        .upload-zone{border:2px dashed #d1d5db;border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:all .2s}
+        .upload-zone:hover{border-color:#16a34a;background:#f0fdf4}
         @media(max-width:640px){.sgrid{grid-template-columns:1fr 1fr!important}.hide-sm{display:none!important}.tabs{overflow-x:auto;scrollbar-width:none}}
       `}</style>
 
@@ -204,7 +265,7 @@ export default function DashboardPage() {
             <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#f0fdf4", border: "1.5px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#15803d", marginLeft: 4 }}>
               {(pName || user?.email || "?").charAt(0).toUpperCase()}
             </div>
-            <button onClick={() => getSB().auth.signOut().then(() => { window.location.href = "/"; })}
+            <button onClick={signOut}
               style={{ background: "none", border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: "#374151", cursor: "pointer", fontFamily: "inherit" }}>
               Déconnexion
             </button>
@@ -221,6 +282,7 @@ export default function DashboardPage() {
                 </h1>
                 <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 3 }}>
                   {total} candidature{total !== 1 ? "s" : ""} · {cvs.length} CV sauvegardé{cvs.length !== 1 ? "s" : ""}
+                  {storedCvUrl && <span style={{ color: "#16a34a", marginLeft: 8 }}>· ✅ CV importé</span>}
                 </p>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
@@ -230,10 +292,10 @@ export default function DashboardPage() {
             </div>
             <div className="tabs" style={{ display: "flex", gap: 0 }}>
               {([
-                ["overview",      "📊 Vue d'ensemble"],
-                ["applications",  `💼 Candidatures (${total})`],
-                ["cvs",           `📄 Mes CVs (${cvs.length})`],
-                ["profile",       "👤 Mon profil"],
+                ["overview",     "📊 Vue d'ensemble"],
+                ["applications", `💼 Candidatures (${total})`],
+                ["cvs",          `📄 Mes CVs (${cvs.length})`],
+                ["profile",      "👤 Mon profil"],
               ] as const).map(([t, l]) => (
                 <button key={t} className={`tab${tab === t ? " on" : ""}`} onClick={() => setTab(t)}>{l}</button>
               ))}
@@ -246,7 +308,6 @@ export default function DashboardPage() {
           {/* ── OVERVIEW ── */}
           {tab === "overview" && (
             <div className="au">
-              {/* Stats row */}
               <div className="sgrid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
                 {[
                   { icon: "💼", label: "Total candidatures", val: total,      c: "#16a34a" },
@@ -264,6 +325,39 @@ export default function DashboardPage() {
                 ))}
               </div>
 
+              {/* CV banner */}
+              {storedCvUrl ? (
+                <div className="card" style={{ padding: "18px 22px", marginBottom: 16, background: "linear-gradient(135deg,#f0fdf4,#dcfce7)", border: "1.5px solid #bbf7d0" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <span style={{ fontSize: 28 }}>📄</span>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#15803d" }}>Votre CV est prêt à l'emploi</div>
+                        <div style={{ fontSize: 12, color: "#4b7c59" }}>Importé · Joints automatiquement lors de vos candidatures</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <a href={storedCvUrl} target="_blank" rel="noopener noreferrer" className="bo" style={{ fontSize: 12 }}>👁 Voir le CV</a>
+                      <button className="bg" style={{ fontSize: 12 }} onClick={() => { setTab("cvs"); }}>Gérer les CVs</button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="card" style={{ padding: "18px 22px", marginBottom: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 32 }}>📄</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3 }}>Importez votre CV</div>
+                      <div style={{ fontSize: 12, color: "#6b7280" }}>Joignez votre CV aux candidatures pour augmenter vos chances.</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button className="bg" style={{ fontSize: 12 }} onClick={() => setTab("cvs")}>📂 Importer un CV</button>
+                      <a href="/cv" className="bo" style={{ fontSize: 12 }}>✦ Créer avec l'IA</a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Pipeline */}
               <div className="card" style={{ padding: "20px 22px", marginBottom: 16 }}>
                 <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 14 }}>Pipeline de candidatures</h3>
@@ -277,9 +371,9 @@ export default function DashboardPage() {
                       const count = apps.filter(a => a.status === key).length;
                       return (
                         <div key={key} onClick={() => { setTab("applications"); setSf(key); }}
-                          style={{ flex: 1, minWidth: 85, background: cfg.bg, border: `1.5px solid ${cfg.border}`, borderRadius: 10, padding: "12px 14px", textAlign: "center", cursor: "pointer", transition: "transform .15s, box-shadow .15s" }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 12px rgba(0,0,0,.08)"; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}>
+                          style={{ flex: 1, minWidth: 85, background: cfg.bg, border: `1.5px solid ${cfg.border}`, borderRadius: 10, padding: "12px 14px", textAlign: "center", cursor: "pointer", transition: "transform .15s" }}
+                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"}
+                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = "none"}>
                           <div style={{ fontSize: 22, fontWeight: 800, color: cfg.color }}>{count}</div>
                           <div style={{ fontSize: 10, fontWeight: 700, color: cfg.color, marginTop: 2 }}>{cfg.icon} {cfg.label}</div>
                         </div>
@@ -289,43 +383,7 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* CVs preview */}
-              <div className="card" style={{ padding: "20px 22px", marginBottom: 16 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 800 }}>Mes CVs</h3>
-                  <a href="/cv" className="bg" style={{ fontSize: 11, padding: "6px 14px" }}>✦ Nouveau CV</a>
-                </div>
-                {cvs.length === 0 ? (
-                  <div style={{ background: "linear-gradient(135deg,#f0fdf4,#dcfce7)", border: "1.5px solid #bbf7d0", borderRadius: 10, padding: "20px", display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 32 }}>📄</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#15803d", marginBottom: 4 }}>Aucun CV sauvegardé</div>
-                      <div style={{ fontSize: 12, color: "#4b7c59", lineHeight: 1.5 }}>Créez un CV avec l'IA ou importez un CV existant. Ils apparaîtront ici et vous pourrez les utiliser pour postuler.</div>
-                    </div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <a href="/cv" className="bg" style={{ fontSize: 12 }}>✦ Générer avec l'IA</a>
-                      <a href="/cv" className="bo" style={{ fontSize: 12 }}>📂 Importer</a>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    {cvs.slice(0, 3).map(cv => (
-                      <div key={cv.id} style={{ flex: 1, minWidth: 160, background: "#f9fafb", border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "14px 16px" }}>
-                        <div style={{ fontSize: 20, marginBottom: 7 }}>{cv.type === "generated" ? "✦" : "📄"}</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{cv.name}</div>
-                        <div style={{ fontSize: 11, color: "#9ca3af" }}>{cv.template}</div>
-                      </div>
-                    ))}
-                    {cvs.length > 3 && (
-                      <div style={{ flex: 1, minWidth: 120, background: "#f9fafb", border: "1.5px dashed #e5e7eb", borderRadius: 10, padding: "14px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <button onClick={() => setTab("cvs")} className="ghost">+{cvs.length - 3} autres →</button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Recent applications */}
+              {/* Recent */}
               <div className="card" style={{ padding: "20px 22px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                   <h3 style={{ fontSize: 14, fontWeight: 800 }}>Candidatures récentes</h3>
@@ -417,29 +475,62 @@ export default function DashboardPage() {
             <div className="au">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
                 <div>
-                  <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 2 }}>Mes CVs sauvegardés</h2>
-                  <p style={{ fontSize: 13, color: "#6b7280" }}>CVs générés par IA ou importés via le CV Builder.</p>
+                  <h2 style={{ fontSize: 16, fontWeight: 800, marginBottom: 2 }}>Mes CVs</h2>
+                  <p style={{ fontSize: 13, color: "#6b7280" }}>Importez un CV PDF ou générez-en un avec l'IA.</p>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <a href="/cv" className="bo">📂 Importer un CV</a>
-                  <a href="/cv" className="bg">✦ Nouveau CV IA</a>
+                  <a href="/cv" className="bo">✦ Nouveau CV IA</a>
                 </div>
               </div>
 
+              {/* Upload zone */}
+              <div className="card" style={{ padding: "24px", marginBottom: 20 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>📂 Importer votre CV (PDF)</h3>
+                <p style={{ fontSize: 12, color: "#6b7280", marginBottom: 16 }}>Votre CV sera sauvegardé et joint automatiquement à vos candidatures. Max 10 Mo.</p>
+
+                <input ref={fileInputRef} type="file" accept=".pdf" style={{ display: "none" }}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleCVUpload(f); e.target.value = ""; }} />
+
+                <div className="upload-zone" onClick={() => fileInputRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = "#16a34a"; }}
+                  onDragLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#d1d5db"; }}
+                  onDrop={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = "#d1d5db"; const f = e.dataTransfer.files[0]; if (f) handleCVUpload(f); }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>{cvUploading ? "⏳" : "📤"}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 4 }}>
+                    {cvUploading ? "Import en cours…" : "Glissez votre CV ici ou cliquez pour sélectionner"}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#9ca3af" }}>PDF uniquement · Max 10 Mo</div>
+                </div>
+
+                {cvUploadErr && <div style={{ marginTop: 10, background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#dc2626" }}>⚠ {cvUploadErr}</div>}
+                {cvUploadMsg && <div style={{ marginTop: 10, background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#15803d" }}>✓ {cvUploadMsg}</div>}
+
+                {storedCvUrl && (
+                  <div style={{ marginTop: 14, background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 22 }}>📄</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#15803d" }}>CV actif</div>
+                        <div style={{ fontSize: 11, color: "#4b7c59" }}>Ce CV est joint automatiquement à vos candidatures</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <a href={storedCvUrl} target="_blank" rel="noopener noreferrer" className="bo" style={{ fontSize: 12 }}>👁 Voir</a>
+                      <a href={storedCvUrl} download className="bg" style={{ fontSize: 12 }}>⬇ Télécharger</a>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* AI-generated and uploaded CVs */}
               {cvs.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "56px 32px", background: "white", border: "2px dashed #e5e7eb", borderRadius: 14 }}>
+                <div style={{ textAlign: "center", padding: "48px 32px", background: "white", border: "2px dashed #e5e7eb", borderRadius: 14 }}>
                   <div style={{ fontSize: 48, marginBottom: 16 }}>📄</div>
                   <h3 style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>Aucun CV sauvegardé</h3>
-                  <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 24, maxWidth: 400, margin: "0 auto 24px", lineHeight: 1.7 }}>
-                    Créez un CV avec l'IA ou importez votre CV existant depuis le CV Builder. Ils apparaîtront ici pour être réutilisés lors de vos candidatures.
+                  <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 24, maxWidth: 360, margin: "0 auto 24px", lineHeight: 1.7 }}>
+                    Importez votre CV ci-dessus ou créez-en un avec notre générateur IA.
                   </p>
-                  <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-                    <a href="/cv" className="bg">✦ Générer mon CV avec l'IA</a>
-                    <a href="/cv" className="bo">📂 Importer un CV existant</a>
-                  </div>
-                  <div style={{ marginTop: 20, background: "#fffbeb", border: "1.5px solid #fde68a", borderRadius: 10, padding: "12px 16px", fontSize: 12, color: "#92400e", lineHeight: 1.6, maxWidth: 480, margin: "20px auto 0" }}>
-                    💡 <strong>Comment ça marche :</strong> Après avoir généré votre CV dans le CV Builder, il sera automatiquement sauvegardé ici. Vous pourrez ensuite l'utiliser directement pour postuler aux offres d'employeurs directs.
-                  </div>
+                  <a href="/cv" className="bg">✦ Générer mon CV avec l'IA</a>
                 </div>
               ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))", gap: 14 }}>
@@ -448,23 +539,41 @@ export default function DashboardPage() {
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 20px rgba(0,0,0,.08)"; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 4px rgba(0,0,0,.04)"; }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                        <div style={{ width: 44, height: 44, background: cv.type === "generated" ? "#eff6ff" : "#f0fdf4", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
-                          {cv.type === "generated" ? "✦" : "📄"}
+                        <div style={{ width: 44, height: 44, background: cv.type === "generated" ? "#eff6ff" : cv.type === "uploaded" ? "#f0fdf4" : "#fefce8", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+                          {cv.type === "generated" ? "✦" : cv.type === "uploaded" ? "📂" : "📄"}
                         </div>
                         <button onClick={() => { if (confirm(`Supprimer "${cv.name}" ?`)) deleteCV(cv.id); }} className="ghost" style={{ color: "#d1d5db" }}>🗑</button>
                       </div>
                       <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 3 }}>{cv.name}</div>
                       <div style={{ fontSize: 11, color: "#9ca3af", marginBottom: 14 }}>
-                        {cv.type === "generated" ? "✦ Généré par IA" : "📂 Importé"} · {cv.template || "Classique"} · {new Date(cv.created_at).toLocaleDateString("fr-FR")}
+                        {cv.type === "generated" ? "✦ IA" : cv.type === "uploaded" ? "📂 Importé" : "📄 Modèle"} · {new Date(cv.created_at).toLocaleDateString("fr-FR")}
                       </div>
                       <div style={{ display: "flex", gap: 7 }}>
-                        <a href="/cv" className="bg" style={{ flex: 1, padding: "8px", fontSize: 12, justifyContent: "center" }}>Modifier</a>
+                        {cv.url ? (
+                          <a href={cv.url} target="_blank" rel="noopener noreferrer" className="bg" style={{ flex: 1, padding: "8px", fontSize: 12, justifyContent: "center" }}>👁 Voir</a>
+                        ) : (
+                          <a href="/cv" className="bg" style={{ flex: 1, padding: "8px", fontSize: 12, justifyContent: "center" }}>Modifier</a>
+                        )}
                         <a href="/" className="bo" style={{ flex: 1, padding: "8px", fontSize: 12, justifyContent: "center" }}>Postuler</a>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
+
+              {/* AI Enhancement upsell */}
+              <div style={{ marginTop: 20, background: "linear-gradient(135deg,#0f172a,#1e3a5f)", borderRadius: 14, padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14 }}>
+                <div>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(22,163,74,.2)", border: "1px solid rgba(22,163,74,.3)", borderRadius: 100, padding: "3px 10px", marginBottom: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#4ade80" }}>✦ PRO</span>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "white", marginBottom: 4 }}>Améliorez votre CV avec l'IA</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,.6)", lineHeight: 1.5 }}>Notre IA analyse et réécrit votre CV pour maximiser vos chances. Adapté à chaque poste.</div>
+                </div>
+                <a href="/pricing" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#16a34a", color: "white", padding: "10px 20px", borderRadius: 9, fontSize: 13, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
+                  Voir les offres Pro →
+                </a>
+              </div>
             </div>
           )}
 
@@ -479,7 +588,7 @@ export default function DashboardPage() {
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 800 }}>{pName || user?.email?.split("@")[0]}</div>
                     <div style={{ fontSize: 12, color: "#9ca3af" }}>{user?.email}</div>
-                    <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 600, marginTop: 2 }}>✅ Compte actif</div>
+                    <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 600, marginTop: 2 }}>✅ Compte Candidat actif</div>
                   </div>
                 </div>
 
@@ -487,14 +596,33 @@ export default function DashboardPage() {
                   <div>
                     <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Prénom et Nom</label>
                     <input value={pName} onChange={e => setPName(e.target.value)} placeholder="Youssef Benali"
-                      style={{ border: "1.5px solid #e5e7eb", borderRadius: 9, padding: "11px 14px", width: "100%", fontSize: 14, fontFamily: "inherit", color: "#0f172a", background: "white", outline: "none" }} />
+                      style={IS2} />
                   </div>
                   <div>
                     <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Email</label>
                     <input value={user?.email || ""} disabled
-                      style={{ border: "1.5px solid #f0f0f0", borderRadius: 9, padding: "11px 14px", width: "100%", fontSize: 14, fontFamily: "inherit", color: "#9ca3af", background: "#f9fafb", outline: "none", cursor: "not-allowed" }} />
+                      style={{ ...IS2, color: "#9ca3af", background: "#f9fafb", cursor: "not-allowed" }} />
                     <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>L'email ne peut pas être modifié.</p>
                   </div>
+
+                  {/* CV in profile */}
+                  <div>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Mon CV</label>
+                    {storedCvUrl ? (
+                      <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 9, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <div style={{ fontSize: 13, color: "#15803d", fontWeight: 600 }}>📄 CV importé</div>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <a href={storedCvUrl} target="_blank" rel="noopener noreferrer" className="bo" style={{ fontSize: 11, padding: "4px 10px" }}>Voir</a>
+                          <button className="bo" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => setTab("cvs")}>Remplacer</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button className="bo" style={{ width: "100%", justifyContent: "center" }} onClick={() => setTab("cvs")}>
+                        📂 Importer un CV →
+                      </button>
+                    )}
+                  </div>
+
                   {pMsg && (
                     <div style={{ background: pMsg.includes("Erreur") ? "#fef2f2" : "#f0fdf4", border: `1.5px solid ${pMsg.includes("Erreur") ? "#fecaca" : "#bbf7d0"}`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: pMsg.includes("Erreur") ? "#dc2626" : "#15803d" }}>
                       {pMsg}
@@ -506,14 +634,14 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Account info */}
               <div className="card" style={{ padding: "20px 22px", marginBottom: 14 }}>
                 <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Informations du compte</h3>
                 {[
-                  ["📧 Email", user?.email],
-                  ["📅 Membre depuis", user?.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "—"],
-                  ["💼 Candidatures", `${total} au total`],
-                  ["📄 CVs sauvegardés", `${cvs.length} CV${cvs.length !== 1 ? "s" : ""}`],
+                  ["📧 Email",            user?.email],
+                  ["📅 Membre depuis",    user?.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "—"],
+                  ["💼 Candidatures",     `${total} au total`],
+                  ["📄 CVs sauvegardés",  `${cvs.length} CV${cvs.length !== 1 ? "s" : ""}`],
+                  ["🔖 Rôle",             "Candidat"],
                 ].map(([label, value]) => (
                   <div key={label as string} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 }}>
                     <span style={{ color: "#6b7280" }}>{label as string}</span>
@@ -522,13 +650,11 @@ export default function DashboardPage() {
                 ))}
               </div>
 
-              {/* Quick links */}
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <a href="/" className="bo">🏠 Accueil</a>
                 <a href="/cv" className="bo">✦ CV Builder</a>
-                <a href="/employeur" className="bo">🏢 Espace recruteur</a>
-                <button className="bo" style={{ color: "#dc2626", borderColor: "#fecaca" }}
-                  onClick={() => { if (confirm("Déconnexion ?")) getSB().auth.signOut().then(() => window.location.href = "/"); }}>
+                <a href="/pricing" className="bo">💎 Offres Pro</a>
+                <button className="bo" style={{ color: "#dc2626", borderColor: "#fecaca" }} onClick={signOut}>
                   Déconnexion
                 </button>
               </div>
@@ -551,7 +677,7 @@ export default function DashboardPage() {
             </div>
             <div style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 8 }}>Statut de la candidature</label>
+                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 8 }}>Statut</label>
                 <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                   {(Object.entries(STATUS) as [AppStatus, any][]).map(([s, cfg]) => (
                     <button key={s} onClick={() => setEditStatus(s)}
@@ -564,7 +690,7 @@ export default function DashboardPage() {
               <div>
                 <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Notes personnelles</label>
                 <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={4}
-                  placeholder="Entretien prévu le... / Contact : ... / Points à préparer..."
+                  placeholder="Entretien prévu le… / Contact : … / Points à préparer…"
                   style={{ border: "1.5px solid #e5e7eb", borderRadius: 9, padding: "10px 13px", width: "100%", fontSize: 13, fontFamily: "inherit", color: "#0f172a", background: "white", outline: "none", resize: "vertical", lineHeight: 1.6 }} />
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>

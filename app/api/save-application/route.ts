@@ -1,18 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-// ── Create an authenticated Supabase client from the Bearer JWT ────────────
-// We create the client with the user's access token so all queries
-// run with auth.uid() set correctly — satisfying RLS policies.
 function createAuthClient(accessToken: string) {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      global: {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      },
-    }
+    { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
   );
 }
 
@@ -20,13 +13,11 @@ async function getUserFromRequest(req: NextRequest): Promise<{ user: any; sb: an
   const authHeader = req.headers.get("authorization");
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.slice(7);
-    // Create client with the token injected — this sets auth.uid() in RLS
     const sb = createAuthClient(token);
     const { data: { user }, error } = await sb.auth.getUser();
     if (user && !error) return { user, sb };
   }
 
-  // Fallback: cookie-based session (SSR)
   try {
     const { createServerClient } = await import('@supabase/ssr');
     const { cookies } = await import('next/headers');
@@ -51,14 +42,21 @@ export async function POST(req: NextRequest) {
     const { user, sb } = auth;
 
     const body = await req.json();
-    const { job_id, job_title, company, city, original_url, logo_url,
-            status = 'applied', notes, cv_version } = body;
+    const {
+      job_id, job_title, company, city, original_url, logo_url,
+      status = 'applied', notes, cv_version, cover_letter,
+    } = body;
 
     if (!job_title || !company) {
       return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 });
     }
 
-    // Check for existing application for this user + job
+    // Candidate info from user metadata
+    const candidate_email = user.email || null;
+    const candidate_name  = user.user_metadata?.name || null;
+    const cv_url          = user.user_metadata?.cv_url || null;
+
+    // Check for existing application
     let existingId: string | null = null;
     if (job_id) {
       const { data: existing } = await sb
@@ -74,15 +72,15 @@ export async function POST(req: NextRequest) {
     if (existingId) {
       ({ data, error } = await sb
         .from('applications')
-        .update({ status, notes, cv_version, updated_at: new Date().toISOString() })
+        .update({ status, notes, cv_version, cover_letter, cv_url, updated_at: new Date().toISOString() })
         .eq('id', existingId)
         .select().single());
     } else {
       ({ data, error } = await sb
         .from('applications')
         .insert({
-          user_id:    user.id,
-          job_id:     job_id || null,
+          user_id:         user.id,
+          job_id:          job_id || null,
           job_title,
           company,
           city,
@@ -91,7 +89,11 @@ export async function POST(req: NextRequest) {
           status,
           notes,
           cv_version,
-          applied_at: new Date().toISOString(),
+          cover_letter:    cover_letter || null,
+          candidate_email,
+          candidate_name,
+          cv_url,
+          applied_at:      new Date().toISOString(),
         })
         .select().single());
     }
@@ -111,14 +113,15 @@ export async function PATCH(req: NextRequest) {
     if (!auth) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     const { user, sb } = auth;
 
-    const { id, status, notes, cv_version } = await req.json();
+    const { id, status, notes, cv_version, cover_letter } = await req.json();
     if (!id) return NextResponse.json({ error: 'ID manquant' }, { status: 400 });
 
     const updates: Record<string, any> = { updated_at: new Date().toISOString() };
-    if (status !== undefined)     updates.status     = status;
-    if (notes !== undefined)      updates.notes      = notes;
-    if (cv_version !== undefined) updates.cv_version = cv_version;
-    if (status === 'applied')     updates.applied_at = new Date().toISOString();
+    if (status !== undefined)       updates.status       = status;
+    if (notes !== undefined)        updates.notes        = notes;
+    if (cv_version !== undefined)   updates.cv_version   = cv_version;
+    if (cover_letter !== undefined) updates.cover_letter = cover_letter;
+    if (status === 'applied')       updates.applied_at   = new Date().toISOString();
 
     const { data, error } = await sb
       .from('applications').update(updates)
