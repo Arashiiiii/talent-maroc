@@ -3,6 +3,7 @@ import { unstable_noStore as noStore } from 'next/cache';
 import { Suspense } from 'react';
 import { Search, MapPin, Briefcase, Clock, ChevronRight, Zap } from 'lucide-react';
 import CompanyLogo from '@/components/CompanyLogo';
+import NavbarAuth from '@/components/NavbarAuth';
 
 export const metadata = {
   title: 'Talent Maroc | Trouvez votre prochain job au Maroc',
@@ -250,7 +251,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
             </div>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <a href="/auth/login"    className="nl hide-sm">Connexion</a>
+            <NavbarAuth />
             <a href="/employeur/new" className="btn-green" style={{ padding:'8px 18px', fontSize:13 }}>Publier une offre</a>
           </div>
         </nav>
