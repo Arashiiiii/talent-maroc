@@ -472,9 +472,22 @@ export default function EmployeurDashboard() {
                     </button>
                   ))}
                 </div>
-                <div style={{ display:"flex", gap:8 }}>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                   <button className="btn btn-outline" onClick={()=>dlCSV("candidatures.csv",filteredApps.map(a=>({ "Nom":a.candidate_name||"—", "Email":a.candidate_email||"—", "Poste":a.job_title, "Ville":a.city||"—", "Statut":STATUS_CFG[a.status].label, "Date":a.applied_at||"", "Notes":a.notes||"", "CV":a.cv_url||"" })))}>
                     ⬇ CSV ({filteredApps.length})
+                  </button>
+                  <button className="btn btn-pro" style={{ background:"#0f172a", color:"white" }}
+                    title="Télécharger tous les CVs disponibles — Fonctionnalité Pro"
+                    onClick={()=>{
+                      const withCv = filteredApps.filter(a=>a.cv_url);
+                      if (!withCv.length) { setErr("Aucun CV disponible parmi les candidats filtrés."); return; }
+                      // Open each CV in a new tab (browsers may block multiple popups; CSV with links is the safe alternative)
+                      const rows = withCv.map(a=>({ "Nom":a.candidate_name||"—", "Email":a.candidate_email||"—", "Poste":a.job_title, "Lien CV":a.cv_url||"" }));
+                      dlCSV("cvs_liens.csv", rows);
+                      // Also open first CV directly
+                      withCv.forEach((a,i)=>{ if(i<5&&a.cv_url) setTimeout(()=>window.open(a.cv_url!,"_blank"),i*300); });
+                    }}>
+                    📦 CVs en lot ✦ Pro ({filteredApps.filter(a=>a.cv_url).length})
                   </button>
                   <button className="btn btn-pro" onClick={aiCompare} disabled={comparing}
                     title="Comparaison IA des candidats — Fonctionnalité Pro">

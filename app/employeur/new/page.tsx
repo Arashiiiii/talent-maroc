@@ -27,20 +27,30 @@ const IS: React.CSSProperties = {
   background: "white", outline: "none",
 };
 
+const FREE_JOB_LIMIT = 3;
+
 export default function NewJobPage() {
-  const [user,    setUser]    = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(false);
-  const [err,     setErr]     = useState<string | null>(null);
-  const [form,    setForm]    = useState({
+  const [user,      setUser]     = useState<any>(null);
+  const [loading,   setLoading]  = useState(true);
+  const [saving,    setSaving]   = useState(false);
+  const [err,       setErr]      = useState<string | null>(null);
+  const [jobCount,  setJobCount] = useState(0);
+  const [form,      setForm]     = useState({
     title: "", company: "", city: "", sector: "",
     contract_type: "", salary: "", description: "", logo_url: "",
   });
 
   useEffect(() => {
-    getSupabase().auth.getUser().then(({ data: { user } }) => {
+    const sb = getSupabase();
+    sb.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) { window.location.href = "/employeur"; return; }
       setUser(user);
+      // Count current active jobs for limit enforcement
+      const { count } = await sb
+        .from("jobs")
+        .select("id", { count: "exact", head: true })
+        .eq("employer_id", user.id);
+      setJobCount(count || 0);
       setLoading(false);
     });
   }, []);
@@ -125,6 +135,22 @@ export default function NewJobPage() {
             <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Nouvelle offre d'emploi</h1>
             <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 28 }}>Remplissez les informations ci-dessous pour publier votre offre.</p>
 
+            {/* Free plan job limit banner */}
+            {jobCount >= FREE_JOB_LIMIT && (
+              <div style={{ background: "#fffbeb", border: "1.5px solid #fde68a", borderRadius: 10, padding: "14px 18px", marginBottom: 20 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#92400e", marginBottom: 4 }}>
+                  Limite du plan Gratuit atteinte
+                </div>
+                <div style={{ fontSize: 13, color: "#78350f", lineHeight: 1.6, marginBottom: 10 }}>
+                  Vous avez {jobCount} offre{jobCount > 1 ? "s" : ""} publiée{jobCount > 1 ? "s" : ""}. Le plan Gratuit est limité à {FREE_JOB_LIMIT} offres actives.
+                  Passez au plan <strong>Pro Recruteur</strong> pour publier des offres illimitées.
+                </div>
+                <a href="/pricing" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg,#7c3aed,#4f46e5)", color: "white", padding: "9px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: "none" }}>
+                  ✦ Voir les offres Pro →
+                </a>
+              </div>
+            )}
+
             {err && (
               <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 10, padding: "12px 16px", marginBottom: 20, fontSize: 13, color: "#dc2626" }}>
                 ⚠ {err}
@@ -186,9 +212,9 @@ export default function NewJobPage() {
                   style={{ display: "inline-flex", alignItems: "center", padding: "10px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, background: "white", color: "#374151", border: "1.5px solid #e5e7eb", textDecoration: "none", cursor: "pointer" }}>
                   Annuler
                 </a>
-                <button type="submit" disabled={saving}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 24px", borderRadius: 8, fontSize: 13, fontWeight: 700, background: saving ? "#86efac" : "#16a34a", color: "white", border: "none", cursor: saving ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background .18s" }}>
-                  {saving ? "Publication…" : "Publier l'offre"}
+                <button type="submit" disabled={saving || jobCount >= FREE_JOB_LIMIT}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 24px", borderRadius: 8, fontSize: 13, fontWeight: 700, background: (saving || jobCount >= FREE_JOB_LIMIT) ? "#d1d5db" : "#16a34a", color: "white", border: "none", cursor: (saving || jobCount >= FREE_JOB_LIMIT) ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background .18s" }}>
+                  {saving ? "Publication…" : jobCount >= FREE_JOB_LIMIT ? "Limite atteinte" : "Publier l'offre"}
                 </button>
               </div>
             </form>

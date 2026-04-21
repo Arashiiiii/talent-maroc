@@ -24,20 +24,28 @@ const IS: React.CSSProperties = {
 };
 
 export default function EmployeurPage() {
-  const [mode,     setMode]     = useState<"login" | "signup">("login");
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [name,     setName]     = useState("");
-  const [company,  setCompany]  = useState("");
-  const [phone,    setPhone]    = useState("");
-  const [loading,  setLoading]  = useState(false);
-  const [checking, setChecking] = useState(true);
-  const [error,    setError]    = useState<string | null>(null);
+  const [mode,          setMode]         = useState<"login" | "signup">("login");
+  const [email,         setEmail]        = useState("");
+  const [password,      setPassword]     = useState("");
+  const [name,          setName]         = useState("");
+  const [company,       setCompany]      = useState("");
+  const [phone,         setPhone]        = useState("");
+  const [loading,       setLoading]      = useState(false);
+  const [checking,      setChecking]     = useState(true);
+  const [error,         setError]        = useState<string | null>(null);
+  const [candidateUser, setCandidateUser]= useState<any>(null); // logged-in candidate trying to access employer space
 
   useEffect(() => {
     getSB().auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        window.location.href = "/employeur/dashboard";
+        const role = user.user_metadata?.role;
+        if (role === "candidate") {
+          // Candidate trying to access employer space — show prompt
+          setCandidateUser(user);
+          setChecking(false);
+        } else {
+          window.location.href = "/employeur/dashboard";
+        }
       } else {
         setChecking(false);
       }
@@ -93,6 +101,68 @@ export default function EmployeurPage() {
       <div style={{ width: 32, height: 32, border: "3px solid #e5e7eb", borderTopColor: "#16a34a", borderRadius: "50%", animation: "spin .7s linear infinite" }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
+  );
+
+  // Candidate is logged in — show a prompt to create a separate employer account
+  if (candidateUser) return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f8fafc;color:#0f172a}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        .au{animation:fadeUp .4s cubic-bezier(.16,1,.3,1) both}
+      `}</style>
+      <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+        <div className="au" style={{ background: "white", border: "1.5px solid #f0f0f0", borderRadius: 18, padding: "40px 36px", maxWidth: 480, width: "100%", boxShadow: "0 4px 24px rgba(0,0,0,.06)", textAlign: "center" }}>
+
+          {/* Icon */}
+          <div style={{ width: 64, height: 64, background: "#fef3c7", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 20px" }}>
+            🏢
+          </div>
+
+          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 10 }}>
+            Espace Recruteurs
+          </h1>
+          <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.7, marginBottom: 8 }}>
+            Vous êtes connecté(e) en tant que <strong style={{ color: "#0f172a" }}>{candidateUser.email}</strong> (compte candidat).
+          </p>
+          <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.7, marginBottom: 28 }}>
+            L'espace recruteurs nécessite un <strong style={{ color: "#0f172a" }}>compte employeur séparé</strong>. Les deux espaces sont indépendants pour protéger vos données.
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {/* Primary: create employer account (sign out first) */}
+            <button
+              onClick={async () => {
+                await getSB().auth.signOut();
+                setMode("signup");
+                setCandidateUser(null);
+              }}
+              style={{ background: "#16a34a", color: "white", border: "none", borderRadius: 10, padding: "13px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              Créer un compte employeur
+            </button>
+
+            {/* Secondary: login with existing employer account */}
+            <button
+              onClick={async () => {
+                await getSB().auth.signOut();
+                setMode("login");
+                setCandidateUser(null);
+              }}
+              style={{ background: "white", color: "#374151", border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "13px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              J'ai déjà un compte employeur — Se connecter
+            </button>
+
+            {/* Return to candidate dashboard */}
+            <a href="/dashboard"
+              style={{ display: "block", fontSize: 13, color: "#9ca3af", textDecoration: "none", marginTop: 4, padding: "8px" }}>
+              ← Retour à mon espace candidat
+            </a>
+          </div>
+        </div>
+      </div>
+    </>
   );
 
   return (

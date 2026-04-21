@@ -1022,6 +1022,12 @@ export default function CVPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
+  // Check if free generation has already been used
+  useEffect(()=>{
+    const used = localStorage.getItem("tm_free_gen_used") === "1";
+    setFreeGenUsed(used);
+  },[]);
+
   // Keep refs in sync with latest state values
   useEffect(()=>{ uploadedBase64Ref.current  = uploadedBase64;  }, [uploadedBase64]);
   useEffect(()=>{ uploadedMimeRef.current    = uploadedMime;    }, [uploadedMime]);
@@ -1330,8 +1336,9 @@ Retourne UNIQUEMENT le JSON.`}];
 
   const [formValidErr, setFormValidErr] = useState<string|null>(null);
   const [jobContext,   setJobContext]   = useState<{title:string;company:string}|null>(null);
-  const [showJobChoice, setShowJobChoice] = useState(false);
-  const [userCvUrl,     setUserCvUrl]     = useState<string|null>(null);
+  const [showJobChoice,   setShowJobChoice]   = useState(false);
+  const [userCvUrl,       setUserCvUrl]       = useState<string|null>(null);
+  const [freeGenUsed,     setFreeGenUsed]     = useState(false); // has user already used their 1 free generation
 
   const handleFormContinue = () => {
     const err = validateForm();
@@ -1836,6 +1843,28 @@ Retourne UNIQUEMENT le JSON.`}];
                 <h2 style={{fontSize:18,fontWeight:800}}>3. Choisissez votre formule</h2>
                 <p style={{fontSize:13,color:"#6b7280",marginTop:4}}>Paiement sécurisé via Paddle · Visa, Mastercard, PayPal</p>
               </div>
+
+              {/* Free generation offer — shown only if not used yet */}
+              {!freeGenUsed && (
+                <div style={{background:"#f0fdf4",border:"2px solid #16a34a",borderRadius:14,padding:"20px 22px",marginBottom:20,display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:800,color:"#15803d",marginBottom:3}}>🎁 1 génération gratuite disponible</div>
+                    <div style={{fontSize:12,color:"#166534",lineHeight:1.6}}>
+                      Chaque compte bénéficie d'une génération de CV gratuite. Profitez-en maintenant.
+                    </div>
+                  </div>
+                  <button className="btn-green" onClick={()=>{
+                    localStorage.setItem("tm_free_gen_used","1");
+                    setFreeGenUsed(true);
+                    setPurchasedPlan(PLANS[0]);
+                    purchasedPlanRef.current = PLANS[0];
+                    runGeneration("ai");
+                  }} style={{whiteSpace:"nowrap",flexShrink:0}}>
+                    ✓ Utiliser ma génération gratuite →
+                  </button>
+                </div>
+              )}
+
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(250px,1fr))",gap:14,marginBottom:20}}>
                 {PLANS.map(plan=>{
                   const featured=plan.name==="Professionnel";

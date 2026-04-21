@@ -11,7 +11,7 @@ function getSB() {
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
 type AppStatus = "saved" | "applied" | "interview" | "offer" | "rejected";
-type Tab = "overview" | "applications" | "cvs" | "profile";
+type Tab = "overview" | "applications" | "cvs" | "outils" | "profile";
 
 interface Application {
   id: string; job_id: string | null; job_title: string; company: string;
@@ -72,6 +72,18 @@ export default function DashboardPage() {
   const [pName,      setPName]      = useState("");
   const [pSaving,    setPSaving]    = useState(false);
   const [pMsg,       setPMsg]       = useState<string | null>(null);
+  // AI tools state — cover letter
+  const [clJobTitle,   setClJobTitle]   = useState("");
+  const [clCompany,    setClCompany]    = useState("");
+  const [clDesc,       setClDesc]       = useState("");
+  const [clLoading,    setClLoading]    = useState(false);
+  const [clResult,     setClResult]     = useState<string|null>(null);
+  const [clErr,        setClErr]        = useState<string|null>(null);
+  // AI tools state — LinkedIn bio
+  const [liLoading,    setLiLoading]    = useState(false);
+  const [liResult,     setLiResult]     = useState<string|null>(null);
+  const [liErr,        setLiErr]        = useState<string|null>(null);
+
   // CV upload state
   const [cvUploading,  setCvUploading]  = useState(false);
   const [cvUploadErr,  setCvUploadErr]  = useState<string | null>(null);
@@ -295,6 +307,7 @@ export default function DashboardPage() {
                 ["overview",     "📊 Vue d'ensemble"],
                 ["applications", `💼 Candidatures (${total})`],
                 ["cvs",          `📄 Mes CVs (${cvs.length})`],
+                ["outils",       "✦ Outils IA"],
                 ["profile",      "👤 Mon profil"],
               ] as const).map(([t, l]) => (
                 <button key={t} className={`tab${tab === t ? " on" : ""}`} onClick={() => setTab(t)}>{l}</button>
@@ -572,6 +585,172 @@ export default function DashboardPage() {
                 </div>
                 <a href="/pricing" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#16a34a", color: "white", padding: "10px 20px", borderRadius: 9, fontSize: 13, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
                   Voir les offres Pro →
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* ── OUTILS IA ── */}
+          {tab === "outils" && (
+            <div className="au">
+
+              {/* ── COVER LETTER ── */}
+              <div className="card" style={{ padding:"24px 26px", marginBottom:16 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
+                  <span style={{ fontSize:20 }}>✉️</span>
+                  <h2 style={{ fontSize:16, fontWeight:800 }}>Lettre de motivation IA</h2>
+                  <span style={{ fontSize:11, fontWeight:700, background:"#16a34a", color:"white", padding:"2px 8px", borderRadius:100 }}>Pro</span>
+                </div>
+                <p style={{ fontSize:13, color:"#6b7280", marginBottom:20, lineHeight:1.6 }}>
+                  L'IA génère une lettre de motivation personnalisée pour le poste ciblé en se basant sur votre profil.
+                </p>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+                  <div>
+                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:5 }}>Poste visé *</label>
+                    <input value={clJobTitle} onChange={e=>setClJobTitle(e.target.value)} placeholder="ex: Développeur Full Stack"
+                      style={IS2}/>
+                  </div>
+                  <div>
+                    <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:5 }}>Entreprise *</label>
+                    <input value={clCompany} onChange={e=>setClCompany(e.target.value)} placeholder="ex: Maroc Telecom"
+                      style={IS2}/>
+                  </div>
+                </div>
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ fontSize:12, fontWeight:600, color:"#374151", display:"block", marginBottom:5 }}>Description du poste <span style={{ fontWeight:400, color:"#9ca3af" }}>(optionnel)</span></label>
+                  <textarea value={clDesc} onChange={e=>setClDesc(e.target.value)} rows={3}
+                    placeholder="Copiez-collez la description du poste pour une lettre encore plus ciblée…"
+                    style={{ ...IS2, resize:"vertical", lineHeight:1.6 }}/>
+                </div>
+                {clErr && <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:12, color:"#dc2626", marginBottom:12 }}>⚠ {clErr}</div>}
+                <button className="bg" disabled={clLoading || !clJobTitle.trim() || !clCompany.trim()}
+                  onClick={async ()=>{
+                    setClLoading(true); setClErr(null); setClResult(null);
+                    try {
+                      const res = await fetch("/api/generate-tools", {
+                        method:"POST", headers:{"Content-Type":"application/json"},
+                        body:JSON.stringify({
+                          type:"cover_letter",
+                          data:{
+                            name: pName || user?.email?.split("@")[0] || "",
+                            candidate_title: user?.user_metadata?.title || "",
+                            skills: user?.user_metadata?.skills || "",
+                            experience: user?.user_metadata?.experience || "",
+                            location: user?.user_metadata?.location || "Maroc",
+                            job_title: clJobTitle,
+                            company: clCompany,
+                            job_description: clDesc,
+                          }
+                        })
+                      });
+                      const json = await res.json();
+                      if (json.error) throw new Error(json.error);
+                      setClResult(json.result);
+                    } catch(e:any){ setClErr(e.message); }
+                    finally{ setClLoading(false); }
+                  }}>
+                  {clLoading ? "Génération…" : "✦ Générer ma lettre de motivation"}
+                </button>
+
+                {clResult && (
+                  <div style={{ marginTop:18 }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#15803d" }}>✓ Lettre générée</div>
+                      <div style={{ display:"flex", gap:6 }}>
+                        <button className="bo" style={{ fontSize:12, padding:"6px 12px" }}
+                          onClick={()=>{ navigator.clipboard.writeText(clResult); }}>
+                          📋 Copier
+                        </button>
+                        <button className="bo" style={{ fontSize:12, padding:"6px 12px" }}
+                          onClick={()=>{ const a=document.createElement("a"); a.href="data:text/plain;charset=utf-8,"+encodeURIComponent(clResult); a.download=`lettre_${clCompany.replace(/\s+/g,"_")}.txt`; a.click(); }}>
+                          ⬇ Télécharger
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ background:"#f8fafc", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"18px 20px", fontSize:13, color:"#374151", lineHeight:1.9, whiteSpace:"pre-wrap" }}>
+                      {clResult}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── LINKEDIN BIO ── */}
+              <div className="card" style={{ padding:"24px 26px", marginBottom:16 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
+                  <span style={{ fontSize:20 }}>💼</span>
+                  <h2 style={{ fontSize:16, fontWeight:800 }}>Résumé LinkedIn IA</h2>
+                  <span style={{ fontSize:11, fontWeight:700, background:"#16a34a", color:"white", padding:"2px 8px", borderRadius:100 }}>Pro</span>
+                </div>
+                <p style={{ fontSize:13, color:"#6b7280", marginBottom:20, lineHeight:1.6 }}>
+                  Générez une bio LinkedIn percutante basée sur votre profil pour maximiser votre visibilité.
+                </p>
+                {liErr && <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:12, color:"#dc2626", marginBottom:12 }}>⚠ {liErr}</div>}
+                <button className="bg" disabled={liLoading}
+                  onClick={async ()=>{
+                    setLiLoading(true); setLiErr(null); setLiResult(null);
+                    try {
+                      const res = await fetch("/api/generate-tools", {
+                        method:"POST", headers:{"Content-Type":"application/json"},
+                        body:JSON.stringify({
+                          type:"linkedin_bio",
+                          data:{
+                            name: pName || user?.email?.split("@")[0] || "",
+                            candidate_title: user?.user_metadata?.title || "",
+                            industry: user?.user_metadata?.industry || "",
+                            skills: user?.user_metadata?.skills || "",
+                            experience: user?.user_metadata?.experience || "",
+                            location: user?.user_metadata?.location || "Maroc",
+                          }
+                        })
+                      });
+                      const json = await res.json();
+                      if (json.error) throw new Error(json.error);
+                      setLiResult(json.result);
+                    } catch(e:any){ setLiErr(e.message); }
+                    finally{ setLiLoading(false); }
+                  }}>
+                  {liLoading ? "Génération…" : "✦ Générer mon résumé LinkedIn"}
+                </button>
+
+                {!pName && !user?.user_metadata?.title && (
+                  <div style={{ marginTop:10, fontSize:12, color:"#9ca3af" }}>
+                    💡 Complétez votre profil (onglet "Mon profil") pour une bio plus personnalisée.
+                  </div>
+                )}
+
+                {liResult && (
+                  <div style={{ marginTop:18 }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#15803d" }}>✓ Bio LinkedIn générée</div>
+                      <div style={{ display:"flex", gap:6 }}>
+                        <button className="bo" style={{ fontSize:12, padding:"6px 12px" }}
+                          onClick={()=>{ navigator.clipboard.writeText(liResult); }}>
+                          📋 Copier
+                        </button>
+                        <button className="bo" style={{ fontSize:12, padding:"6px 12px" }}
+                          onClick={()=>{ const a=document.createElement("a"); a.href="data:text/plain;charset=utf-8,"+encodeURIComponent(liResult); a.download="bio_linkedin.txt"; a.click(); }}>
+                          ⬇ Télécharger
+                        </button>
+                      </div>
+                    </div>
+                    <div style={{ background:"#f8fafc", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"18px 20px", fontSize:13, color:"#374151", lineHeight:1.9, whiteSpace:"pre-wrap" }}>
+                      {liResult}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── UPGRADE BANNER ── */}
+              <div style={{ background:"linear-gradient(135deg,#0f172a,#1e3a5f)", borderRadius:14, padding:"22px 26px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:16, flexWrap:"wrap" }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:800, color:"#4ade80", textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>✦ Candidat Pro · 49 MAD/mois</div>
+                  <div style={{ fontSize:14, fontWeight:800, color:"white", marginBottom:3 }}>Débloquez tous les outils IA</div>
+                  <div style={{ fontSize:12, color:"rgba(255,255,255,.5)", lineHeight:1.6 }}>
+                    CV amélioré · Lettre de motivation · Bio LinkedIn · Adaptation CV au poste
+                  </div>
+                </div>
+                <a href="/pricing" style={{ display:"inline-flex", alignItems:"center", gap:7, background:"#16a34a", color:"white", padding:"11px 20px", borderRadius:9, fontSize:13, fontWeight:700, textDecoration:"none", whiteSpace:"nowrap", flexShrink:0 }}>
+                  Voir les offres →
                 </a>
               </div>
             </div>
