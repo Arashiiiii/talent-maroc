@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { MapPin, Briefcase, Clock, ArrowLeft, ExternalLink, Building2, Globe, Zap } from 'lucide-react';
 import CompanyLogo from '@/components/CompanyLogo';
 import { SaveApplyButton } from '@/components/SaveApplyButton';
+import NavbarAuth from '@/components/NavbarAuth';
 
 export const metadata = {
   title: "Offre d'emploi | Talent Maroc",
@@ -16,6 +17,18 @@ function getSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
+}
+
+// ── DESCRIPTION FORMATTER ─────────────────────────────────────────────────
+// If the description already contains HTML tags, pass through as-is.
+// Otherwise treat as plain text and convert newlines to paragraph breaks.
+function formatDescription(desc: string): string {
+  if (/<[a-z]/i.test(desc)) return desc;
+  return desc
+    .split(/\n{2,}/)
+    .map(para => `<p>${para.replace(/\n/g, '<br/>')}</p>`)
+    .filter(p => p !== '<p></p>')
+    .join('');
 }
 
 // ── SKELETON ──────────────────────────────────────────────────────────────
@@ -130,7 +143,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
             Description du poste
           </h2>
           {job.description ? (
-            <div className="job-desc" dangerouslySetInnerHTML={{ __html: job.description }}/>
+            <div className="job-desc" dangerouslySetInnerHTML={{ __html: formatDescription(job.description) }}/>
           ) : (
             <div className="job-desc">
               <p><strong>{job.company}</strong> recrute un(e) <strong>{job.title}</strong> basé(e) à <strong>{job.city}</strong>.</p>
@@ -363,7 +376,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
             </div>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <a href="/auth/login"    className="nl hide-sm">Connexion</a>
+            <NavbarAuth />
             <a href="/employers/new" style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#16a34a', color:'white', padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:700, textDecoration:'none', transition:'all .18s' }}>
               Publier
             </a>

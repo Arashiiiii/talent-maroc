@@ -932,7 +932,6 @@ export default function CVPage() {
     if (match) {
       try {
         const job = Object.fromEntries(new URLSearchParams(match));
-        // Pre-fill job-specific fields and jump straight to create flow
         if (job.job_title) {
           setJobContext({ title: job.job_title, company: job.job_company || "" });
           setForm(prev => ({
@@ -941,7 +940,6 @@ export default function CVPage() {
             location: job.job_city     || prev.location,
             industry: job.job_sector   || prev.industry,
           }));
-          // Store job context so runGeneration can use it in the prompt
           sessionStorage.setItem("cv_job_context", JSON.stringify({
             title:    job.job_title    || "",
             company:  job.job_company  || "",
@@ -953,9 +951,33 @@ export default function CVPage() {
         }
         // Remove ?match= from URL cleanly
         window.history.replaceState({}, "", "/cv");
-        // Go straight to "create new" flow
-        setMode("ai");
-        setStep(2);
+
+        // Check if the user has an uploaded CV in their profile
+        const checkUserCv = async () => {
+          try {
+            const { createClient } = await import("@supabase/supabase-js");
+            const sb = createClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL!,
+              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            );
+            const { data: { user } } = await sb.auth.getUser();
+            const cvUrl = user?.user_metadata?.cv_url || null;
+            if (cvUrl) {
+              // User has a CV — show the choice modal
+              setUserCvUrl(cvUrl);
+              setShowJobChoice(true);
+            } else {
+              // No uploaded CV — go directly to manual fill
+              setMode("ai");
+              setStep(2);
+            }
+          } catch {
+            // Fallback: go directly to manual fill
+            setMode("ai");
+            setStep(2);
+          }
+        };
+        checkUserCv();
       } catch(e) {
         console.error("Failed to parse match params", e);
       }
@@ -1308,6 +1330,8 @@ Retourne UNIQUEMENT le JSON.`}];
 
   const [formValidErr, setFormValidErr] = useState<string|null>(null);
   const [jobContext,   setJobContext]   = useState<{title:string;company:string}|null>(null);
+  const [showJobChoice, setShowJobChoice] = useState(false);
+  const [userCvUrl,     setUserCvUrl]     = useState<string|null>(null);
 
   const handleFormContinue = () => {
     const err = validateForm();
@@ -1405,8 +1429,67 @@ Retourne UNIQUEMENT le JSON.`}];
         {/* ── MAIN ── */}
         <div style={{maxWidth:1080,margin:"0 auto",padding:"36px 20px 80px"}}>
 
+          {/* ─────── JOB CHOICE: use uploaded CV or fill manually ─────── */}
+          {showJobChoice && jobContext && (
+            <div className="au" style={{maxWidth:700,margin:"0 auto"}}>
+              <div style={{background:"linear-gradient(135deg,#0f172a,#1e3a5f)",borderRadius:14,padding:"22px 24px",marginBottom:24,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:11,fontWeight:800,color:"#4ade80",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:4}}>✦ CV IA Personnalisé</div>
+                  <div style={{fontSize:15,fontWeight:800,color:"white",marginBottom:2}}>
+                    Postuler pour : {jobContext.title}
+                  </div>
+                  <div style={{fontSize:12,color:"rgba(255,255,255,.5)"}}>
+                    chez {jobContext.company}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:6,textAlign:"center"}}>
+                Comment souhaitez-vous créer votre CV ?
+              </div>
+              <div style={{fontSize:13,color:"#6b7280",textAlign:"center",marginBottom:24}}>
+                Vous avez déjà un CV importé dans votre dashboard.
+              </div>
+
+              <div className="choice-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+
+                {/* Option A — use uploaded CV */}
+                <button className="choice-card" onClick={()=>{
+                  setShowJobChoice(false);
+                  // Pre-load the uploaded CV from their profile URL
+                  setUploadedFile("Mon CV (importé)");
+                  // Store the URL as text content so the AI can reference it
+                  setUploadedContent(`CV disponible à : ${userCvUrl}`);
+                  setMode("upload");
+                  setStep(2);
+                }}>
+                  <div style={{width:52,height:52,background:"#f0fdf4",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>📄</div>
+                  <div>
+                    <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:5}}>Utiliser mon CV importé</div>
+                    <div style={{fontSize:12,color:"#6b7280",lineHeight:1.6}}>L'IA adapte votre CV existant pour cibler exactement ce poste.</div>
+                  </div>
+                  <span style={{fontSize:11,fontWeight:700,background:"#f0fdf4",color:"#15803d",border:"1px solid #bbf7d0",padding:"3px 10px",borderRadius:100,alignSelf:"flex-start"}}>✓ Rapide · CV déjà chargé</span>
+                </button>
+
+                {/* Option B — fill manually */}
+                <button className="choice-card" onClick={()=>{
+                  setShowJobChoice(false);
+                  setMode("ai");
+                  setStep(2);
+                }}>
+                  <div style={{width:52,height:52,background:"#eff6ff",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>✏️</div>
+                  <div>
+                    <div style={{fontSize:16,fontWeight:800,color:"#0f172a",marginBottom:5}}>Remplir manuellement</div>
+                    <div style={{fontSize:12,color:"#6b7280",lineHeight:1.6}}>Saisissez vos informations et laissez l'IA rédiger un CV sur mesure.</div>
+                  </div>
+                  <span style={{fontSize:11,fontWeight:700,background:"#eff6ff",color:"#1d4ed8",border:"1px solid #bfdbfe",padding:"3px 10px",borderRadius:100,alignSelf:"flex-start"}}>✓ Contrôle total</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ─────── ENTRY POINT: choose action ─────── */}
-          {step===1 && mode==="upload" && (
+          {step===1 && mode==="upload" && !showJobChoice && (
             <div className="au">
               <div className="choice-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,maxWidth:700,margin:"0 auto"}}>
 

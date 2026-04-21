@@ -79,7 +79,7 @@ export function SaveApplyButton({ job }: { job: any }) {
           city:         job.city,
           original_url: job.original_url,
           logo_url:     job.logo_url || null,
-          status:       "applied",
+          status:       "saved",
         }),
       });
       if (res.ok) {
