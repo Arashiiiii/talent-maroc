@@ -1454,12 +1454,33 @@ Retourne UNIQUEMENT le JSON.`}];
               <div className="choice-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
 
                 {/* Option A — use uploaded CV */}
-                <button className="choice-card" onClick={()=>{
+                <button className="choice-card" onClick={async ()=>{
                   setShowJobChoice(false);
-                  // Pre-load the uploaded CV from their profile URL
-                  setUploadedFile("Mon CV (importé)");
-                  // Store the URL as text content so the AI can reference it
-                  setUploadedContent(`CV disponible à : ${userCvUrl}`);
+                  setUploadedFile("Mon CV (chargement…)");
+                  setUploadError(null);
+                  try {
+                    // Fetch the PDF from Supabase Storage and convert to base64
+                    const res = await fetch(userCvUrl!);
+                    if (!res.ok) throw new Error("Impossible de charger le CV.");
+                    const blob = await res.blob();
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                      const dataUrl = e.target?.result as string;
+                      const b64 = dataUrl.split(",")[1];
+                      setUploadedBase64(b64);
+                      uploadedBase64Ref.current = b64;
+                      setUploadedMime("application/pdf");
+                      uploadedMimeRef.current = "application/pdf";
+                      setUploadedContent("");
+                      uploadedContentRef.current = "";
+                      setUploadedFile("Mon CV importé (profil)");
+                    };
+                    reader.readAsDataURL(blob);
+                  } catch {
+                    setUploadedFile("Mon CV (profil)");
+                    setUploadedContent(userCvUrl!);
+                    uploadedContentRef.current = userCvUrl!;
+                  }
                   setMode("upload");
                   setStep(2);
                 }}>
