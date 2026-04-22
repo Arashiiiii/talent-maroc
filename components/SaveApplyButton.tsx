@@ -144,6 +144,16 @@ export function SaveApplyButton({ job }: { job: any }) {
     </div>
   );
 
+  // Employers can view jobs but cannot apply or save them
+  if (user?.user_metadata?.role === "employer") return (
+    <div style={{ background:"#f8fafc", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"12px 15px", textAlign:"center" }}>
+      <div style={{ fontSize:12, fontWeight:600, color:"#6b7280", marginBottom:4 }}>Espace recruteur</div>
+      <div style={{ fontSize:12, color:"#9ca3af", lineHeight:1.5 }}>
+        Les comptes recruteurs ne peuvent pas postuler aux offres.
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
 
