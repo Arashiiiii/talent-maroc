@@ -18,9 +18,9 @@ function Field({ label, required, children }: { label: string; required?: boolea
 }
 
 const IS: React.CSSProperties = {
-  border: "1.5px solid #e5e7eb", borderRadius: 9, padding: "11px 14px",
-  width: "100%", fontSize: 14, fontFamily: "inherit", color: "#0f172a",
-  background: "white", outline: "none",
+  border: "1.5px solid #ede9fe", borderRadius: 10, padding: "12px 14px",
+  width: "100%", fontSize: 14, fontFamily: "inherit", color: "#1e1147",
+  background: "#faf9ff", outline: "none",
 };
 
 export default function EmployeurPage() {
@@ -107,56 +107,41 @@ export default function EmployeurPage() {
   if (candidateUser) return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f8fafc;color:#0f172a}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#1e1147;color:#0f172a}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         .au{animation:fadeUp .4s cubic-bezier(.16,1,.3,1) both}
       `}</style>
-      <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
-        <div className="au" style={{ background: "white", border: "1.5px solid #f0f0f0", borderRadius: 18, padding: "40px 36px", maxWidth: 480, width: "100%", boxShadow: "0 4px 24px rgba(0,0,0,.06)", textAlign: "center" }}>
+      <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#1e1147 0%,#3b1fa3 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+        <div className="au" style={{ background: "white", borderRadius: 20, padding: "40px 36px", maxWidth: 480, width: "100%", boxShadow: "0 24px 60px rgba(0,0,0,.3)", textAlign: "center" }}>
 
-          {/* Icon */}
-          <div style={{ width: 64, height: 64, background: "#fef3c7", borderRadius: 16, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 20px" }}>
+          <div style={{ width: 64, height: 64, background: "linear-gradient(135deg,#f5f3ff,#ede9fe)", borderRadius: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto 20px", border: "2px solid #ddd6fe" }}>
             🏢
           </div>
 
-          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 10 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#1e1147", marginBottom: 10 }}>
             Espace Recruteurs
           </h1>
           <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.7, marginBottom: 8 }}>
-            Vous êtes connecté(e) en tant que <strong style={{ color: "#0f172a" }}>{candidateUser.email}</strong> (compte candidat).
+            Vous êtes connecté(e) en tant que <strong style={{ color: "#1e1147" }}>{candidateUser.email}</strong> (compte candidat).
           </p>
           <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.7, marginBottom: 28 }}>
-            L'espace recruteurs nécessite un <strong style={{ color: "#0f172a" }}>compte employeur séparé</strong>. Les deux espaces sont indépendants pour protéger vos données.
+            L'espace recruteurs nécessite un <strong style={{ color: "#1e1147" }}>compte employeur séparé</strong>. Les deux espaces sont indépendants pour protéger vos données.
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {/* Primary: create employer account (sign out first) */}
             <button
-              onClick={async () => {
-                await getSB().auth.signOut();
-                setMode("signup");
-                setCandidateUser(null);
-              }}
-              style={{ background: "#16a34a", color: "white", border: "none", borderRadius: 10, padding: "13px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+              onClick={async () => { await getSB().auth.signOut(); setMode("signup"); setCandidateUser(null); }}
+              style={{ background: "linear-gradient(135deg,#7c3aed,#5b21b6)", color: "white", border: "none", borderRadius: 12, padding: "14px 20px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(124,58,237,.35)" }}>
               Créer un compte employeur
             </button>
-
-            {/* Secondary: login with existing employer account */}
             <button
-              onClick={async () => {
-                await getSB().auth.signOut();
-                setMode("login");
-                setCandidateUser(null);
-              }}
-              style={{ background: "white", color: "#374151", border: "1.5px solid #e5e7eb", borderRadius: 10, padding: "13px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              onClick={async () => { await getSB().auth.signOut(); setMode("login"); setCandidateUser(null); }}
+              style={{ background: "white", color: "#6d28d9", border: "1.5px solid #ddd6fe", borderRadius: 12, padding: "14px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
               J'ai déjà un compte employeur — Se connecter
             </button>
-
-            {/* Return to candidate dashboard */}
-            <a href="/dashboard"
-              style={{ display: "block", fontSize: 13, color: "#9ca3af", textDecoration: "none", marginTop: 4, padding: "8px" }}>
+            <a href="/dashboard" style={{ display: "block", fontSize: 13, color: "#9ca3af", textDecoration: "none", marginTop: 4, padding: "8px" }}>
               ← Retour à mon espace candidat
             </a>
           </div>
@@ -168,55 +153,54 @@ export default function EmployeurPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f8fafc;color:#0f172a}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        .au{animation:fadeUp .4s cubic-bezier(.16,1,.3,1) both}
-        input:focus{border-color:#16a34a!important;box-shadow:0 0 0 3px rgba(22,163,74,.1)!important;outline:none!important}
-        @media(max-width:480px){
-          .au{width:100%}
-          input{font-size:16px!important}
-        }
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#1e1147;color:#0f172a}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        .au{animation:fadeUp .45s cubic-bezier(.16,1,.3,1) both}
+        input:focus{border-color:#7c3aed!important;box-shadow:0 0 0 3px rgba(124,58,237,.12)!important;outline:none!important}
+        input{transition:border-color .18s,box-shadow .18s}
+        @media(max-width:480px){.au{width:100%}input{font-size:16px!important}}
       `}</style>
 
-      <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", flexDirection: "column" }}>
-        <nav style={{ background: "rgba(255,255,255,.96)", backdropFilter: "blur(12px)", borderBottom: "1.5px solid #f0f0f0", padding: "0 24px", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
-          <a href="/" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}>
-            <div style={{ width: 34, height: 34, background: "#16a34a", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "white" }}>T</div>
-            <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>TalentMaroc</span>
+      <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#1e1147 0%,#3b1fa3 100%)", display: "flex", flexDirection: "column" }}>
+        <nav style={{ padding: "0 24px", height: 66, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+            <div style={{ width: 36, height: 36, background: "rgba(255,255,255,0.15)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 17, color: "white", border: "1.5px solid rgba(255,255,255,0.2)" }}>T</div>
+            <div>
+              <div style={{ color: "white", fontWeight: 800, fontSize: 15, lineHeight: 1 }}>TalentMaroc</div>
+              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 9, letterSpacing: "0.05em" }}>A WORLD OF OPPORTUNITY</div>
+            </div>
           </a>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <a href="/pricing" style={{ fontSize: 13, color: "#6b7280", fontWeight: 600, textDecoration: "none" }}>Tarifs</a>
-            <a href="/auth/login" style={{ fontSize: 13, color: "#6b7280", fontWeight: 600, textDecoration: "none" }}>Espace candidat →</a>
+            <a href="/pricing" style={{ fontSize: 13, color: "rgba(255,255,255,.6)", fontWeight: 600, textDecoration: "none" }}>Tarifs</a>
+            <a href="/auth/login" style={{ fontSize: 13, color: "rgba(255,255,255,.6)", fontWeight: 600, textDecoration: "none" }}>Espace candidat →</a>
           </div>
         </nav>
 
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 20px" }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 20px 48px" }}>
           <div className="au" style={{ width: "100%", maxWidth: 480 }}>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 100, padding: "6px 16px", marginBottom: 14 }}>
-                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#15803d" }}>Espace Recruteur</span>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.12)", border: "1.5px solid rgba(255,255,255,0.2)", borderRadius: 100, padding: "6px 16px", marginBottom: 14 }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#a78bfa", display: "inline-block" }} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>Espace Recruteur</span>
               </div>
-              <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 8 }}>
+              <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 8, color: "white" }}>
                 {mode === "login" ? "Connexion Recruteur" : "Créer un compte Recruteur"}
               </h1>
-              <p style={{ fontSize: 13, color: "#6b7280" }}>
-                {mode === "login"
-                  ? "Accédez à votre dashboard de recrutement."
-                  : "Publiez vos offres et gérez vos candidatures."}
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,.5)" }}>
+                {mode === "login" ? "Accédez à votre dashboard de recrutement." : "Publiez vos offres et gérez vos candidatures."}
               </p>
             </div>
 
-            <div style={{ background: "white", border: "1.5px solid #f0f0f0", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,.08)" }}>
+            <div style={{ background: "white", borderRadius: 20, overflow: "hidden", boxShadow: "0 24px 60px rgba(0,0,0,.3)" }}>
               <div style={{ padding: "28px 28px 24px" }}>
-                <div style={{ display: "flex", gap: 4, background: "#f3f4f6", borderRadius: 10, padding: 4, marginBottom: 22 }}>
+                <div style={{ display: "flex", gap: 4, background: "#f5f3ff", borderRadius: 12, padding: 4, marginBottom: 22 }}>
                   {(["login", "signup"] as const).map(m => (
                     <button key={m} onClick={() => { setMode(m); setError(null); }}
-                      style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all .18s",
-                        background: mode === m ? "white" : "transparent", color: mode === m ? "#0f172a" : "#6b7280",
-                        boxShadow: mode === m ? "0 1px 4px rgba(0,0,0,.1)" : "none" }}>
+                      style={{ flex: 1, padding: "10px", borderRadius: 9, border: "none", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all .18s",
+                        background: mode === m ? "white" : "transparent", color: mode === m ? "#6d28d9" : "#9ca3af",
+                        boxShadow: mode === m ? "0 2px 8px rgba(109,40,217,.12)" : "none" }}>
                       {m === "login" ? "Connexion" : "Inscription"}
                     </button>
                   ))}
@@ -247,10 +231,10 @@ export default function EmployeurPage() {
 
                   {error && (
                     <div style={{
-                      background: error.startsWith("✉️") ? "#f0fdf4" : "#fef2f2",
-                      border: `1.5px solid ${error.startsWith("✉️") ? "#bbf7d0" : "#fecaca"}`,
-                      borderRadius: 8, padding: "10px 14px", fontSize: 13,
-                      color: error.startsWith("✉️") ? "#15803d" : "#dc2626",
+                      background: error.startsWith("✉️") ? "#f5f3ff" : "#fef2f2",
+                      border: `1.5px solid ${error.startsWith("✉️") ? "#ddd6fe" : "#fecaca"}`,
+                      borderRadius: 10, padding: "10px 14px", fontSize: 13,
+                      color: error.startsWith("✉️") ? "#6d28d9" : "#dc2626",
                       lineHeight: 1.6,
                     }}>
                       {error}
@@ -258,28 +242,28 @@ export default function EmployeurPage() {
                   )}
 
                   <button disabled={loading} onClick={submit}
-                    style={{ background: "#16a34a", color: "white", padding: "13px", borderRadius: 10, border: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all .18s", marginTop: 4 }}>
+                    style={{ background: "linear-gradient(135deg,#7c3aed,#5b21b6)", color: "white", padding: "14px", borderRadius: 12, border: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all .18s", marginTop: 4, boxShadow: "0 4px 16px rgba(124,58,237,.35)" }}>
                     {loading ? "…" : mode === "login" ? "Accéder au dashboard →" : "Créer mon espace recruteur →"}
                   </button>
 
                   {mode === "signup" && (
                     <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", lineHeight: 1.6 }}>
-                      En créant un compte vous acceptez nos <a href="/terms" style={{ color: "#16a34a" }}>CGU</a> et notre <a href="/privacy" style={{ color: "#16a34a" }}>politique de confidentialité</a>.
+                      En créant un compte vous acceptez nos <a href="/terms" style={{ color: "#7c3aed" }}>CGU</a> et notre <a href="/privacy" style={{ color: "#7c3aed" }}>politique de confidentialité</a>.
                     </p>
                   )}
                 </div>
               </div>
 
-              <div style={{ padding: "14px 28px", background: "#f9fafb", borderTop: "1.5px solid #f0f0f0", textAlign: "center" }}>
+              <div style={{ padding: "16px 28px", background: "#f5f3ff", borderTop: "1.5px solid #ede9fe", textAlign: "center" }}>
                 <span style={{ fontSize: 13, color: "#9ca3af" }}>Vous cherchez un emploi ? </span>
-                <a href="/auth/login" style={{ fontSize: 13, color: "#16a34a", fontWeight: 700, textDecoration: "none" }}>Espace candidat →</a>
+                <a href="/auth/login" style={{ fontSize: 13, color: "#7c3aed", fontWeight: 700, textDecoration: "none" }}>Espace candidat →</a>
               </div>
             </div>
           </div>
         </div>
 
-        <footer style={{ background: "#0f172a", padding: "16px 24px", textAlign: "center" }}>
-          <span style={{ fontSize: 12, color: "rgba(255,255,255,.25)" }}>© 2026 Talent Maroc · Recruteurs</span>
+        <footer style={{ padding: "16px 24px", textAlign: "center" }}>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,.2)" }}>© 2026 Talent Maroc · Recruteurs</span>
         </footer>
       </div>
     </>

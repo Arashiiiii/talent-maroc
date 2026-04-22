@@ -23,9 +23,9 @@ function Field({ label, required, children }: {
 }
 
 const IS: React.CSSProperties = {
-  border: "1.5px solid #e5e7eb", borderRadius: 9, padding: "11px 14px",
-  width: "100%", fontSize: 14, fontFamily: "inherit", color: "#0f172a",
-  background: "white", outline: "none",
+  border: "1.5px solid #ede9fe", borderRadius: 10, padding: "12px 14px",
+  width: "100%", fontSize: 14, fontFamily: "inherit", color: "#1e1147",
+  background: "#faf9ff", outline: "none",
 };
 
 export default function AuthLoginPage() {
@@ -107,62 +107,67 @@ export default function AuthLoginPage() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f8fafc;color:#0f172a}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-        .au{animation:fadeUp .4s cubic-bezier(.16,1,.3,1) both}
-        input:focus{border-color:#16a34a!important;box-shadow:0 0 0 3px rgba(22,163,74,.1)!important;outline:none!important}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#1e1147;color:#0f172a}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        .au{animation:fadeUp .45s cubic-bezier(.16,1,.3,1) both}
+        input:focus{border-color:#7c3aed!important;box-shadow:0 0 0 3px rgba(124,58,237,.12)!important;outline:none!important}
+        input{transition:border-color .18s,box-shadow .18s}
         @media(max-width:480px){
           .au{width:100%}
           input{font-size:16px!important}
         }
       `}</style>
 
-      <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", flexDirection: "column" }}>
-        <nav style={{ background: "rgba(255,255,255,.96)", backdropFilter: "blur(12px)", borderBottom: "1.5px solid #f0f0f0", padding: "0 24px", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
-          <a href="/" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none" }}>
-            <div style={{ width: 34, height: 34, background: "#16a34a", borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "white" }}>T</div>
-            <span style={{ color: "#0f172a", fontWeight: 800, fontSize: 16 }}>TalentMaroc</span>
+      <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#1e1147 0%,#3b1fa3 100%)", display: "flex", flexDirection: "column" }}>
+        <nav style={{ padding: "0 24px", height: 66, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+            <div style={{ width: 36, height: 36, background: "rgba(255,255,255,0.15)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 17, color: "white", border: "1.5px solid rgba(255,255,255,0.2)" }}>T</div>
+            <div>
+              <div style={{ color: "white", fontWeight: 800, fontSize: 15, lineHeight: 1 }}>TalentMaroc</div>
+              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 9, letterSpacing: "0.05em" }}>A WORLD OF OPPORTUNITY</div>
+            </div>
           </a>
-          <a href="/" style={{ fontSize: 13, color: "#6b7280", fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
+          <a href="/" style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
             ← Retour aux offres
           </a>
         </nav>
 
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 20px" }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 20px 48px" }}>
           <div className="au" style={{ width: "100%", maxWidth: 440 }}>
 
             {fromJob && (
-              <div style={{ background: "linear-gradient(135deg,#0f172a,#1e3a5f)", borderRadius: 12, padding: "16px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 40, height: 40, background: "rgba(22,163,74,.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>💼</div>
+              <div style={{ background: "rgba(255,255,255,0.1)", border: "1.5px solid rgba(255,255,255,0.15)", backdropFilter: "blur(8px)", borderRadius: 14, padding: "16px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 40, height: 40, background: "rgba(245,158,11,0.2)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>💼</div>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "white", marginBottom: 3 }}>Connexion requise pour postuler</div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,.55)", lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,.6)", lineHeight: 1.5 }}>
                     Connectez-vous ou créez un compte gratuit. Vous serez redirigé(e) automatiquement vers l'offre après la connexion.
                   </div>
                 </div>
               </div>
             )}
 
-            <div style={{ background: "white", border: "1.5px solid #f0f0f0", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,.08)" }}>
-              <div style={{ padding: "28px 28px 24px" }}>
-                <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 5 }}>
+            <div style={{ background: "white", borderRadius: 20, overflow: "hidden", boxShadow: "0 24px 60px rgba(0,0,0,.3)" }}>
+              <div style={{ padding: "32px 28px 8px" }}>
+                <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 5, color: "#1e1147" }}>
                   {mode === "login" ? "Connexion" : "Créer un compte"}
                 </h1>
-                <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 24 }}>
+                <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 24 }}>
                   {mode === "login"
                     ? "Accédez à votre espace candidat TalentMaroc."
                     : "Rejoignez TalentMaroc gratuitement et gérez vos candidatures."}
                 </p>
 
-                <div style={{ display: "flex", gap: 4, background: "#f3f4f6", borderRadius: 10, padding: 4, marginBottom: 22 }}>
+                <div style={{ display: "flex", gap: 4, background: "#f5f3ff", borderRadius: 12, padding: 4, marginBottom: 22 }}>
                   {(["login", "signup"] as const).map(m => (
                     <button key={m} onClick={() => { setMode(m); setError(null); }}
-                      style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all .18s",
+                      style={{ flex: 1, padding: "10px", borderRadius: 9, border: "none", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer", transition: "all .18s",
                         background: mode === m ? "white" : "transparent",
-                        color: mode === m ? "#0f172a" : "#6b7280",
-                        boxShadow: mode === m ? "0 1px 4px rgba(0,0,0,.1)" : "none" }}>
+                        color: mode === m ? "#6d28d9" : "#9ca3af",
+                        boxShadow: mode === m ? "0 2px 8px rgba(109,40,217,.12)" : "none" }}>
                       {m === "login" ? "Connexion" : "Inscription"}
                     </button>
                   ))}
@@ -189,10 +194,10 @@ export default function AuthLoginPage() {
 
                   {error && (
                     <div style={{
-                      background: error.startsWith("✉️") ? "#f0fdf4" : "#fef2f2",
-                      border: `1.5px solid ${error.startsWith("✉️") ? "#bbf7d0" : "#fecaca"}`,
-                      borderRadius: 8, padding: "10px 14px", fontSize: 13,
-                      color: error.startsWith("✉️") ? "#15803d" : "#dc2626",
+                      background: error.startsWith("✉️") ? "#f5f3ff" : "#fef2f2",
+                      border: `1.5px solid ${error.startsWith("✉️") ? "#ddd6fe" : "#fecaca"}`,
+                      borderRadius: 10, padding: "10px 14px", fontSize: 13,
+                      color: error.startsWith("✉️") ? "#6d28d9" : "#dc2626",
                       lineHeight: 1.6,
                     }}>
                       {error}
@@ -200,34 +205,34 @@ export default function AuthLoginPage() {
                   )}
 
                   <button disabled={loading} onClick={submit}
-                    style={{ background: "#16a34a", color: "white", padding: "13px", borderRadius: 10, border: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all .18s", marginTop: 4 }}>
+                    style={{ background: "linear-gradient(135deg,#7c3aed,#5b21b6)", color: "white", padding: "14px", borderRadius: 12, border: "none", fontFamily: "inherit", fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "all .18s", marginTop: 4, boxShadow: "0 4px 16px rgba(124,58,237,0.35)" }}>
                     {loading ? "…" : mode === "login" ? "Se connecter →" : "Créer mon compte →"}
                   </button>
 
                   {mode === "login" && (
-                    <a href="/auth/forgot-password" style={{ textAlign: "center", fontSize: 12, color: "#6b7280", textDecoration: "none" }}>
+                    <a href="/auth/forgot-password" style={{ textAlign: "center", fontSize: 12, color: "#9ca3af", textDecoration: "none" }}>
                       Mot de passe oublié ?
                     </a>
                   )}
 
                   {mode === "signup" && (
                     <p style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", lineHeight: 1.6 }}>
-                      En créant un compte vous acceptez nos <a href="/terms" style={{ color: "#16a34a" }}>CGU</a> et notre <a href="/privacy" style={{ color: "#16a34a" }}>politique de confidentialité</a>.
+                      En créant un compte vous acceptez nos <a href="/terms" style={{ color: "#7c3aed" }}>CGU</a> et notre <a href="/privacy" style={{ color: "#7c3aed" }}>politique de confidentialité</a>.
                     </p>
                   )}
                 </div>
               </div>
 
-              <div style={{ padding: "14px 28px", background: "#f9fafb", borderTop: "1.5px solid #f0f0f0", textAlign: "center" }}>
+              <div style={{ padding: "16px 28px", background: "#f5f3ff", borderTop: "1.5px solid #ede9fe", textAlign: "center" }}>
                 <span style={{ fontSize: 13, color: "#9ca3af" }}>Vous recrutez ? </span>
-                <a href="/employeur" style={{ fontSize: 13, color: "#16a34a", fontWeight: 700, textDecoration: "none" }}>Espace recruteur →</a>
+                <a href="/employeur" style={{ fontSize: 13, color: "#7c3aed", fontWeight: 700, textDecoration: "none" }}>Espace recruteur →</a>
               </div>
             </div>
           </div>
         </div>
 
-        <footer style={{ background: "#0f172a", padding: "16px 24px", textAlign: "center" }}>
-          <span style={{ fontSize: 12, color: "rgba(255,255,255,.25)" }}>© 2026 Talent Maroc</span>
+        <footer style={{ padding: "16px 24px", textAlign: "center" }}>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,.2)" }}>© 2026 Talent Maroc · A World of Opportunity</span>
         </footer>
       </div>
     </>
