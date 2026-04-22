@@ -27,7 +27,7 @@ interface Application {
   cover_letter?: string|null;
 }
 type AppStatus = "saved"|"applied"|"interview"|"offer"|"rejected";
-type DashTab   = "overview"|"jobs"|"candidates";
+type DashTab   = "overview"|"jobs"|"candidates"|"profile";
 
 const STATUS_CFG: Record<AppStatus,{label:string;color:string;bg:string;border:string}> = {
   saved:     { label:"Sauvegardée",  color:"#374151", bg:"#f9fafb",  border:"#e5e7eb" },
@@ -86,6 +86,14 @@ export default function EmployeurDashboard() {
   const [comparing,    setComparing]    = useState(false);
   const [compareResult,setCompareResult]= useState<string|null>(null);
   const [compareModal, setCompareModal] = useState(false);
+  // Profile form
+  const [pName,     setPName]     = useState("");
+  const [pCompany,  setPCompany]  = useState("");
+  const [pPhone,    setPPhone]    = useState("");
+  const [pWebsite,  setPWebsite]  = useState("");
+  const [pLogoUrl,  setPLogoUrl]  = useState("");
+  const [pSaving,   setPSaving]   = useState(false);
+  const [pMsg,      setPMsg]      = useState<{type:"ok"|"err";text:string}|null>(null);
 
   // ── LOAD ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -98,20 +106,28 @@ export default function EmployeurDashboard() {
       }
     });
 
-    sb.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { window.location.href="/employeur"; return; }
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { window.location.href="/employeur"; return; }
+      const user = session.user;
       // Role guard: candidates use their own dashboard
       if (user.user_metadata?.role === "candidate") {
         window.location.href = "/dashboard"; return;
       }
       setUser(user);
-      load(user.id);
+      // Pre-fill profile form from user metadata
+      const m = user.user_metadata || {};
+      setPName(m.name || "");
+      setPCompany(m.company_name || "");
+      setPPhone(m.phone || "");
+      setPWebsite(m.website || "");
+      setPLogoUrl(m.logo_url || "");
+      load(user.id, session.access_token);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const load = useCallback(async (uid: string) => {
+  const load = useCallback(async (uid: string, token: string) => {
     setLoading(true);
     const sb = getSupabase();
 
@@ -124,15 +140,22 @@ export default function EmployeurDashboard() {
     if (jErr) { setErr(jErr.message); setLoading(false); return; }
     const myJobs: Job[] = jobsData || [];
 
-    const jobIds = myJobs.map(j=>j.id);
+    // Fetch applications via server-side API route (bypasses candidate-scoped RLS)
     let apps: Application[] = [];
-    if (jobIds.length > 0) {
-      const { data: appsData } = await sb
-        .from("applications")
-        .select("*")
-        .in("job_id", jobIds)
-        .order("created_at", { ascending: false });
-      if (appsData) apps = appsData;
+    if (myJobs.length > 0) {
+      try {
+        const res = await fetch("/api/employer/applications", {
+          headers: { "Authorization": `Bearer ${token}` },
+        });
+        const json = await res.json();
+        if (res.ok) {
+          apps = json.applications || [];
+        } else {
+          setErr(json.error || "Impossible de charger les candidatures.");
+        }
+      } catch {
+        setErr("Erreur réseau lors du chargement des candidatures.");
+      }
     }
 
     const byJob: Record<string,Application[]> = {};
@@ -197,6 +220,32 @@ export default function EmployeurDashboard() {
   const signOut = async () => {
     await getSupabase().auth.signOut();
     window.location.href = "/employeur";
+  };
+
+  const saveProfile = async () => {
+    if (!pName.trim() || !pCompany.trim()) {
+      setPMsg({ type:"err", text:"Nom et entreprise sont requis." });
+      return;
+    }
+    setPSaving(true); setPMsg(null);
+    const { error } = await getSupabase().auth.updateUser({
+      data: {
+        name:         pName.trim(),
+        company_name: pCompany.trim(),
+        phone:        pPhone.trim() || null,
+        website:      pWebsite.trim() || null,
+        logo_url:     pLogoUrl.trim() || null,
+      },
+    });
+    setPSaving(false);
+    if (error) {
+      setPMsg({ type:"err", text: error.message });
+    } else {
+      setPMsg({ type:"ok", text: "Profil mis à jour avec succès." });
+      // Refresh user in state
+      const { data: { user: u } } = await getSupabase().auth.getUser();
+      if (u) setUser(u);
+    }
   };
 
   // ── DOWNLOAD APPLICATION FILES ──────────────────────────────────────────
@@ -344,9 +393,9 @@ export default function EmployeurDashboard() {
             <p style={{ fontSize:13, color:"#6b7280", marginBottom:16 }}>
               {jobs.length} offre{jobs.length!==1?"s":""} publiée{jobs.length!==1?"s":""} · {totalApps} candidature{totalApps!==1?"s":""}
             </p>
-            <div className="tab-nav">
-              {([["overview","📊 Vue d'ensemble"],["jobs","💼 Mes offres"],["candidates","👥 Candidatures"]] as const).map(([t,l])=>(
-                <button key={t} className={`tab-item${tab===t?" active":""}`} onClick={()=>setTab(t)}>{l}</button>
+            <div className="tab-nav" style={{ overflowX:"auto", scrollbarWidth:"none" }}>
+              {([["overview","📊 Vue d'ensemble"],["jobs","💼 Mes offres"],["candidates","👥 Candidatures"],["profile","👤 Mon profil"]] as const).map(([t,l])=>(
+                <button key={t} className={`tab-item${tab===t?" active":""}`} onClick={()=>setTab(t)} style={{ whiteSpace:"nowrap" }}>{l}</button>
               ))}
             </div>
           </div>
@@ -483,6 +532,92 @@ export default function EmployeurDashboard() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── PROFILE TAB ── */}
+          {tab==="profile" && (
+            <div className="au" style={{ maxWidth:560 }}>
+              <div className="card" style={{ overflow:"hidden", marginBottom:16 }}>
+                {/* Header */}
+                <div style={{ background:"linear-gradient(135deg,#0f172a,#1e3a5f)", padding:"20px 24px", display:"flex", alignItems:"center", gap:14 }}>
+                  <div style={{ width:52, height:52, borderRadius:14, background:"rgba(22,163,74,.25)", border:"2px solid rgba(22,163,74,.4)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, fontWeight:800, color:"white", flexShrink:0 }}>
+                    {pCompany.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ fontSize:15, fontWeight:800, color:"white" }}>{pCompany || "Votre entreprise"}</div>
+                    <div style={{ fontSize:12, color:"rgba(255,255,255,.5)", marginTop:2 }}>{user?.email}</div>
+                  </div>
+                </div>
+
+                <div style={{ padding:"24px", display:"flex", flexDirection:"column", gap:14 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.07em" }}>Informations du recruteur</div>
+
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }} className="edit-grid">
+                    <EF label="Nom et prénom" required>
+                      <input style={EIS} placeholder="Khadija Alaoui" value={pName} onChange={e=>setPName(e.target.value)}/>
+                    </EF>
+                    <EF label="Entreprise" required>
+                      <input style={EIS} placeholder="Maroc Telecom" value={pCompany} onChange={e=>setPCompany(e.target.value)}/>
+                    </EF>
+                  </div>
+
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }} className="edit-grid">
+                    <EF label="Téléphone">
+                      <input style={EIS} type="tel" placeholder="+212 6XX XXX XXX" value={pPhone} onChange={e=>setPPhone(e.target.value)}/>
+                    </EF>
+                    <EF label="Site web">
+                      <input style={EIS} type="url" placeholder="https://entreprise.ma" value={pWebsite} onChange={e=>setPWebsite(e.target.value)}/>
+                    </EF>
+                  </div>
+
+                  <EF label="URL du logo (optionnel)">
+                    <input style={EIS} type="url" placeholder="https://..." value={pLogoUrl} onChange={e=>setPLogoUrl(e.target.value)}/>
+                  </EF>
+
+                  {pLogoUrl && (
+                    <div style={{ display:"flex", alignItems:"center", gap:10, background:"#f8fafc", border:"1.5px solid #e5e7eb", borderRadius:9, padding:"10px 13px" }}>
+                      <img src={pLogoUrl} alt="logo preview" style={{ width:36, height:36, objectFit:"contain", borderRadius:6, background:"white", border:"1px solid #e5e7eb" }} onError={e=>(e.currentTarget.style.display="none")}/>
+                      <span style={{ fontSize:12, color:"#6b7280" }}>Aperçu du logo</span>
+                    </div>
+                  )}
+
+                  <div style={{ height:1, background:"#f0f0f0" }}/>
+
+                  <EF label="Email (compte)">
+                    <input style={{ ...EIS, background:"#f9fafb", color:"#9ca3af" }} value={user?.email||""} disabled/>
+                  </EF>
+
+                  {pMsg && (
+                    <div style={{ background:pMsg.type==="ok"?"#f0fdf4":"#fef2f2", border:`1.5px solid ${pMsg.type==="ok"?"#bbf7d0":"#fecaca"}`, borderRadius:8, padding:"10px 14px", fontSize:13, color:pMsg.type==="ok"?"#15803d":"#dc2626" }}>
+                      {pMsg.type==="ok"?"✓":"⚠"} {pMsg.text}
+                    </div>
+                  )}
+
+                  <button onClick={saveProfile} disabled={pSaving}
+                    style={{ background:pSaving?"#86efac":"#16a34a", color:"white", padding:"12px", borderRadius:9, border:"none", fontSize:13, fontWeight:700, cursor:pSaving?"not-allowed":"pointer", fontFamily:"inherit", transition:"background .18s" }}>
+                    {pSaving ? "Sauvegarde…" : "💾 Sauvegarder le profil"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Account info */}
+              <div className="card" style={{ padding:"18px 22px" }}>
+                <div style={{ fontSize:11, fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:12 }}>Compte</div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                  <span style={{ fontSize:13, color:"#374151" }}>Email</span>
+                  <span style={{ fontSize:13, fontWeight:600, color:"#0f172a" }}>{user?.email}</span>
+                </div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                  <span style={{ fontSize:13, color:"#374151" }}>Type de compte</span>
+                  <span style={{ fontSize:12, fontWeight:700, background:"#f0fdf4", color:"#15803d", border:"1px solid #bbf7d0", padding:"3px 10px", borderRadius:100 }}>Recruteur</span>
+                </div>
+                <div style={{ height:1, background:"#f0f0f0", margin:"12px 0" }}/>
+                <button onClick={signOut}
+                  style={{ width:"100%", background:"none", border:"1.5px solid #fecaca", borderRadius:8, padding:"10px", fontSize:13, fontWeight:600, color:"#dc2626", cursor:"pointer", fontFamily:"inherit", transition:"all .18s" }}>
+                  Se déconnecter
+                </button>
+              </div>
             </div>
           )}
 
