@@ -199,6 +199,41 @@ export default function EmployeurDashboard() {
     window.location.href = "/employeur";
   };
 
+  // ── DOWNLOAD APPLICATION FILES ──────────────────────────────────────────
+  const downloadApplicationFiles = async (app: Application) => {
+    const slug = (app.candidate_name || "candidat").replace(/\s+/g, "_");
+
+    // 1. CV PDF — fetch and trigger named download
+    if (app.cv_url) {
+      try {
+        const res = await fetch(app.cv_url);
+        const blob = await res.blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement("a");
+        a.href = url; a.download = `${slug}_CV.pdf`; a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        // Fallback: open in new tab
+        window.open(app.cv_url, "_blank");
+      }
+    }
+
+    // 2. Cover letter — download as .txt, slight delay so browser allows both
+    if (app.cover_letter) {
+      setTimeout(() => {
+        const blob = new Blob([app.cover_letter!], { type: "text/plain;charset=utf-8" });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement("a");
+        a.href = url; a.download = `${slug}_lettre.txt`; a.click();
+        URL.revokeObjectURL(url);
+      }, 400);
+    }
+
+    if (!app.cv_url && !app.cover_letter) {
+      setErr("Ce candidat n'a pas joint de CV ni de lettre de motivation.");
+    }
+  };
+
   // ── AI COMPARE ─────────────────────────────────────────────────────────
   const aiCompare = async () => {
     const candidates = filteredApps.slice(0, 10); // max 10
@@ -524,7 +559,12 @@ export default function EmployeurDashboard() {
                               {a.job_title} · {a.city||"—"} · {a.applied_at?new Date(a.applied_at).toLocaleDateString("fr-FR"):new Date(a.created_at).toLocaleDateString("fr-FR")}
                             </div>
                             {a.notes&&<div style={{ fontSize:11, color:"#4b5563", marginTop:4, background:"#f9fafb", padding:"3px 8px", borderRadius:5 }}>📝 {a.notes.slice(0,80)}{a.notes.length>80?"…":""}</div>}
-                            {a.cover_letter&&<div style={{ fontSize:11, color:"#6b7280", marginTop:3, fontStyle:"italic" }}>✉️ Lettre de motivation jointe</div>}
+                            {a.cover_letter&&(
+                              <div style={{ fontSize:11, color:"#374151", marginTop:5, background:"#f8fafc", border:"1px solid #e5e7eb", borderRadius:6, padding:"6px 10px", lineHeight:1.6 }}>
+                                <span style={{ fontWeight:700, color:"#6b7280" }}>✉️ Lettre : </span>
+                                {a.cover_letter.slice(0,120)}{a.cover_letter.length>120?"…":""}
+                              </div>
+                            )}
                           </div>
                           {/* Status selector */}
                           <select value={a.status} onChange={e=>updateStatus(a.id,e.target.value as AppStatus)}
@@ -542,8 +582,15 @@ export default function EmployeurDashboard() {
                             {displayEmail && (
                               <a href={`mailto:${displayEmail}?subject=Votre candidature pour ${a.job_title}`} className="btn btn-outline" style={{ textDecoration:"none", fontSize:11, padding:"5px 8px" }}>✉️</a>
                             )}
-                            <button onClick={()=>dlCSV(`candidat_${displayName.replace(/\s+/g,"_")}.csv`,[{ "Nom":displayName, "Email":displayEmail||"—", "Poste":a.job_title, "Statut":sc.label, "Date":a.applied_at||"", "Notes":a.notes||"", "CV":a.cv_url||"" }])}
-                              style={{ fontSize:11, padding:"5px 8px", background:"#f3f4f6", color:"#374151", borderRadius:6, fontWeight:600, border:"none", cursor:"pointer", fontFamily:"inherit" }}>⬇</button>
+                            {/* Download CV + cover letter as named files */}
+                            {(a.cv_url || a.cover_letter) && (
+                              <button
+                                onClick={()=>downloadApplicationFiles(a)}
+                                title={`Télécharger CV + lettre — ${displayName}`}
+                                style={{ fontSize:11, padding:"5px 8px", background:"#f0fdf4", color:"#15803d", borderRadius:6, fontWeight:600, border:"1px solid #bbf7d0", cursor:"pointer", fontFamily:"inherit" }}>
+                                ⬇ Dossier
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

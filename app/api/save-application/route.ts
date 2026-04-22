@@ -45,15 +45,18 @@ export async function POST(req: NextRequest) {
     const {
       job_id, job_title, company, city, original_url, logo_url,
       status = 'applied', notes, cv_version, cover_letter,
+      // Form can override candidate info (e.g. user edited name before applying)
+      candidate_name:  name_override,
+      candidate_email: email_override,
     } = body;
 
     if (!job_title || !company) {
       return NextResponse.json({ error: 'Champs requis manquants' }, { status: 400 });
     }
 
-    // Candidate info from user metadata
-    const candidate_email = user.email || null;
-    const candidate_name  = user.user_metadata?.name || null;
+    // Prefer body overrides, fall back to user metadata / auth email
+    const candidate_email = email_override || user.email || null;
+    const candidate_name  = name_override  || user.user_metadata?.name || null;
     const cv_url          = user.user_metadata?.cv_url || null;
 
     // Check for existing application
