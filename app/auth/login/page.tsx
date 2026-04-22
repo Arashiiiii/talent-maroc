@@ -91,7 +91,7 @@ export default function AuthLoginPage() {
         });
         if (error) throw error;
         if (!data.session) {
-          setError("Un email de confirmation a été envoyé. Vérifiez votre boîte mail puis reconnectez-vous.");
+          setError("✉️ Email de confirmation envoyé à " + email + ". Vérifiez votre boîte mail (et les spams) puis revenez vous connecter.");
           setLoading(false);
           return;
         }
@@ -184,8 +184,14 @@ export default function AuthLoginPage() {
                   </Field>
 
                   {error && (
-                    <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#dc2626", lineHeight: 1.5 }}>
-                      ⚠ {error}
+                    <div style={{
+                      background: error.startsWith("✉️") ? "#f0fdf4" : "#fef2f2",
+                      border: `1.5px solid ${error.startsWith("✉️") ? "#bbf7d0" : "#fecaca"}`,
+                      borderRadius: 8, padding: "10px 14px", fontSize: 13,
+                      color: error.startsWith("✉️") ? "#15803d" : "#dc2626",
+                      lineHeight: 1.6,
+                    }}>
+                      {error}
                     </div>
                   )}
 
