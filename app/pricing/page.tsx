@@ -14,29 +14,29 @@ export default function PricingPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f8fafc;color:#0f172a}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f5f3ff;color:#0f172a}
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         .au{animation:fadeUp .45s cubic-bezier(.16,1,.3,1) both}
-        .plan{background:white;border:2px solid #f0f0f0;border-radius:18px;padding:32px 28px;display:flex;flex-direction:column;gap:0;transition:transform .18s,box-shadow .18s}
-        .plan:hover{transform:translateY(-4px);box-shadow:0 16px 48px rgba(0,0,0,.1)}
-        .plan.featured{border-color:#16a34a;box-shadow:0 8px 32px rgba(22,163,74,.15)}
+        .plan{background:white;border:2px solid #ede9fe;border-radius:18px;padding:32px 28px;display:flex;flex-direction:column;gap:0;transition:transform .18s,box-shadow .18s}
+        .plan:hover{transform:translateY(-4px);box-shadow:0 16px 48px rgba(124,58,237,.1)}
+        .plan.featured{border-color:#7c3aed;box-shadow:0 8px 32px rgba(124,58,237,.2)}
         .plan.pro-employer{border-color:#7c3aed;box-shadow:0 8px 32px rgba(124,58,237,.12)}
-        .feature-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
+        .feature-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #f5f3ff;font-size:13px}
         .feature-row:last-child{border-bottom:none}
-        .check{color:#16a34a;font-weight:700;flex-shrink:0;margin-top:1px}
+        .check{color:#7c3aed;font-weight:700;flex-shrink:0;margin-top:1px}
         .check.purple{color:#7c3aed}
         .cross{color:#d1d5db;flex-shrink:0;margin-top:1px}
         .tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px}
         .nl{color:#4b5563;text-decoration:none;font-size:13px;font-weight:600;padding:6px 10px;border-radius:7px;transition:all .18s}
-        .nl:hover{color:#0f172a;background:#f3f4f6}
+        .nl:hover{color:#1e1147;background:#f5f3ff}
         @media(max-width:900px){.plans-grid{grid-template-columns:1fr!important}.compare-grid{grid-template-columns:1fr!important}}
       `}</style>
 
       {/* NAVBAR */}
       <nav style={{ background:"rgba(255,255,255,.96)", backdropFilter:"blur(12px)", borderBottom:"1.5px solid #f0f0f0", padding:"0 24px", height:62, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100 }}>
         <a href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
-          <div style={{ width:34, height:34, background:"#16a34a", borderRadius:9, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:16, color:"white" }}>T</div>
-          <span style={{ color:"#0f172a", fontWeight:800, fontSize:16 }}>TalentMaroc</span>
+          <div style={{ width:34, height:34, background:"linear-gradient(135deg,#7c3aed,#5b21b6)", borderRadius:9, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:16, color:"white" }}>T</div>
+          <span style={{ color:"#1e1147", fontWeight:800, fontSize:16 }}>TalentMaroc</span>
         </a>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <a href="/" className="nl">Emplois</a>
@@ -45,18 +45,18 @@ export default function PricingPage() {
         </div>
       </nav>
 
-      <div style={{ background:"#f8fafc", minHeight:"100vh", paddingBottom:80 }}>
+      <div style={{ background:"#f5f3ff", minHeight:"100vh", paddingBottom:80 }}>
 
         {/* HERO */}
-        <header style={{ background:"white", borderBottom:"1.5px solid #f0f0f0", padding:"64px 24px 56px", textAlign:"center" }}>
+        <header style={{ background:"white", borderBottom:"1.5px solid #ede9fe", padding:"64px 24px 56px", textAlign:"center" }}>
           <div style={{ maxWidth:640, margin:"0 auto" }}>
-            <div style={{ display:"inline-flex", alignItems:"center", gap:7, background:"#f0fdf4", border:"1.5px solid #bbf7d0", borderRadius:100, padding:"5px 16px", marginBottom:18 }}>
-              <span style={{ width:7, height:7, borderRadius:"50%", background:"#16a34a", display:"inline-block" }}/>
-              <span style={{ fontSize:12, fontWeight:700, color:"#15803d" }}>Tarifs simples et transparents</span>
+            <div style={{ display:"inline-flex", alignItems:"center", gap:7, background:"#f5f3ff", border:"1.5px solid #ddd6fe", borderRadius:100, padding:"5px 16px", marginBottom:18 }}>
+              <span style={{ width:7, height:7, borderRadius:"50%", background:"#7c3aed", display:"inline-block" }}/>
+              <span style={{ fontSize:12, fontWeight:700, color:"#6d28d9" }}>Tarifs simples et transparents</span>
             </div>
-            <h1 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:"clamp(28px,5vw,46px)", fontWeight:800, lineHeight:1.12, letterSpacing:"-.02em", marginBottom:14, color:"#0f172a" }}>
+            <h1 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:"clamp(28px,5vw,46px)", fontWeight:800, lineHeight:1.12, letterSpacing:"-.02em", marginBottom:14, color:"#1e1147" }}>
               Investissez dans<br/>
-              <span style={{ color:"#16a34a" }}>votre carrière ou vos recrutements</span>
+              <span style={{ color:"#7c3aed" }}>votre carrière ou vos recrutements</span>
             </h1>
             <p style={{ fontSize:15, color:"#6b7280", lineHeight:1.7 }}>
               Accès gratuit pour tous. Les fonctionnalités Pro débloqueront l'IA et les outils avancés.
@@ -109,8 +109,8 @@ export default function PricingPage() {
               <div className="plan featured au" style={{ animationDelay:".12s" }}>
                 <div style={{ marginBottom:24 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-                    <span className="tag" style={{ background:"#16a34a", color:"white" }}>✦ Pro</span>
-                    <span style={{ fontSize:11, fontWeight:700, color:"#16a34a", background:"#f0fdf4", padding:"2px 8px", borderRadius:100 }}>Le plus populaire</span>
+                    <span className="tag" style={{ background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white" }}>✦ Pro</span>
+                    <span style={{ fontSize:11, fontWeight:700, color:"#6d28d9", background:"#f5f3ff", padding:"2px 8px", borderRadius:100 }}>Le plus populaire</span>
                   </div>
                   <div style={{ fontSize:28, fontWeight:800, marginBottom:4 }}>
                     49 MAD <span style={{ fontSize:14, fontWeight:500, color:"#6b7280" }}>/mois</span>
@@ -135,7 +135,7 @@ export default function PricingPage() {
                     </div>
                   ))}
                 </div>
-                <a href="/cv" style={{ display:"block", background:"#16a34a", color:"white", padding:"12px", borderRadius:10, textAlign:"center", textDecoration:"none", fontWeight:700, fontSize:13, transition:"all .18s" }}>
+                <a href="/cv" style={{ display:"block", background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white", padding:"12px", borderRadius:10, textAlign:"center", textDecoration:"none", fontWeight:700, fontSize:13, transition:"all .18s", boxShadow:"0 4px 14px rgba(124,58,237,.35)" }}>
                   Commencer avec Pro →
                 </a>
               </div>
@@ -268,7 +268,7 @@ export default function PricingPage() {
                     "Formation équipe RH",
                   ].map((label, i) => (
                     <div key={i} className="feature-row" style={{ borderBottomColor:"rgba(255,255,255,.08)" }}>
-                      <span style={{ color:"#4ade80", flexShrink:0, fontWeight:700 }}>✓</span>
+                      <span style={{ color:"#a78bfa", flexShrink:0, fontWeight:700 }}>✓</span>
                       <span style={{ color:"rgba(255,255,255,.8)", fontSize:13 }}>{label}</span>
                     </div>
                   ))}

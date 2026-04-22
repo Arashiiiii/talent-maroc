@@ -84,7 +84,7 @@ const TEMPLATES: Template[] = [
 ];
 
 const BADGE_STYLES: Record<string,{bg:string;color:string}> = {
-  gratuit:{ bg:"#f0fdf4", color:"#15803d" },
+  gratuit:{ bg:"#f5f3ff", color:"#6d28d9" },
   pro:    { bg:"#fef3c7", color:"#92400e" },
   nouveau:{ bg:"#eff6ff", color:"#1d4ed8" },
 };
@@ -1353,33 +1353,33 @@ Retourne UNIQUEMENT le JSON.`}];
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
         html,body{width:100%;overflow-x:hidden;}
-        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f8fafc;color:#0f172a;}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f5f3ff;color:#0f172a;}
 
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes spin{to{transform:rotate(360deg)}}
 
         .au{animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both}
-        .spinner{width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#16a34a;border-radius:50%;animation:spin .7s linear infinite}
+        .spinner{width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#7c3aed;border-radius:50%;animation:spin .7s linear infinite}
 
         .nl{color:#4b5563;text-decoration:none;font-size:14px;font-weight:600;padding:7px 12px;border-radius:8px;transition:all .18s}
-        .nl:hover{color:#0f172a;background:#f3f4f6}
+        .nl:hover{color:#1e1147;background:#f5f3ff}
 
         .tpl-thumb{border:2px solid #e5e7eb;border-radius:14px;overflow:hidden;cursor:pointer;background:white;transition:all .2s;box-shadow:0 1px 4px rgba(0,0,0,.05)}
-        .tpl-thumb:hover{border-color:#16a34a;box-shadow:0 4px 20px rgba(22,163,74,.12);transform:translateY(-2px)}
-        .tpl-thumb.selected{border-color:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.2)}
+        .tpl-thumb:hover{border-color:#7c3aed;box-shadow:0 4px 20px rgba(124,58,237,.12);transform:translateY(-2px)}
+        .tpl-thumb.selected{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.2)}
 
         input,select,textarea{font-family:inherit;font-size:14px;}
-        input:focus,select:focus,textarea:focus{outline:none;border-color:#16a34a!important;box-shadow:0 0 0 3px rgba(22,163,74,.1)!important;}
+        input:focus,select:focus,textarea:focus{outline:none;border-color:#7c3aed!important;box-shadow:0 0 0 3px rgba(124,58,237,.1)!important;}
 
-        .btn-green{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:#16a34a;color:white;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all .18s}
-        .btn-green:hover{background:#15803d;transform:translateY(-1px);box-shadow:0 6px 20px rgba(22,163,74,.3)}
+        .btn-green{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all .18s;box-shadow:0 4px 16px rgba(124,58,237,.35)}
+        .btn-green:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(124,58,237,.45)}
         .btn-green:disabled{background:#d1d5db;cursor:not-allowed;transform:none;box-shadow:none}
         .btn-outline{display:inline-flex;align-items:center;gap:7px;background:white;color:#374151;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;border:1.5px solid #e5e7eb;cursor:pointer;font-family:inherit;transition:all .18s}
-        .btn-outline:hover{border-color:#16a34a;color:#16a34a}
+        .btn-outline:hover{border-color:#7c3aed;color:#7c3aed}
 
         .pay-card{border:2px solid #e5e7eb;border-radius:14px;padding:24px;transition:all .18s;background:white}
-        .pay-card:hover{border-color:#16a34a;box-shadow:0 4px 20px rgba(22,163,74,.1)}
-        .pay-card.featured{border-color:#16a34a;background:#f0fdf4}
+        .pay-card:hover{border-color:#7c3aed;box-shadow:0 4px 20px rgba(124,58,237,.1)}
+        .pay-card.featured{border-color:#7c3aed;background:#f5f3ff}
 
         .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto;backdrop-filter:blur(4px)}
         .modal-box{background:white;border-radius:16px;width:100%;max-width:860px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,.3)}
@@ -1391,7 +1391,7 @@ Retourne UNIQUEMENT le JSON.`}];
         .fi.req-err{border-color:#ef4444!important;}
 
         .choice-card{border:2px solid #e5e7eb;border-radius:16px;padding:28px 24px;cursor:pointer;background:white;transition:all .22s;text-align:left;font-family:inherit;display:flex;flex-direction:column;gap:10}
-        .choice-card:hover{border-color:#16a34a;box-shadow:0 6px 24px rgba(22,163,74,.15);transform:translateY(-2px)}
+        .choice-card:hover{border-color:#7c3aed;box-shadow:0 6px 24px rgba(124,58,237,.15);transform:translateY(-2px)}
 
         @media(max-width:640px){.hide-sm{display:none!important}.grid2{grid-template-columns:1fr!important}.choice-grid{grid-template-columns:1fr!important}}
 
@@ -1401,29 +1401,29 @@ Retourne UNIQUEMENT le JSON.`}];
         @media print{body{background:white}#cv-print{display:block!important}}
       `}</style>
 
-      <div style={{background:"#f8fafc",minHeight:"100vh",width:"100%"}}>
+      <div style={{background:"#f5f3ff",minHeight:"100vh",width:"100%"}}>
 
         {/* ── NAVBAR ── */}
         <nav style={{background:"rgba(255,255,255,.96)",backdropFilter:"blur(12px)",borderBottom:"1.5px solid #f0f0f0",padding:"0 24px",height:62,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
           <div style={{display:"flex",alignItems:"center",gap:28}}>
             <a href="/" style={{display:"flex",alignItems:"center",gap:9,textDecoration:"none"}}>
-              <div style={{width:34,height:34,background:"#16a34a",borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:16,color:"white"}}>T</div>
-              <span style={{color:"#0f172a",fontWeight:800,fontSize:16}}>TalentMaroc</span>
+              <div style={{width:34,height:34,background:"linear-gradient(135deg,#7c3aed,#5b21b6)",borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:16,color:"white"}}>T</div>
+              <span style={{color:"#1e1147",fontWeight:800,fontSize:16}}>TalentMaroc</span>
             </a>
             <div className="hide-sm" style={{display:"flex",gap:2}}>
               <a href="/" className="nl">Emplois</a>
               <a href="/employeur" className="nl">Recruteurs</a>
-              <span style={{color:"#16a34a",fontSize:14,fontWeight:700,padding:"7px 12px"}}>Mon CV ✦</span>
+              <span style={{color:"#7c3aed",fontSize:14,fontWeight:700,padding:"7px 12px"}}>Mon CV ✦</span>
             </div>
           </div>
           <a href="/dashboard" className="btn-green" style={{padding:"8px 16px",fontSize:13}}>📋 Mes candidatures</a>
         </nav>
 
         {/* ── HERO ── */}
-        <div style={{background:"white",borderBottom:"1.5px solid #f0f0f0",padding:"44px 24px 48px",textAlign:"center"}}>
-          <div className="au" style={{display:"inline-flex",alignItems:"center",gap:7,background:"#f0fdf4",border:"1.5px solid #bbf7d0",borderRadius:100,padding:"5px 14px",marginBottom:18}}>
-            <span style={{width:7,height:7,borderRadius:"50%",background:"#16a34a",display:"inline-block"}}/>
-            <span style={{fontSize:12,fontWeight:700,color:"#15803d"}}>9 modèles professionnels · IA de rédaction · PDF téléchargeable</span>
+        <div style={{background:"white",borderBottom:"1.5px solid #ede9fe",padding:"44px 24px 48px",textAlign:"center"}}>
+          <div className="au" style={{display:"inline-flex",alignItems:"center",gap:7,background:"#f5f3ff",border:"1.5px solid #ddd6fe",borderRadius:100,padding:"5px 14px",marginBottom:18}}>
+            <span style={{width:7,height:7,borderRadius:"50%",background:"#7c3aed",display:"inline-block"}}/>
+            <span style={{fontSize:12,fontWeight:700,color:"#6d28d9"}}>9 modèles professionnels · IA de rédaction · PDF téléchargeable</span>
           </div>
           <h1 className="au" style={{fontFamily:"inherit",fontSize:"clamp(24px,5vw,42px)",fontWeight:800,color:"#0f172a",lineHeight:1.12,letterSpacing:"-0.02em",marginBottom:12,animationDelay:".08s"}}>
             Importer un CV ou en créer un nouveau

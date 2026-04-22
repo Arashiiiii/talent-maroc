@@ -86,7 +86,7 @@ export default function NewJobPage() {
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#16a34a", borderRadius: "50%", animation: "spin .7s linear infinite", margin: "0 auto 12px" }} />
+        <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#7c3aed", borderRadius: "50%", animation: "spin .7s linear infinite", margin: "0 auto 12px" }} />
         <div style={{ fontSize: 14, color: "#6b7280" }}>Chargement…</div>
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
@@ -98,28 +98,28 @@ export default function NewJobPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f8fafc;color:#0f172a}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f5f3ff;color:#0f172a}
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         .au{animation:fadeUp .4s cubic-bezier(.16,1,.3,1) both}
-        input:focus,select:focus,textarea:focus{border-color:#16a34a!important;box-shadow:0 0 0 3px rgba(22,163,74,.1)!important;outline:none!important}
+        input:focus,select:focus,textarea:focus{border-color:#7c3aed!important;box-shadow:0 0 0 3px rgba(124,58,237,.1)!important;outline:none!important}
         .nl{color:#4b5563;text-decoration:none;font-size:13px;font-weight:600;padding:6px 10px;border-radius:7px;transition:all .18s}
-        .nl:hover{color:#0f172a;background:#f3f4f6}
+        .nl:hover{color:#1e1147;background:#f5f3ff}
       `}</style>
 
-      <div style={{ background: "#f8fafc", minHeight: "100vh" }}>
+      <div style={{ background: "#f5f3ff", minHeight: "100vh" }}>
         {/* NAVBAR */}
         <nav style={{ background: "rgba(255,255,255,.96)", backdropFilter: "blur(12px)", borderBottom: "1.5px solid #f0f0f0", padding: "0 20px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-              <div style={{ width: 32, height: 32, background: "#16a34a", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15, color: "white" }}>T</div>
-              <span style={{ fontWeight: 800, fontSize: 15, color: "#0f172a" }}>TalentMaroc</span>
+              <div style={{ width: 32, height: 32, background: "linear-gradient(135deg,#7c3aed,#5b21b6)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15, color: "white" }}>T</div>
+              <span style={{ fontWeight: 800, fontSize: 15, color: "#1e1147" }}>TalentMaroc</span>
             </a>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#16a34a", background: "#f0fdf4", padding: "4px 10px", borderRadius: 7 }}>Publier une offre</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#6d28d9", background: "#f5f3ff", padding: "4px 10px", borderRadius: 7 }}>Publier une offre</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <a href="/employeur/dashboard" className="nl">← Dashboard</a>
-            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#f0fdf4", border: "1.5px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#15803d" }}>
+            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#7c3aed,#5b21b6)", border: "1.5px solid #ddd6fe", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "white" }}>
               {user?.email?.charAt(0).toUpperCase()}
             </div>
             <button onClick={() => { getSupabase().auth.signOut(); window.location.href = "/employeur"; }}
@@ -213,7 +213,7 @@ export default function NewJobPage() {
                   Annuler
                 </a>
                 <button type="submit" disabled={saving || jobCount >= FREE_JOB_LIMIT}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 24px", borderRadius: 8, fontSize: 13, fontWeight: 700, background: (saving || jobCount >= FREE_JOB_LIMIT) ? "#d1d5db" : "#16a34a", color: "white", border: "none", cursor: (saving || jobCount >= FREE_JOB_LIMIT) ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "background .18s" }}>
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "10px 24px", borderRadius: 8, fontSize: 13, fontWeight: 700, background: (saving || jobCount >= FREE_JOB_LIMIT) ? "#d1d5db" : "linear-gradient(135deg,#7c3aed,#5b21b6)", color: "white", border: "none", cursor: (saving || jobCount >= FREE_JOB_LIMIT) ? "not-allowed" : "pointer", fontFamily: "inherit", transition: "all .18s", boxShadow: (saving || jobCount >= FREE_JOB_LIMIT) ? "none" : "0 4px 14px rgba(124,58,237,.3)" }}>
                   {saving ? "Publication…" : jobCount >= FREE_JOB_LIMIT ? "Limite atteinte" : "Publier l'offre"}
                 </button>
               </div>

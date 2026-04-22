@@ -89,7 +89,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
 
         {/* Header card */}
         <div style={{ background:'white', border:'1.5px solid #f0f0f0', borderRadius:16, padding:'28px 26px', marginBottom:14, boxShadow:'0 1px 4px rgba(0,0,0,0.04)', position:'relative', overflow:'hidden' }}>
-          <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:'linear-gradient(90deg,#16a34a,#4ade80)' }}/>
+          <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:'linear-gradient(90deg,#7c3aed,#a78bfa)' }}/>
           <div style={{ display:'flex', gap:16, alignItems:'flex-start', flexWrap:'wrap' }}>
             <div style={{ flexShrink:0 }}><CompanyLogo logoUrl={job.logo_url} companyName={job.company}/></div>
             <div style={{ flex:1, minWidth:0 }}>
@@ -139,7 +139,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
         {/* Description */}
         <div style={{ background:'white', border:'1.5px solid #f0f0f0', borderRadius:14, padding:'24px 26px', marginBottom:14, boxShadow:'0 1px 4px rgba(0,0,0,0.04)' }}>
           <h2 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:15, fontWeight:800, color:'#0f172a', marginBottom:16, display:'flex', alignItems:'center', gap:8 }}>
-            <span style={{ width:3, height:16, background:'#16a34a', borderRadius:2, display:'inline-block', flexShrink:0 }}/>
+            <span style={{ width:3, height:16, background:'#7c3aed', borderRadius:2, display:'inline-block', flexShrink:0 }}/>
             Description du poste
           </h2>
           {job.description ? (
@@ -155,10 +155,10 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
         </div>
 
         {/* Bottom CTA — desktop only */}
-        <div className="hide-sm" style={{ background:'#f0fdf4', border:'1.5px solid #bbf7d0', borderRadius:13, padding:'22px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:18, flexWrap:'wrap' }}>
+        <div className="hide-sm" style={{ background:'#f5f3ff', border:'1.5px solid #ddd6fe', borderRadius:13, padding:'22px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:18, flexWrap:'wrap' }}>
           <div>
-            <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:15, fontWeight:800, color:'#0f172a', marginBottom:3 }}>Prêt(e) à postuler ?</div>
-            <div style={{ fontSize:13, color:'#4b7c59' }}>Postulez directement via votre profil TalentMaroc.</div>
+            <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:15, fontWeight:800, color:'#1e1147', marginBottom:3 }}>Prêt(e) à postuler ?</div>
+            <div style={{ fontSize:13, color:'#6d28d9' }}>Postulez directement via votre profil TalentMaroc.</div>
           </div>
           <SaveApplyButton job={job}/>
         </div>
@@ -186,8 +186,8 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
             <div style={{ background:'linear-gradient(135deg,#0f172a,#1e3a5f)', borderRadius:13, padding:'20px 22px', marginTop:14, display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
               <div>
                 <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:5 }}>
-                  <Zap size={13} style={{ color:'#4ade80' }}/>
-                  <span style={{ fontSize:10, fontWeight:800, color:'#4ade80', textTransform:'uppercase', letterSpacing:'0.1em' }}>CV IA Personnalisé</span>
+                  <Zap size={13} style={{ color:'#a78bfa' }}/>
+                  <span style={{ fontSize:10, fontWeight:800, color:'#a78bfa', textTransform:'uppercase', letterSpacing:'0.1em' }}>CV IA Personnalisé</span>
                 </div>
                 <div style={{ fontSize:14, fontWeight:800, color:'white', marginBottom:3 }}>
                   Maximisez vos chances avec un CV ciblé
@@ -197,7 +197,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
                 </div>
               </div>
               <a href={cvUrl}
-                style={{ display:'inline-flex', alignItems:'center', gap:7, background:'#16a34a', color:'white', padding:'11px 20px', borderRadius:9, fontSize:13, fontWeight:700, textDecoration:'none', whiteSpace:'nowrap', flexShrink:0 }}>
+                style={{ display:'inline-flex', alignItems:'center', gap:7, background:'linear-gradient(135deg,#7c3aed,#5b21b6)', color:'white', padding:'11px 20px', borderRadius:9, fontSize:13, fontWeight:700, textDecoration:'none', whiteSpace:'nowrap', flexShrink:0, boxShadow:'0 4px 16px rgba(124,58,237,.35)' }}>
                 ✦ Créer mon CV pour ce poste →
               </a>
             </div>
@@ -266,12 +266,12 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
           const cvUrl = `/cv?match=${encodeURIComponent(params.toString())}`;
           return (
             <div style={{ background:'linear-gradient(135deg,#0f172a,#1e3a5f)', borderRadius:14, padding:'18px', overflow:'hidden', position:'relative' }}>
-              <div style={{ position:'absolute', top:-20, right:-20, width:80, height:80, background:'rgba(22,163,74,.15)', borderRadius:'50%' }}/>
-              <div style={{ position:'absolute', bottom:-30, left:-10, width:60, height:60, background:'rgba(74,222,128,.08)', borderRadius:'50%' }}/>
+              <div style={{ position:'absolute', top:-20, right:-20, width:80, height:80, background:'rgba(124,58,237,.15)', borderRadius:'50%' }}/>
+              <div style={{ position:'absolute', bottom:-30, left:-10, width:60, height:60, background:'rgba(167,139,250,.08)', borderRadius:'50%' }}/>
               <div style={{ position:'relative', zIndex:1 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
-                  <Zap size={13} style={{ color:'#4ade80' }}/>
-                  <span style={{ fontSize:10, fontWeight:800, color:'#4ade80', textTransform:'uppercase', letterSpacing:'0.1em' }}>IA · Personnalisé</span>
+                  <Zap size={13} style={{ color:'#a78bfa' }}/>
+                  <span style={{ fontSize:10, fontWeight:800, color:'#a78bfa', textTransform:'uppercase', letterSpacing:'0.1em' }}>IA · Personnalisé</span>
                 </div>
                 <div style={{ fontSize:14, fontWeight:800, color:'white', marginBottom:6, lineHeight:1.3 }}>
                   CV ciblé pour ce poste
@@ -280,7 +280,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
                   L'IA crée un CV optimisé spécifiquement pour <strong style={{ color:'rgba(255,255,255,.8)' }}>{job.title}</strong> chez {job.company}.
                 </p>
                 <a href={cvUrl}
-                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:7, background:'#16a34a', color:'white', padding:'10px 14px', borderRadius:9, fontSize:12, fontWeight:700, textDecoration:'none', textAlign:'center', transition:'all .18s' }}>
+                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:7, background:'linear-gradient(135deg,#7c3aed,#5b21b6)', color:'white', padding:'10px 14px', borderRadius:9, fontSize:12, fontWeight:700, textDecoration:'none', textAlign:'center', transition:'all .18s', boxShadow:'0 4px 12px rgba(124,58,237,.35)' }}>
                   ✦ Créer mon CV pour ce poste
                 </a>
                 <div style={{ marginTop:10, fontSize:10, color:'rgba(255,255,255,.3)', textAlign:'center' }}>
@@ -333,7 +333,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
         html, body { width:100%; overflow-x:hidden; }
-        body { font-family:'Plus Jakarta Sans',sans-serif; background:#f8fafc; color:#111827; }
+        body { font-family:'Plus Jakarta Sans',sans-serif; background:#f5f3ff; color:#111827; }
 
         @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
@@ -347,7 +347,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
         /* Pills */
         .pill { display:inline-flex; align-items:center; padding:5px 12px; border-radius:100px; font-size:12px; font-weight:700; border:1.5px solid; }
-        .pill-green { background:#f0fdf4; color:#15803d; border-color:#bbf7d0; }
+        .pill-green { background:#f5f3ff; color:#6d28d9; border-color:#ddd6fe; }
         .pill-blue  { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
         .pill-amber { background:#fffbeb; color:#92400e; border-color:#fde68a; }
         .pill-gray  { background:#f9fafb; color:#374151; border-color:#e5e7eb; }
@@ -364,15 +364,15 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         .job-desc strong { color:#0f172a; font-weight:700; }
 
         /* CTA */
-        .cta-btn { display:inline-flex; align-items:center; justify-content:center; gap:9px; background:#16a34a; color:white; padding:14px 32px; border-radius:10px; font-size:15px; font-weight:700; text-decoration:none; font-family:'Plus Jakarta Sans',sans-serif; transition:all .2s; width:100%; border:none; cursor:pointer; }
-        .cta-btn:hover { background:#15803d; transform:translateY(-2px); box-shadow:0 8px 24px rgba(22,163,74,0.3); }
+        .cta-btn { display:inline-flex; align-items:center; justify-content:center; gap:9px; background:linear-gradient(135deg,#7c3aed,#5b21b6); color:white; padding:14px 32px; border-radius:10px; font-size:15px; font-weight:700; text-decoration:none; font-family:'Plus Jakarta Sans',sans-serif; transition:all .2s; width:100%; border:none; cursor:pointer; box-shadow:0 4px 16px rgba(124,58,237,.35); }
+        .cta-btn:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(124,58,237,0.45); }
 
         /* Similar */
         .sim-card { background:white; border:1.5px solid #f0f0f0; border-radius:11px; padding:14px 16px; transition:all .18s; text-decoration:none; display:block; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
-        .sim-card:hover { border-color:#16a34a; box-shadow:0 4px 16px rgba(22,163,74,0.1); transform:translateY(-1px); }
+        .sim-card:hover { border-color:#7c3aed; box-shadow:0 4px 16px rgba(124,58,237,0.12); transform:translateY(-1px); }
 
         /* Sticky bar mobile */
-        .sticky-bar { display:none; position:fixed; bottom:0; left:0; right:0; background:rgba(248,250,252,0.97); backdrop-filter:blur(12px); border-top:1.5px solid #e5e7eb; padding:12px 20px; z-index:50; }
+        .sticky-bar { display:none; position:fixed; bottom:0; left:0; right:0; background:rgba(245,243,255,0.97); backdrop-filter:blur(12px); border-top:1.5px solid #ddd6fe; padding:12px 20px; z-index:50; }
 
         /* Mobile apply section — shown only on mobile */
         .mobile-apply { display:none; }
@@ -398,24 +398,24 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         .footer-link:hover { color:rgba(255,255,255,0.85); }
       `}</style>
 
-      <div style={{ background:'#f8fafc', minHeight:'100vh', width:'100%' }}>
+      <div style={{ background:'#f5f3ff', minHeight:'100vh', width:'100%' }}>
 
         {/* NAVBAR */}
         <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(12px)', borderBottom:'1.5px solid #f0f0f0', padding:'0 24px', height:62, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div style={{ display:'flex', alignItems:'center', gap:28 }}>
             <a href="/" style={{ display:'flex', alignItems:'center', gap:9, textDecoration:'none' }}>
-              <div style={{ width:34, height:34, background:'#16a34a', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:16, color:'white' }}>T</div>
-              <span style={{ color:'#0f172a', fontWeight:800, fontSize:16 }}>TalentMaroc</span>
+              <div style={{ width:34, height:34, background:'linear-gradient(135deg,#7c3aed,#5b21b6)', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:16, color:'white' }}>T</div>
+              <span style={{ color:'#1e1147', fontWeight:800, fontSize:16 }}>TalentMaroc</span>
             </a>
             <div className="hide-sm" style={{ display:'flex', gap:2 }}>
               <a href="/"          className="nl">Emplois</a>
-              <a href="/employers" className="nl">Recruteurs</a>
-              <a href="/cv"        className="nl" style={{ color:'#16a34a' }}>Mon CV ✦</a>
+              <a href="/employeur" className="nl">Recruteurs</a>
+              <a href="/cv"        className="nl" style={{ color:'#7c3aed' }}>Mon CV ✦</a>
             </div>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <NavbarAuth />
-            <a href="/employers/new" style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#16a34a', color:'white', padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:700, textDecoration:'none', transition:'all .18s' }}>
+            <a href="/employeur/new" style={{ display:'inline-flex', alignItems:'center', gap:6, background:'linear-gradient(135deg,#7c3aed,#5b21b6)', color:'white', padding:'8px 16px', borderRadius:9, fontSize:13, fontWeight:700, textDecoration:'none', transition:'all .18s', boxShadow:'0 2px 8px rgba(124,58,237,.3)' }}>
               Publier
             </a>
           </div>
@@ -434,10 +434,10 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         </div>
 
         {/* FOOTER */}
-        <footer style={{ background:'#0f172a', padding:'40px 24px 24px' }}>
+        <footer style={{ background:'#1e1147', padding:'40px 24px 24px' }}>
           <div style={{ maxWidth:1060, margin:'0 auto', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16 }}>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{ width:28, height:28, background:'#16a34a', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:13, color:'white' }}>T</div>
+              <div style={{ width:28, height:28, background:'linear-gradient(135deg,#7c3aed,#5b21b6)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:13, color:'white' }}>T</div>
               <span style={{ color:'white', fontWeight:800, fontSize:14 }}>TalentMaroc</span>
             </div>
             <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>

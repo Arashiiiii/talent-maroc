@@ -46,11 +46,11 @@ function Badge({ status }: { status: AppStatus }) {
 function Logo({ name, url }: { name: string; url?: string | null }) {
   if (url) return (
     <div style={{ width: 42, height: 42, borderRadius: 10, background: "#f8fafc", border: "1.5px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
-      <img src={url} alt="" style={{ width: 32, height: 32, objectFit: "contain" }} onError={e => { e.currentTarget.parentElement!.innerHTML = `<div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#16a34a">${name.charAt(0)}</div>`; }} />
+      <img src={url} alt="" style={{ width: 32, height: 32, objectFit: "contain" }} onError={e => { e.currentTarget.parentElement!.innerHTML = `<div style="width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#7c3aed">${name.charAt(0)}</div>`; }} />
     </div>
   );
   return (
-    <div style={{ width: 42, height: 42, borderRadius: 10, background: "#f0fdf4", border: "1.5px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#16a34a", flexShrink: 0 }}>
+    <div style={{ width: 42, height: 42, borderRadius: 10, background: "#f5f3ff", border: "1.5px solid #ddd6fe", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#7c3aed", flexShrink: 0 }}>
       {name.charAt(0).toUpperCase()}
     </div>
   );
@@ -217,7 +217,7 @@ export default function DashboardPage() {
   if (loading) return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
       <div style={{ textAlign: "center" }}>
-        <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#16a34a", borderRadius: "50%", animation: "spin .7s linear infinite", margin: "0 auto 12px" }} />
+        <div style={{ width: 36, height: 36, border: "3px solid #e5e7eb", borderTopColor: "#7c3aed", borderRadius: "50%", animation: "spin .7s linear infinite", margin: "0 auto 12px" }} />
         <div style={{ fontSize: 14, color: "#6b7280" }}>Chargement de votre espace…</div>
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
@@ -231,30 +231,30 @@ export default function DashboardPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f8fafc;color:#0f172a}
+        body{font-family:'Plus Jakarta Sans',sans-serif;background:#f5f3ff;color:#0f172a}
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         .au{animation:fadeUp .4s cubic-bezier(.16,1,.3,1) both}
-        input:focus,select:focus,textarea:focus{border-color:#16a34a!important;box-shadow:0 0 0 3px rgba(22,163,74,.1)!important;outline:none!important}
+        input:focus,select:focus,textarea:focus{border-color:#7c3aed!important;box-shadow:0 0 0 3px rgba(124,58,237,.1)!important;outline:none!important}
         .tab{padding:13px 16px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;font-family:inherit;color:#6b7280;border-bottom:2.5px solid transparent;transition:all .18s;display:flex;align-items:center;gap:7px;white-space:nowrap}
-        .tab.on{color:#16a34a;border-bottom-color:#16a34a}
-        .tab:hover:not(.on){color:#0f172a}
-        .card{background:white;border:1.5px solid #f0f0f0;border-radius:13px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
-        .acard{background:white;border:1.5px solid #f0f0f0;border-radius:12px;padding:16px 18px;transition:border-color .15s;box-shadow:0 1px 3px rgba(0,0,0,.03)}
-        .acard:hover{border-color:#d1d5db;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-        .bg{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#16a34a;color:white;padding:9px 18px;border-radius:9px;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:inherit;text-decoration:none;transition:all .18s;white-space:nowrap}
-        .bg:hover{background:#15803d;transform:translateY(-1px);box-shadow:0 4px 14px rgba(22,163,74,.25)}
+        .tab.on{color:#7c3aed;border-bottom-color:#7c3aed}
+        .tab:hover:not(.on){color:#1e1147}
+        .card{background:white;border:1.5px solid #ede9fe;border-radius:13px;box-shadow:0 1px 4px rgba(124,58,237,.06)}
+        .acard{background:white;border:1.5px solid #ede9fe;border-radius:12px;padding:16px 18px;transition:border-color .15s;box-shadow:0 1px 3px rgba(0,0,0,.03)}
+        .acard:hover{border-color:#c4b5fd;box-shadow:0 2px 8px rgba(124,58,237,.08)}
+        .bg{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;padding:9px 18px;border-radius:9px;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:inherit;text-decoration:none;transition:all .18s;white-space:nowrap;box-shadow:0 4px 14px rgba(124,58,237,.3)}
+        .bg:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(124,58,237,.4)}
         .bg:disabled{background:#d1d5db;cursor:not-allowed;transform:none;box-shadow:none}
         .bo{display:inline-flex;align-items:center;gap:6px;background:white;color:#374151;padding:9px 16px;border-radius:9px;font-size:13px;font-weight:600;border:1.5px solid #e5e7eb;cursor:pointer;font-family:inherit;text-decoration:none;transition:all .18s;white-space:nowrap}
-        .bo:hover{border-color:#16a34a;color:#16a34a}
+        .bo:hover{border-color:#7c3aed;color:#7c3aed}
         .chip{padding:6px 12px;border-radius:100px;border:1.5px solid #e5e7eb;background:white;cursor:pointer;font-size:11px;font-weight:600;color:#374151;font-family:inherit;transition:all .18s}
-        .chip.on{border-color:#16a34a;color:#16a34a;background:#f0fdf4}
+        .chip.on{border-color:#7c3aed;color:#6d28d9;background:#f5f3ff}
         .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
         .modal{background:white;border-radius:16px;width:100%;max-width:500px;box-shadow:0 24px 60px rgba(0,0,0,.2);overflow:hidden}
         .ghost{background:none;border:none;cursor:pointer;padding:6px;border-radius:7px;color:#9ca3af;font-family:inherit;font-size:13px;display:inline-flex;align-items:center;transition:all .15s}
-        .ghost:hover{background:#f3f4f6;color:#374151}
+        .ghost:hover{background:#f5f3ff;color:#374151}
         .upload-zone{border:2px dashed #d1d5db;border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:all .2s}
-        .upload-zone:hover{border-color:#16a34a;background:#f0fdf4}
+        .upload-zone:hover{border-color:#7c3aed;background:#f5f3ff}
         @media(max-width:640px){
           .sgrid{grid-template-columns:1fr 1fr!important}
           .hide-sm{display:none!important}
@@ -266,23 +266,23 @@ export default function DashboardPage() {
         }
       `}</style>
 
-      <div style={{ background: "#f8fafc", minHeight: "100vh" }}>
+      <div style={{ background: "#f5f3ff", minHeight: "100vh" }}>
 
         {/* NAVBAR */}
         <nav style={{ background: "rgba(255,255,255,.97)", backdropFilter: "blur(12px)", borderBottom: "1.5px solid #f0f0f0", padding: "0 22px", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
             <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-              <div style={{ width: 33, height: 33, background: "#16a34a", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15, color: "white" }}>T</div>
-              <span style={{ fontWeight: 800, fontSize: 15, color: "#0f172a" }}>TalentMaroc</span>
+              <div style={{ width: 33, height: 33, background: "linear-gradient(135deg,#7c3aed,#5b21b6)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15, color: "white" }}>T</div>
+              <span style={{ fontWeight: 800, fontSize: 15, color: "#1e1147" }}>TalentMaroc</span>
             </a>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#16a34a", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "4px 10px", borderRadius: 100 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#6d28d9", background: "#f5f3ff", border: "1px solid #ddd6fe", padding: "4px 10px", borderRadius: 100 }}>
               Espace Candidat
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <a href="/" className="bo hide-sm" style={{ padding: "7px 14px", fontSize: 12 }}>🔍 Offres</a>
             <a href="/cv" className="bo hide-sm" style={{ padding: "7px 14px", fontSize: 12 }}>✦ CV Builder</a>
-            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#f0fdf4", border: "1.5px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#15803d" }}>
+            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#7c3aed,#5b21b6)", border: "1.5px solid #ddd6fe", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "white" }}>
               {(pName || user?.email || "?").charAt(0).toUpperCase()}
             </div>
             <button onClick={signOut}
@@ -302,7 +302,7 @@ export default function DashboardPage() {
                 </h1>
                 <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 3 }}>
                   {total} candidature{total !== 1 ? "s" : ""} · {cvs.length} CV sauvegardé{cvs.length !== 1 ? "s" : ""}
-                  {storedCvUrl && <span style={{ color: "#16a34a", marginLeft: 8 }}>· ✅ CV importé</span>}
+                  {storedCvUrl && <span style={{ color: "#7c3aed", marginLeft: 8 }}>· ✅ CV importé</span>}
                 </p>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
@@ -331,7 +331,7 @@ export default function DashboardPage() {
             <div className="au">
               <div className="sgrid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
                 {[
-                  { icon: "💼", label: "Total candidatures", val: total,      c: "#16a34a" },
+                  { icon: "💼", label: "Total candidatures", val: total,      c: "#7c3aed" },
                   { icon: "🔥", label: "En cours",           val: active,     c: "#1d4ed8" },
                   { icon: "🗓", label: "Entretiens",          val: interviews, c: "#92400e" },
                   { icon: "🎉", label: "Offres reçues",       val: offers,     c: "#065f46" },
@@ -348,13 +348,13 @@ export default function DashboardPage() {
 
               {/* CV banner */}
               {storedCvUrl ? (
-                <div className="card" style={{ padding: "18px 22px", marginBottom: 16, background: "linear-gradient(135deg,#f0fdf4,#dcfce7)", border: "1.5px solid #bbf7d0" }}>
+                <div className="card" style={{ padding: "18px 22px", marginBottom: 16, background: "linear-gradient(135deg,#f5f3ff,#ede9fe)", border: "1.5px solid #ddd6fe" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <span style={{ fontSize: 28 }}>📄</span>
                       <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "#15803d" }}>Votre CV est prêt à l'emploi</div>
-                        <div style={{ fontSize: 12, color: "#4b7c59" }}>Importé · Joints automatiquement lors de vos candidatures</div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#6d28d9" }}>Votre CV est prêt à l'emploi</div>
+                        <div style={{ fontSize: 12, color: "#7c3aed" }}>Importé · Joints automatiquement lors de vos candidatures</div>
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
@@ -384,7 +384,7 @@ export default function DashboardPage() {
                 <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 14 }}>Pipeline de candidatures</h3>
                 {total === 0 ? (
                   <div style={{ textAlign: "center", padding: "20px", color: "#9ca3af", fontSize: 13 }}>
-                    Aucune candidature. <a href="/" style={{ color: "#16a34a", fontWeight: 600 }}>Parcourez les offres →</a>
+                    Aucune candidature. <a href="/" style={{ color: "#7c3aed", fontWeight: 600 }}>Parcourez les offres →</a>
                   </div>
                 ) : (
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -412,7 +412,7 @@ export default function DashboardPage() {
                 </div>
                 {apps.length === 0 ? (
                   <div style={{ textAlign: "center", padding: "24px", color: "#9ca3af", fontSize: 13 }}>
-                    Aucune candidature. <a href="/" style={{ color: "#16a34a", fontWeight: 600 }}>Parcourez les offres d'emploi →</a>
+                    Aucune candidature. <a href="/" style={{ color: "#7c3aed", fontWeight: 600 }}>Parcourez les offres d'emploi →</a>
                   </div>
                 ) : apps.slice(0, 5).map(a => (
                   <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid #f3f4f6", flexWrap: "wrap" }}>
@@ -513,7 +513,7 @@ export default function DashboardPage() {
                   onChange={e => { const f = e.target.files?.[0]; if (f) handleCVUpload(f); e.target.value = ""; }} />
 
                 <div className="upload-zone" onClick={() => fileInputRef.current?.click()}
-                  onDragOver={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = "#16a34a"; }}
+                  onDragOver={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = "#7c3aed"; }}
                   onDragLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "#d1d5db"; }}
                   onDrop={e => { e.preventDefault(); (e.currentTarget as HTMLElement).style.borderColor = "#d1d5db"; const f = e.dataTransfer.files[0]; if (f) handleCVUpload(f); }}>
                   <div style={{ fontSize: 32, marginBottom: 8 }}>{cvUploading ? "⏳" : "📤"}</div>
@@ -524,15 +524,15 @@ export default function DashboardPage() {
                 </div>
 
                 {cvUploadErr && <div style={{ marginTop: 10, background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#dc2626" }}>⚠ {cvUploadErr}</div>}
-                {cvUploadMsg && <div style={{ marginTop: 10, background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#15803d" }}>✓ {cvUploadMsg}</div>}
+                {cvUploadMsg && <div style={{ marginTop: 10, background: "#f5f3ff", border: "1.5px solid #ddd6fe", borderRadius: 8, padding: "10px 14px", fontSize: 13, color: "#6d28d9" }}>✓ {cvUploadMsg}</div>}
 
                 {storedCvUrl && (
-                  <div style={{ marginTop: 14, background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                  <div style={{ marginTop: 14, background: "#f5f3ff", border: "1.5px solid #ddd6fe", borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <span style={{ fontSize: 22 }}>📄</span>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "#15803d" }}>CV actif</div>
-                        <div style={{ fontSize: 11, color: "#4b7c59" }}>Ce CV est joint automatiquement à vos candidatures</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#6d28d9" }}>CV actif</div>
+                        <div style={{ fontSize: 11, color: "#7c3aed" }}>Ce CV est joint automatiquement à vos candidatures</div>
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
@@ -560,7 +560,7 @@ export default function DashboardPage() {
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 20px rgba(0,0,0,.08)"; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "0 1px 4px rgba(0,0,0,.04)"; }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                        <div style={{ width: 44, height: 44, background: cv.type === "generated" ? "#eff6ff" : cv.type === "uploaded" ? "#f0fdf4" : "#fefce8", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+                        <div style={{ width: 44, height: 44, background: cv.type === "generated" ? "#f5f3ff" : cv.type === "uploaded" ? "#f0fdf4" : "#fefce8", borderRadius: 11, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
                           {cv.type === "generated" ? "✦" : cv.type === "uploaded" ? "📂" : "📄"}
                         </div>
                         <button onClick={() => { if (confirm(`Supprimer "${cv.name}" ?`)) deleteCV(cv.id); }} className="ghost" style={{ color: "#d1d5db" }}>🗑</button>
@@ -585,13 +585,13 @@ export default function DashboardPage() {
               {/* AI Enhancement upsell */}
               <div style={{ marginTop: 20, background: "linear-gradient(135deg,#0f172a,#1e3a5f)", borderRadius: 14, padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14 }}>
                 <div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(22,163,74,.2)", border: "1px solid rgba(22,163,74,.3)", borderRadius: 100, padding: "3px 10px", marginBottom: 8 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#4ade80" }}>✦ PRO</span>
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(167,139,250,.2)", border: "1px solid rgba(167,139,250,.3)", borderRadius: 100, padding: "3px 10px", marginBottom: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "#a78bfa" }}>✦ PRO</span>
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "white", marginBottom: 4 }}>Améliorez votre CV avec l'IA</div>
                   <div style={{ fontSize: 12, color: "rgba(255,255,255,.6)", lineHeight: 1.5 }}>Notre IA analyse et réécrit votre CV pour maximiser vos chances. Adapté à chaque poste.</div>
                 </div>
-                <a href="/pricing" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#16a34a", color: "white", padding: "10px 20px", borderRadius: 9, fontSize: 13, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}>
+                <a href="/pricing" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg,#7c3aed,#5b21b6)", color: "white", padding: "10px 20px", borderRadius: 9, fontSize: 13, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", boxShadow: "0 4px 14px rgba(124,58,237,.35)" }}>
                   Voir les offres Pro →
                 </a>
               </div>
@@ -607,7 +607,7 @@ export default function DashboardPage() {
                 <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
                   <span style={{ fontSize:20 }}>✉️</span>
                   <h2 style={{ fontSize:16, fontWeight:800 }}>Lettre de motivation IA</h2>
-                  <span style={{ fontSize:11, fontWeight:700, background:"#16a34a", color:"white", padding:"2px 8px", borderRadius:100 }}>Pro</span>
+                  <span style={{ fontSize:11, fontWeight:700, background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white", padding:"2px 8px", borderRadius:100 }}>Pro</span>
                 </div>
                 <p style={{ fontSize:13, color:"#6b7280", marginBottom:20, lineHeight:1.6 }}>
                   L'IA génère une lettre de motivation personnalisée pour le poste ciblé en se basant sur votre profil.
@@ -663,7 +663,7 @@ export default function DashboardPage() {
                 {clResult && (
                   <div style={{ marginTop:18 }}>
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
-                      <div style={{ fontSize:13, fontWeight:700, color:"#15803d" }}>✓ Lettre générée</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#6d28d9" }}>✓ Lettre générée</div>
                       <div style={{ display:"flex", gap:6 }}>
                         <button className="bo" style={{ fontSize:12, padding:"6px 12px" }}
                           onClick={()=>{ navigator.clipboard.writeText(clResult); }}>
@@ -687,7 +687,7 @@ export default function DashboardPage() {
                 <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
                   <span style={{ fontSize:20 }}>💼</span>
                   <h2 style={{ fontSize:16, fontWeight:800 }}>Résumé LinkedIn IA</h2>
-                  <span style={{ fontSize:11, fontWeight:700, background:"#16a34a", color:"white", padding:"2px 8px", borderRadius:100 }}>Pro</span>
+                  <span style={{ fontSize:11, fontWeight:700, background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white", padding:"2px 8px", borderRadius:100 }}>Pro</span>
                 </div>
                 <p style={{ fontSize:13, color:"#6b7280", marginBottom:20, lineHeight:1.6 }}>
                   Générez une bio LinkedIn percutante basée sur votre profil pour maximiser votre visibilité.
@@ -729,7 +729,7 @@ export default function DashboardPage() {
                 {liResult && (
                   <div style={{ marginTop:18 }}>
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
-                      <div style={{ fontSize:13, fontWeight:700, color:"#15803d" }}>✓ Bio LinkedIn générée</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#6d28d9" }}>✓ Bio LinkedIn générée</div>
                       <div style={{ display:"flex", gap:6 }}>
                         <button className="bo" style={{ fontSize:12, padding:"6px 12px" }}
                           onClick={()=>{ navigator.clipboard.writeText(liResult); }}>
@@ -751,13 +751,13 @@ export default function DashboardPage() {
               {/* ── UPGRADE BANNER ── */}
               <div style={{ background:"linear-gradient(135deg,#0f172a,#1e3a5f)", borderRadius:14, padding:"22px 26px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:16, flexWrap:"wrap" }}>
                 <div>
-                  <div style={{ fontSize:11, fontWeight:800, color:"#4ade80", textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>✦ Candidat Pro · 49 MAD/mois</div>
+                  <div style={{ fontSize:11, fontWeight:800, color:"#a78bfa", textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>✦ Candidat Pro · 49 MAD/mois</div>
                   <div style={{ fontSize:14, fontWeight:800, color:"white", marginBottom:3 }}>Débloquez tous les outils IA</div>
                   <div style={{ fontSize:12, color:"rgba(255,255,255,.5)", lineHeight:1.6 }}>
                     CV amélioré · Lettre de motivation · Bio LinkedIn · Adaptation CV au poste
                   </div>
                 </div>
-                <a href="/pricing" style={{ display:"inline-flex", alignItems:"center", gap:7, background:"#16a34a", color:"white", padding:"11px 20px", borderRadius:9, fontSize:13, fontWeight:700, textDecoration:"none", whiteSpace:"nowrap", flexShrink:0 }}>
+                <a href="/pricing" style={{ display:"inline-flex", alignItems:"center", gap:7, background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white", padding:"11px 20px", borderRadius:9, fontSize:13, fontWeight:700, textDecoration:"none", whiteSpace:"nowrap", flexShrink:0, boxShadow:"0 4px 14px rgba(124,58,237,.35)" }}>
                   Voir les offres →
                 </a>
               </div>
@@ -769,13 +769,13 @@ export default function DashboardPage() {
             <div className="au" style={{ maxWidth: 560 }}>
               <div className="card" style={{ padding: "24px 26px", marginBottom: 14 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 22 }}>
-                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg,#16a34a,#4ade80)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, color: "white" }}>
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg,#7c3aed,#5b21b6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, color: "white" }}>
                     {(pName || user?.email || "?").charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 800 }}>{pName || user?.email?.split("@")[0]}</div>
                     <div style={{ fontSize: 12, color: "#9ca3af" }}>{user?.email}</div>
-                    <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 600, marginTop: 2 }}>✅ Compte Candidat actif</div>
+                    <div style={{ fontSize: 11, color: "#7c3aed", fontWeight: 600, marginTop: 2 }}>✅ Compte Candidat actif</div>
                   </div>
                 </div>
 
@@ -796,8 +796,8 @@ export default function DashboardPage() {
                   <div>
                     <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>Mon CV</label>
                     {storedCvUrl ? (
-                      <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: 9, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                        <div style={{ fontSize: 13, color: "#15803d", fontWeight: 600 }}>📄 CV importé</div>
+                      <div style={{ background: "#f5f3ff", border: "1.5px solid #ddd6fe", borderRadius: 9, padding: "10px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <div style={{ fontSize: 13, color: "#6d28d9", fontWeight: 600 }}>📄 CV importé</div>
                         <div style={{ display: "flex", gap: 6 }}>
                           <a href={storedCvUrl} target="_blank" rel="noopener noreferrer" className="bo" style={{ fontSize: 11, padding: "4px 10px" }}>Voir</a>
                           <button className="bo" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => setTab("cvs")}>Remplacer</button>
@@ -811,7 +811,7 @@ export default function DashboardPage() {
                   </div>
 
                   {pMsg && (
-                    <div style={{ background: pMsg.includes("Erreur") ? "#fef2f2" : "#f0fdf4", border: `1.5px solid ${pMsg.includes("Erreur") ? "#fecaca" : "#bbf7d0"}`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: pMsg.includes("Erreur") ? "#dc2626" : "#15803d" }}>
+                    <div style={{ background: pMsg.includes("Erreur") ? "#fef2f2" : "#f5f3ff", border: `1.5px solid ${pMsg.includes("Erreur") ? "#fecaca" : "#ddd6fe"}`, borderRadius: 8, padding: "10px 14px", fontSize: 13, color: pMsg.includes("Erreur") ? "#dc2626" : "#6d28d9" }}>
                       {pMsg}
                     </div>
                   )}
