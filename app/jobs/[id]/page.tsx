@@ -154,13 +154,22 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
           )}
         </div>
 
-        {/* Bottom CTA */}
+        {/* Bottom CTA — desktop only */}
         <div className="hide-sm" style={{ background:'#f0fdf4', border:'1.5px solid #bbf7d0', borderRadius:13, padding:'22px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:18, flexWrap:'wrap' }}>
           <div>
             <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:15, fontWeight:800, color:'#0f172a', marginBottom:3 }}>Prêt(e) à postuler ?</div>
-            <div style={{ fontSize:13, color:'#4b7c59' }}>Vous allez être redirigé(e) vers le site de {job.company}.</div>
+            <div style={{ fontSize:13, color:'#4b7c59' }}>Postulez directement via votre profil TalentMaroc.</div>
           </div>
           <SaveApplyButton job={job}/>
+        </div>
+
+        {/* Mobile apply section — replaces sidebar on mobile */}
+        <div id="mobile-apply" className="mobile-apply" style={{ marginTop:16 }}>
+          <div style={{ background:'white', border:'1.5px solid #f0f0f0', borderRadius:14, padding:'18px', boxShadow:'0 1px 4px rgba(0,0,0,0.04)' }}>
+            <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:14, fontWeight:800, color:'#0f172a', marginBottom:3 }}>{job.title}</div>
+            <div style={{ fontSize:12, color:'#6b7280', marginBottom:16, fontWeight:500 }}>{job.company} · {job.city}</div>
+            <SaveApplyButton job={job}/>
+          </div>
         </div>
 
         {/* CV match banner — visible on all screen sizes */}
@@ -284,15 +293,33 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
       </div>
 
       {/* ── MOBILE STICKY BAR ─────────────────────────────────────── */}
-      <div className="sticky-bar">
-        <a href={job.original_url} target="_blank" rel="noopener noreferrer" className="cta-btn">
-          Postuler sur le site <ExternalLink size={16}/>
-        </a>
-        <a href="#postuler"
-          style={{display:'block',textAlign:'center',fontSize:12,color:'#6b7280',marginTop:6,textDecoration:'none'}}>
-          📋 Sauvegarder la candidature
-        </a>
-      </div>
+      {(() => {
+        const isDirectJob =
+          !job.original_url ||
+          job.original_url === "https://talentmaroc.shop" ||
+          job.original_url === "https://talentmaroc.shop/" ||
+          job.original_url.endsWith("/jobs") ||
+          job.source === "employer";
+        return (
+          <div className="sticky-bar">
+            {isDirectJob ? (
+              <a href="#mobile-apply" className="cta-btn">
+                📋 Postuler à cette offre
+              </a>
+            ) : (
+              <>
+                <a href={job.original_url} target="_blank" rel="noopener noreferrer" className="cta-btn">
+                  Postuler sur le site <ExternalLink size={16}/>
+                </a>
+                <a href="#mobile-apply"
+                  style={{display:'block',textAlign:'center',fontSize:12,color:'#6b7280',marginTop:6,textDecoration:'none'}}>
+                  📋 Sauvegarder cette offre
+                </a>
+              </>
+            )}
+          </div>
+        );
+      })()}
     </>
   );
 }
@@ -347,12 +374,23 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         /* Sticky bar mobile */
         .sticky-bar { display:none; position:fixed; bottom:0; left:0; right:0; background:rgba(248,250,252,0.97); backdrop-filter:blur(12px); border-top:1.5px solid #e5e7eb; padding:12px 20px; z-index:50; }
 
+        /* Mobile apply section — shown only on mobile */
+        .mobile-apply { display:none; }
+
         @media(max-width:768px) {
           .sticky-bar { display:block; }
           .sidebar-col { display:none !important; }
           .hide-sm { display:none !important; }
-          body { padding-bottom:76px; }
+          .mobile-apply { display:block; }
+          body { padding-bottom:80px; }
           .main-row { flex-direction:column !important; }
+          .meta-item { padding:9px 12px; }
+          .job-desc { font-size:14px; }
+        }
+
+        @media(max-width:480px) {
+          .pill { font-size:11px; padding:4px 10px; }
+          .back-link { font-size:12px; }
         }
 
         /* Footer */

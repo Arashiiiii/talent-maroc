@@ -255,7 +255,15 @@ export default function DashboardPage() {
         .ghost:hover{background:#f3f4f6;color:#374151}
         .upload-zone{border:2px dashed #d1d5db;border-radius:12px;padding:28px;text-align:center;cursor:pointer;transition:all .2s}
         .upload-zone:hover{border-color:#16a34a;background:#f0fdf4}
-        @media(max-width:640px){.sgrid{grid-template-columns:1fr 1fr!important}.hide-sm{display:none!important}.tabs{overflow-x:auto;scrollbar-width:none}}
+        @media(max-width:640px){
+          .sgrid{grid-template-columns:1fr 1fr!important}
+          .hide-sm{display:none!important}
+          .tabs{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+          .tabs::-webkit-scrollbar{display:none}
+          .tab{white-space:nowrap;font-size:12px!important;padding:10px 12px!important}
+          .acard{padding:13px 14px!important}
+          input,textarea{font-size:16px!important}
+        }
       `}</style>
 
       <div style={{ background: "#f8fafc", minHeight: "100vh" }}>
@@ -272,9 +280,9 @@ export default function DashboardPage() {
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <a href="/" className="bo" style={{ padding: "7px 14px", fontSize: 12 }}>🔍 Offres</a>
-            <a href="/cv" className="bo" style={{ padding: "7px 14px", fontSize: 12 }}>✦ CV Builder</a>
-            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#f0fdf4", border: "1.5px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#15803d", marginLeft: 4 }}>
+            <a href="/" className="bo hide-sm" style={{ padding: "7px 14px", fontSize: 12 }}>🔍 Offres</a>
+            <a href="/cv" className="bo hide-sm" style={{ padding: "7px 14px", fontSize: 12 }}>✦ CV Builder</a>
+            <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#f0fdf4", border: "1.5px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#15803d" }}>
               {(pName || user?.email || "?").charAt(0).toUpperCase()}
             </div>
             <button onClick={signOut}

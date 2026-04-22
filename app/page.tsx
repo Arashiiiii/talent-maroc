@@ -232,7 +232,15 @@ export default function Index({ searchParams }: { searchParams: any }) {
           .sb { padding:14px; justify-content:center; }
           .hide-sm { display:none !important; }
           .footer-grid { grid-template-columns:1fr 1fr !important; }
+          .pub-full { display:none !important; }
+          .pub-short { display:inline-flex !important; }
+          .sidebar { grid-template-columns:1fr !important; }
+          .job-card { padding:14px 16px !important; }
+          .si { font-size:16px !important; }
+          header { padding:36px 20px 44px !important; }
+          .apply-btn { display:none !important; }
         }
+        .pub-short { display:none; }
       `}</style>
 
       <div style={{ background:'#f8fafc', minHeight:'100vh', width:'100%' }}>
@@ -252,7 +260,8 @@ export default function Index({ searchParams }: { searchParams: any }) {
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:8 }}>
             <NavbarAuth />
-            <a href="/employeur/new" className="btn-green" style={{ padding:'8px 18px', fontSize:13 }}>Publier une offre</a>
+            <a href="/employeur/new" className="btn-green pub-full" style={{ padding:'8px 18px', fontSize:13 }}>Publier une offre</a>
+            <a href="/employeur/new" className="btn-green pub-short" style={{ padding:'8px 14px', fontSize:13 }}>Publier</a>
           </div>
         </nav>
 

@@ -2,6 +2,14 @@
 import React from "react";
 import { ExternalLink } from "lucide-react";
 
+const MOBILE_STYLE = `
+  @media(max-width:600px) {
+    .sab-name-grid { grid-template-columns:1fr !important; }
+    .sab-form-btns { flex-direction:column !important; }
+    .sab-form-btns button { flex:none !important; }
+  }
+`;
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
@@ -156,6 +164,7 @@ export function SaveApplyButton({ job }: { job: any }) {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+      <style>{MOBILE_STYLE}</style>
 
       {/* ── APPLICATION FORM (direct jobs) ── */}
       {showForm && !formSent && (
@@ -180,7 +189,7 @@ export function SaveApplyButton({ job }: { job: any }) {
               <div style={{ fontSize:11, fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10 }}>
                 Votre profil
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              <div className="sab-name-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                 <div>
                   <label style={{ fontSize:11, fontWeight:600, color:"#6b7280", display:"block", marginBottom:4 }}>Nom complet *</label>
                   <input value={candName} onChange={e=>setCandName(e.target.value)}
@@ -250,7 +259,7 @@ export function SaveApplyButton({ job }: { job: any }) {
               </div>
             )}
 
-            <div style={{ display:"flex", gap:8 }}>
+            <div className="sab-form-btns" style={{ display:"flex", gap:8 }}>
               <button onClick={()=>setShowForm(false)}
                 style={{ flex:1, padding:"11px", borderRadius:9, border:"1.5px solid #e5e7eb", background:"white", fontSize:13, fontWeight:600, color:"#374151", cursor:"pointer", fontFamily:"inherit" }}>
                 Annuler
