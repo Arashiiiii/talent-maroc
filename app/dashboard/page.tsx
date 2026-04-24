@@ -272,7 +272,7 @@ export default function DashboardPage() {
         <nav style={{ background: "rgba(255,255,255,.97)", backdropFilter: "blur(12px)", borderBottom: "1.5px solid #f0f0f0", padding: "0 22px", height: 62, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
             <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-              <img src="/logo.png" alt="TalentMaroc" style={{ height:40, width:'auto', objectFit:'contain' }} />
+              <img src="/logo.png" alt="TalentMaroc" style={{ height:110, width:'auto', objectFit:'contain', margin:'-22px 0' }} />
             </a>
             <span style={{ fontSize: 11, fontWeight: 700, color: "#6d28d9", background: "#f5f3ff", border: "1px solid #ddd6fe", padding: "4px 10px", borderRadius: 100 }}>
               Espace Candidat

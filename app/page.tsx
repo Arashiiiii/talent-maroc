@@ -254,7 +254,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
         <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(255,255,255,0.97)', backdropFilter:'blur(16px)', borderBottom:'1.5px solid #ede9fe', padding:'0 24px', height:66, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div style={{ display:'flex', alignItems:'center', gap:32 }}>
             <a href="/" style={{ display:'flex', alignItems:'center', textDecoration:'none' }}>
-              <img src="/logo.png" alt="TalentMaroc" style={{ height:44, width:'auto', objectFit:'contain' }} />
+              <img src="/logo.png" alt="TalentMaroc" style={{ height:110, width:"auto", objectFit:"contain", margin:"-22px 0" }} />
             </a>
             <div className="hide-sm" style={{ display:'flex', gap:2 }}>
               <a href="/"          className="nl active">Emplois</a>
@@ -484,7 +484,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
             <div className="footer-grid" style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:24, marginBottom:36 }}>
               <div>
                 <div style={{ marginBottom:14 }}>
-                  <img src="/logo.png" alt="TalentMaroc" style={{ height:40, width:'auto', filter:'brightness(0) invert(1)', opacity:0.85 }} />
+                  <img src="/logo.png" alt="TalentMaroc" style={{ height:80, width:"auto", filter:"brightness(0) invert(1)", opacity:0.85 }} />
                 </div>
                 <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', lineHeight:1.7, maxWidth:200 }}>La plateforme de référence pour l'emploi au Maroc. Propulsé par n8n & Supabase.</p>
               </div>

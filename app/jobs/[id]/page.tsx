@@ -404,7 +404,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(12px)', borderBottom:'1.5px solid #f0f0f0', padding:'0 24px', height:62, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div style={{ display:'flex', alignItems:'center', gap:28 }}>
             <a href="/" style={{ display:'flex', alignItems:'center', textDecoration:'none' }}>
-              <img src="/logo.png" alt="TalentMaroc" style={{ height:42, width:'auto', objectFit:'contain' }} />
+              <img src="/logo.png" alt="TalentMaroc" style={{ height:110, width:'auto', objectFit:'contain', margin:'-22px 0' }} />
             </a>
             <div className="hide-sm" style={{ display:'flex', gap:2 }}>
               <a href="/"          className="nl">Emplois</a>
@@ -435,7 +435,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         {/* FOOTER */}
         <footer style={{ background:'#1e1147', padding:'40px 24px 24px' }}>
           <div style={{ maxWidth:1060, margin:'0 auto', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16 }}>
-            <img src="/logo.png" alt="TalentMaroc" style={{ height:36, width:'auto', filter:'brightness(0) invert(1)', opacity:0.85 }} />
+            <img src="/logo.png" alt="TalentMaroc" style={{ height:72, width:'auto', filter:'brightness(0) invert(1)', opacity:0.85 }} />
             <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
               <a href="/"      className="footer-link" style={{ margin:'0 8px' }}>Emplois</a>
               <a href="/terms" className="footer-link" style={{ margin:'0 8px' }}>CGU</a>

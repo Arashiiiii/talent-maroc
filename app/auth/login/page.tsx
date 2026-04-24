@@ -124,7 +124,7 @@ export default function AuthLoginPage() {
       <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#1e1147 0%,#3b1fa3 100%)", display: "flex", flexDirection: "column" }}>
         <nav style={{ padding: "0 24px", height: 66, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-            <img src="/logo.png" alt="TalentMaroc" style={{ height:42, width:'auto', objectFit:'contain', filter:'brightness(0) invert(1)', opacity:0.92 }} />
+            <img src="/logo.png" alt="TalentMaroc" style={{ height:110, width:'auto', objectFit:'contain', filter:'brightness(0) invert(1)', opacity:0.92, margin:'-22px 0' }} />
           </a>
           <a href="/" style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", fontWeight: 600, textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
             ← Retour aux offres
