@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
 
     // 2. Build a privileged client — service role bypasses RLS entirely
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    console.log('[debug] SERVICE_ROLE_KEY present:', !!serviceKey, '| length:', serviceKey?.length ?? 0);
     if (!serviceKey) {
       return NextResponse.json(
         { error: 'SUPABASE_SERVICE_ROLE_KEY non configurée. Ajoutez-la dans .env.local.' },
