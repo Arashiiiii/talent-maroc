@@ -14,6 +14,45 @@ export const metadata = {
 const CITIES = ['Casablanca','Tanger','Rabat','Marrakech','Agadir','Fès'];
 const SECTORS = ['Informatique','Commercial','Finance','Logistique','Santé','Marketing','Ingénierie','RH'];
 const TRENDING = ['Développeur','Stage PFE','Télétravail','Finance','Data','Casablanca'];
+const JOB_FUNCTIONS = [
+  { label:'💻 Tech & IT',       q:'Informatique' },
+  { label:'📊 Finance',          q:'Finance' },
+  { label:'📣 Marketing',        q:'Marketing' },
+  { label:'🤝 Commercial',       q:'Commercial' },
+  { label:'⚙️ Ingénierie',       q:'Ingénierie' },
+  { label:'🏥 Santé',            q:'Santé' },
+  { label:'👥 RH',               q:'RH' },
+  { label:'🎓 Stage / PFE',      q:'Stage' },
+];
+
+// Detect work type from job data
+function getWorkType(job: any): { label: string; color: string; bg: string } | null {
+  const text = `${job.title} ${job.description || ''} ${job.contract_type || ''}`.toLowerCase();
+  if (text.includes('télétravail') || text.includes('remote') || text.includes('à distance')) {
+    return { label: '🏠 Télétravail', color: '#065f46', bg: '#f0fdf4' };
+  }
+  if (text.includes('hybride') || text.includes('hybrid')) {
+    return { label: '🔀 Hybride', color: '#1d4ed8', bg: '#eff6ff' };
+  }
+  return null;
+}
+
+// Check if job is new (posted within 3 days)
+function isNew(job: any): boolean {
+  const d = job.posted_at ? new Date(job.posted_at) : new Date(job.created_at);
+  return (Date.now() - d.getTime()) < 3 * 24 * 60 * 60 * 1000;
+}
+
+// Extract 3 highlights from description
+function getHighlights(job: any): string[] {
+  if (!job.description) return [];
+  const text = job.description.replace(/<[^>]+>/g, ' ');
+  const bullets = text.match(/[•\-–]\s*([^•\-–\n]{10,80})/g);
+  if (bullets && bullets.length >= 2) {
+    return bullets.slice(0, 3).map((b: string) => b.replace(/^[•\-–]\s*/, '').trim());
+  }
+  return [];
+}
 const CITY_META: Record<string,{icon:string;count:string}> = {
   Casablanca:{ icon:'🏙', count:'2 400+' },
   Rabat:     { icon:'🏛', count:'1 100+' },
@@ -56,7 +95,7 @@ async function JobList({ searchParams }: { searchParams: any }) {
     <div style={{ textAlign:'center', padding:'56px 24px', background:'#f9fafb', border:'2px dashed #e5e7eb', borderRadius:14 }}>
       <div style={{ fontSize:36, marginBottom:12 }}>🔍</div>
       <p style={{ color:'#6b7280', fontSize:15, fontWeight:500 }}>Aucune offre trouvée.</p>
-      <a href="/" style={{ color:'#16a34a', fontSize:14, fontWeight:600, textDecoration:'none', display:'inline-block', marginTop:8 }}>Voir toutes les offres →</a>
+      <a href="/" style={{ color:'#7c3aed', fontSize:14, fontWeight:600, textDecoration:'none', display:'inline-block', marginTop:8 }}>Voir toutes les offres →</a>
     </div>
   );
 
@@ -80,33 +119,55 @@ async function JobList({ searchParams }: { searchParams: any }) {
       </div>
 
       <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:24 }}>
-        {jobs.map((job: any) => (
-          <a key={job.id} href={`/jobs/${job.id}`} className="job-card"
-            style={{ display:'block', textDecoration:'none', background:'white', border:'1.5px solid #f0f0f0', borderRadius:14, padding:'18px 20px', transition:'all 0.2s', position:'relative', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }}>
-            <div style={{ display:'flex', gap:14, alignItems:'center' }}>
-              <div style={{ flexShrink:0 }}>
-                <CompanyLogo logoUrl={job.logo_url} companyName={job.company}/>
-              </div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <h2 style={{ fontSize:14, fontWeight:700, color:'#111827', lineHeight:1.35, marginBottom:4 }}>{job.title}</h2>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:'3px 14px', fontSize:12, color:'#6b7280' }}>
-                  <span style={{ display:'flex', alignItems:'center', gap:4, fontWeight:600, color:'#374151' }}>
-                    <Briefcase size={11}/> {job.company}
-                  </span>
-                  <span style={{ display:'flex', alignItems:'center', gap:4 }}>
-                    <MapPin size={11}/> {job.city}
-                  </span>
-                  <span style={{ display:'flex', alignItems:'center', gap:4 }}>
-                    <Clock size={11}/> {job.posted_at || new Date(job.created_at).toLocaleDateString('fr-FR')}
-                  </span>
+        {jobs.map((job: any) => {
+          const workType = getWorkType(job);
+          const newJob   = isNew(job);
+          const highlights = getHighlights(job);
+          const posted = job.posted_at || new Date(job.created_at).toLocaleDateString('fr-FR');
+          return (
+            <a key={job.id} href={`/jobs/${job.id}`} className="job-card"
+              style={{ display:'block', textDecoration:'none', background:'white', border:'1.5px solid #ede9fe', borderRadius:14, padding:'16px 18px', transition:'all 0.2s', position:'relative', boxShadow:'0 1px 4px rgba(124,58,237,0.06)' }}>
+              <div style={{ display:'flex', gap:14, alignItems:'flex-start' }}>
+                <div style={{ flexShrink:0, paddingTop:2 }}>
+                  <CompanyLogo logoUrl={job.logo_url} companyName={job.company}/>
                 </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  {/* Top row: title + badges */}
+                  <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:5, flexWrap:'wrap' }}>
+                    <h2 style={{ fontSize:14, fontWeight:700, color:'#1e1147', lineHeight:1.35, flex:1, minWidth:160 }}>{job.title}</h2>
+                    <div style={{ display:'flex', gap:5, flexShrink:0, flexWrap:'wrap' }}>
+                      {newJob && <span style={{ fontSize:10, fontWeight:700, background:'linear-gradient(135deg,#f97316,#ea580c)', color:'white', padding:'2px 8px', borderRadius:100, whiteSpace:'nowrap' }}>NOUVEAU</span>}
+                      {job.contract_type && <span style={{ fontSize:10, fontWeight:700, background:'#f5f3ff', color:'#7c3aed', border:'1px solid #ddd6fe', padding:'2px 8px', borderRadius:100, whiteSpace:'nowrap' }}>{job.contract_type}</span>}
+                      {workType && <span style={{ fontSize:10, fontWeight:700, background:workType.bg, color:workType.color, padding:'2px 8px', borderRadius:100, whiteSpace:'nowrap' }}>{workType.label}</span>}
+                    </div>
+                  </div>
+                  {/* Company + location + date */}
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:'3px 14px', fontSize:12, color:'#6b7280', marginBottom: highlights.length ? 8 : 0 }}>
+                    <span style={{ display:'flex', alignItems:'center', gap:4, fontWeight:600, color:'#374151' }}>
+                      <Briefcase size={11}/> {job.company}
+                    </span>
+                    {job.city && <span style={{ display:'flex', alignItems:'center', gap:4 }}><MapPin size={11}/> {job.city}</span>}
+                    {job.salary && <span style={{ display:'flex', alignItems:'center', gap:4, color:'#7c3aed', fontWeight:600 }}>💰 {job.salary}</span>}
+                    <span style={{ display:'flex', alignItems:'center', gap:4 }}><Clock size={11}/> {posted}</span>
+                  </div>
+                  {/* Benefit highlights */}
+                  {highlights.length > 0 && (
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginTop:4 }}>
+                      {highlights.map((h, i) => (
+                        <span key={i} style={{ fontSize:11, color:'#4b5563', background:'#f9fafb', border:'1px solid #f0f0f0', borderRadius:6, padding:'2px 8px', lineHeight:1.5 }}>
+                          ✓ {h.slice(0, 55)}{h.length > 55 ? '…' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <span className="apply-btn hide-sm" style={{ flexShrink:0, padding:'8px 16px', borderRadius:8, fontSize:12, fontWeight:700, whiteSpace:'nowrap', transition:'all 0.2s', marginTop:2 }}>
+                  Voir →
+                </span>
               </div>
-              <span className="apply-btn" style={{ flexShrink:0, background:'#f0fdf4', color:'#16a34a', border:'1.5px solid #bbf7d0', padding:'8px 16px', borderRadius:8, fontSize:12, fontWeight:700, whiteSpace:'nowrap', transition:'all 0.2s' }}>
-                Voir l'offre →
-              </span>
-            </div>
-          </a>
-        ))}
+            </a>
+          );
+        })}
       </div>
 
       {/* Pagination controls */}
@@ -134,7 +195,7 @@ async function JobList({ searchParams }: { searchParams: any }) {
                 <span key={`dot-${i}`} style={{ padding:'8px 6px', color:'#9ca3af', fontSize:13 }}>…</span>
               ) : (
                 <a key={p} href={pageUrl(p as number)}
-                  style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:36, height:36, borderRadius:9, border:`1.5px solid ${p===page?'#16a34a':'#e5e7eb'}`, background:p===page?'#16a34a':'white', color:p===page?'white':'#374151', textDecoration:'none', fontSize:13, fontWeight:600, transition:'all .18s' }}>
+                  style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:36, height:36, borderRadius:9, border:`1.5px solid ${p===page?'#7c3aed':'#e5e7eb'}`, background:p===page?'#7c3aed':'white', color:p===page?'white':'#374151', textDecoration:'none', fontSize:13, fontWeight:600, transition:'all .18s' }}>
                   {p}
                 </a>
               )
@@ -191,8 +252,8 @@ export default function Index({ searchParams }: { searchParams: any }) {
         .chip:hover { border-color:#7c3aed; background:#f5f3ff; color:#5b21b6; }
 
         /* Job card */
-        .job-card:hover { border-color:#7c3aed !important; box-shadow:0 4px 24px rgba(124,58,237,0.12) !important; transform:translateY(-2px); }
-        .apply-btn { background:#f5f3ff !important; color:#7c3aed !important; border:1.5px solid #ddd6fe !important; }
+        .job-card:hover { border-color:#7c3aed !important; box-shadow:0 6px 28px rgba(124,58,237,0.14) !important; transform:translateY(-2px); }
+        .apply-btn { background:#f5f3ff; color:#7c3aed; border:1.5px solid #ddd6fe; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:700; white-space:nowrap; }
         .apply-btn:hover { background:#ede9fe !important; }
 
         /* Sidebar links */
@@ -218,6 +279,10 @@ export default function Index({ searchParams }: { searchParams: any }) {
 
         /* Skeleton */
         .skel { background:#ede9fe; border-radius:8px; animation:fadeIn .8s ease both; }
+
+        /* Function filter bar */
+        .fn-bar { scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+        .fn-bar::-webkit-scrollbar { display:none; }
 
         /* Footer */
         .footer-link { font-size:13px; color:rgba(255,255,255,0.45); text-decoration:none; transition:color .18s; display:block; margin-bottom:9px; }
@@ -325,6 +390,24 @@ export default function Index({ searchParams }: { searchParams: any }) {
                 <div style={{ fontSize:12, color:'rgba(255,255,255,0.45)', marginTop:5, fontWeight:500 }}>{l}</div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* ══ JOB FUNCTION QUICK FILTERS ════════════════════════════════ */}
+        <div style={{ background:'white', borderBottom:'1.5px solid #ede9fe', padding:'16px 24px', overflowX:'auto' }}>
+          <div style={{ maxWidth:1060, margin:'0 auto', display:'flex', gap:8, alignItems:'center', flexWrap:'nowrap' }}>
+            <span style={{ fontSize:12, fontWeight:700, color:'#9ca3af', whiteSpace:'nowrap', marginRight:4 }}>Parcourir :</span>
+            {JOB_FUNCTIONS.map(fn => (
+              <a key={fn.q} href={`/?q=${encodeURIComponent(fn.q)}`}
+                style={{ display:'inline-flex', alignItems:'center', padding:'7px 14px', borderRadius:100, border:'1.5px solid #ede9fe', background:'white', fontSize:12, fontWeight:600, color:'#374151', whiteSpace:'nowrap', textDecoration:'none', transition:'all .18s' }}
+                onMouseEnter={e=>(e.currentTarget as HTMLAnchorElement).style.cssText+='border-color:#7c3aed;color:#7c3aed;background:#f5f3ff'}
+                onMouseLeave={e=>{ const el=e.currentTarget as HTMLAnchorElement; el.style.borderColor='#ede9fe'; el.style.color='#374151'; el.style.background='white'; }}>
+                {fn.label}
+              </a>
+            ))}
+            <a href="/?q=Télétravail" style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'7px 14px', borderRadius:100, border:'1.5px solid #f0fdf4', background:'#f0fdf4', fontSize:12, fontWeight:700, color:'#065f46', whiteSpace:'nowrap', textDecoration:'none' }}>
+              🏠 Télétravail
+            </a>
           </div>
         </div>
 
