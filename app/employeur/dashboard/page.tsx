@@ -94,6 +94,7 @@ export default function EmployeurDashboard() {
   const [pLogoUrl,  setPLogoUrl]  = useState("");
   const [pSaving,   setPSaving]   = useState(false);
   const [pMsg,      setPMsg]      = useState<{type:"ok"|"err";text:string}|null>(null);
+  const [token,     setToken]     = useState<string>("");
 
   // ── LOAD ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -114,6 +115,7 @@ export default function EmployeurDashboard() {
         window.location.href = "/dashboard"; return;
       }
       setUser(user);
+      setToken(session.access_token);
       // Pre-fill profile form from user metadata
       const m = user.user_metadata || {};
       setPName(m.name || "");
@@ -208,7 +210,13 @@ export default function EmployeurDashboard() {
   };
 
   const updateStatus=async(id:string,status:AppStatus)=>{
-    await getSupabase().from("applications").update({status}).eq("id",id);
+    // Use server-side route with service role key to bypass RLS
+    const res = await fetch("/api/employer/update-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ applicationId: id, status }),
+    });
+    if (!res.ok) { const j = await res.json(); setErr(j.error || "Erreur mise à jour"); return; }
     const upd=(a:Application)=>a.id===id?{...a,status}:a;
     setAllApps(p=>p.map(upd));
     setJobs(p=>p.map(j=>({...j,apps:j.apps?.map(upd)})));
@@ -249,38 +257,39 @@ export default function EmployeurDashboard() {
   };
 
   // ── DOWNLOAD APPLICATION FILES ──────────────────────────────────────────
-  const downloadApplicationFiles = async (app: Application) => {
+  const downloadApplicationFiles = (app: Application) => {
     const slug = (app.candidate_name || "candidat").replace(/\s+/g, "_");
+    let downloaded = false;
 
-    // 1. CV PDF — fetch and trigger named download
+    // 1. CV — open in new tab (avoids CORS issues with external storage URLs)
     if (app.cv_url) {
-      try {
-        const res = await fetch(app.cv_url);
-        const blob = await res.blob();
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement("a");
-        a.href = url; a.download = `${slug}_CV.pdf`; a.click();
-        URL.revokeObjectURL(url);
-      } catch {
-        // Fallback: open in new tab
-        window.open(app.cv_url, "_blank");
-      }
+      window.open(app.cv_url, "_blank");
+      downloaded = true;
     }
 
-    // 2. Cover letter — download as .txt, slight delay so browser allows both
+    // 2. Cover letter — download as .txt
     if (app.cover_letter) {
       setTimeout(() => {
-        const blob = new Blob([app.cover_letter!], { type: "text/plain;charset=utf-8" });
+        const content = [
+          `LETTRE DE MOTIVATION`,
+          `Candidat : ${app.candidate_name || "—"}`,
+          `Poste    : ${app.job_title}`,
+          `Date     : ${app.applied_at ? new Date(app.applied_at).toLocaleDateString("fr-FR") : "—"}`,
+          "",
+          "─".repeat(60),
+          "",
+          app.cover_letter,
+        ].join("\n");
+        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement("a");
-        a.href = url; a.download = `${slug}_lettre.txt`; a.click();
+        a.href = url; a.download = `${slug}_lettre_motivation.txt`; a.click();
         URL.revokeObjectURL(url);
-      }, 400);
+      }, 300);
+      downloaded = true;
     }
 
-    if (!app.cv_url && !app.cover_letter) {
-      setErr("Ce candidat n'a pas joint de CV ni de lettre de motivation.");
-    }
+    if (!downloaded) setErr("Ce candidat n'a pas joint de CV ni de lettre de motivation.");
   };
 
   // ── AI COMPARE ─────────────────────────────────────────────────────────
@@ -408,34 +417,21 @@ export default function EmployeurDashboard() {
             <div className="au">
               <div className="stats-grid" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:20 }}>
                 {[
-                  {icon:"💼",label:"Mes offres",       val:jobs.length,      color:"#7c3aed"},
-                  {icon:"👥",label:"Candidatures",      val:totalApps,        color:"#1d4ed8"},
-                  {icon:"🗓",label:"Entretiens",         val:interviews,       color:"#92400e"},
-                  {icon:"📈",label:"Taux de réponse",   val:`${responseRate}%`,color:"#065f46"},
+                  {icon:"💼",label:"Mes offres",       val:jobs.length,       color:"#7c3aed", go:"jobs"       as DashTab},
+                  {icon:"👥",label:"Candidatures",      val:totalApps,         color:"#1d4ed8", go:"candidates" as DashTab},
+                  {icon:"🗓",label:"Entretiens",         val:interviews,        color:"#92400e", go:"candidates" as DashTab},
+                  {icon:"📈",label:"Taux de réponse",   val:`${responseRate}%`, color:"#065f46", go:null},
                 ].map((s,i)=>(
-                  <div key={i} className="stat-card">
+                  <div key={i} className="stat-card" onClick={()=>s.go&&setTab(s.go)}
+                    style={{ cursor:s.go?"pointer":"default" }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
                       <span style={{ fontSize:20 }}>{s.icon}</span>
                       <span style={{ fontSize:24, fontWeight:800, color:s.color }}>{s.val}</span>
                     </div>
                     <div style={{ fontSize:11, fontWeight:600, color:"#6b7280" }}>{s.label}</div>
+                    {s.go && <div style={{ fontSize:10, color:"#9ca3af", marginTop:3 }}>Voir →</div>}
                   </div>
                 ))}
-              </div>
-
-              <div className="card" style={{ padding:"20px 22px", marginBottom:16 }}>
-                <h3 style={{ fontSize:14, fontWeight:800, marginBottom:14 }}>Pipeline des candidatures</h3>
-                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                  {(Object.entries(STATUS_CFG) as [AppStatus,any][]).map(([key,cfg])=>{
-                    const count=allApps.filter(a=>a.status===key).length;
-                    return (
-                      <div key={key} style={{ flex:1, minWidth:90, background:cfg.bg, border:`1.5px solid ${cfg.border}`, borderRadius:10, padding:"12px 14px", textAlign:"center" }}>
-                        <div style={{ fontSize:18, fontWeight:800, color:cfg.color }}>{count}</div>
-                        <div style={{ fontSize:10, fontWeight:600, color:cfg.color, marginTop:2 }}>{cfg.label}</div>
-                      </div>
-                    );
-                  })}
-                </div>
               </div>
 
               <div className="card" style={{ padding:"20px 22px" }}>
@@ -448,7 +444,7 @@ export default function EmployeurDashboard() {
                     Aucune offre publiée. <a href="/employeur/new" style={{ color:"#7c3aed", fontWeight:600 }}>Publier →</a>
                   </div>
                 ) : jobs.slice(0,5).map(j=>(
-                  <div key={j.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 0", borderBottom:"1px solid #f3f4f6", flexWrap:"wrap", gap:8 }}>
+                  <a key={j.id} href={`/jobs/${j.id}`} target="_blank" style={{ textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 0", borderBottom:"1px solid #f3f4f6", flexWrap:"wrap", gap:8, color:"inherit" }}>
                     <div>
                       <div style={{ fontSize:13, fontWeight:700 }}>{j.title}</div>
                       <div style={{ fontSize:11, color:"#6b7280" }}>{j.company} · {j.city} · {j.contract_type||"—"}</div>
@@ -459,7 +455,7 @@ export default function EmployeurDashboard() {
                         <div style={{ fontSize:10, color:"#9ca3af" }}>candidat{(j.apps?.length||0)!==1?"s":""}</div>
                       </div>
                     </div>
-                  </div>
+                  </a>
                 ))}
               </div>
             </div>
@@ -635,7 +631,7 @@ export default function EmployeurDashboard() {
                     <option value="all">Toutes les offres</option>
                     {jobs.map(j=><option key={j.id} value={j.id}>{j.title}</option>)}
                   </select>
-                  {(["all","applied","interview","offer","rejected"] as const).map(s=>(
+                  {(["all","interview","offer","rejected"] as const).map(s=>(
                     <button key={s} className={`chip${statusFilter===s?" active":""}`} onClick={()=>setStatusFilter(s as any)}>
                       {s==="all"?`Toutes (${allApps.length})`:`${STATUS_CFG[s as AppStatus]?.label} (${allApps.filter(a=>a.status===s).length})`}
                     </button>
@@ -700,11 +696,11 @@ export default function EmployeurDashboard() {
                               </div>
                             )}
                           </div>
-                          {/* Status selector */}
+                          {/* Status selector — recruiter-relevant statuses only */}
                           <select value={a.status} onChange={e=>updateStatus(a.id,e.target.value as AppStatus)}
                             style={{ border:`1.5px solid ${sc.border}`, background:sc.bg, color:sc.color, borderRadius:8, padding:"6px 10px", fontSize:11, fontWeight:700, fontFamily:"inherit", cursor:"pointer", outline:"none" }}>
-                            {(Object.entries(STATUS_CFG) as [AppStatus,any][]).map(([s,c])=>(
-                              <option key={s} value={s}>{c.label}</option>
+                            {(["applied","interview","offer","rejected"] as AppStatus[]).map(s=>(
+                              <option key={s} value={s}>{STATUS_CFG[s].label}</option>
                             ))}
                           </select>
                           {/* Actions */}
