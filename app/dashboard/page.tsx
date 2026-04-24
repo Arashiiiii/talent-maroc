@@ -103,7 +103,6 @@ export default function DashboardPage() {
 
     sb.auth.getUser().then(({ data: { user } }) => {
       if (!user) { window.location.href = "/auth/login?redirect=/dashboard"; return; }
-      // Role guard: employers use their own dashboard
       if (user.user_metadata?.role === "employer") {
         window.location.href = "/employeur/dashboard"; return;
       }
@@ -112,6 +111,19 @@ export default function DashboardPage() {
       setStoredCvUrl(user.user_metadata?.cv_url || null);
       loadApps(user.id);
       loadCVs(user.id);
+
+      // Real-time: update status instantly when recruiter changes it
+      const channel = sb
+        .channel("candidate-apps")
+        .on("postgres_changes", {
+          event: "UPDATE", schema: "public", table: "applications",
+          filter: `user_id=eq.${user.id}`,
+        }, payload => {
+          setApps(prev => prev.map(a => a.id === payload.new.id ? { ...a, ...payload.new } : a));
+        })
+        .subscribe();
+
+      return () => { channel.unsubscribe(); };
     });
 
     return () => subscription.unsubscribe();
@@ -330,17 +342,19 @@ export default function DashboardPage() {
             <div className="au">
               <div className="sgrid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 20 }}>
                 {[
-                  { icon: "💼", label: "Total candidatures", val: total,      c: "#7c3aed" },
-                  { icon: "🔥", label: "En cours",           val: active,     c: "#1d4ed8" },
-                  { icon: "🗓", label: "Entretiens",          val: interviews, c: "#92400e" },
-                  { icon: "🎉", label: "Offres reçues",       val: offers,     c: "#065f46" },
+                  { icon: "💼", label: "Total candidatures", val: total,      c: "#7c3aed", filter: "all"       as AppStatus | "all" },
+                  { icon: "🔥", label: "En cours",           val: active,     c: "#1d4ed8", filter: "applied"   as AppStatus | "all" },
+                  { icon: "🗓", label: "Entretiens",          val: interviews, c: "#92400e", filter: "interview" as AppStatus | "all" },
+                  { icon: "🎉", label: "Offres reçues",       val: offers,     c: "#065f46", filter: "offer"     as AppStatus | "all" },
                 ].map((s, i) => (
-                  <div key={i} className="card" style={{ padding: "18px 20px" }}>
+                  <div key={i} className="card" style={{ padding: "18px 20px", cursor: "pointer" }}
+                    onClick={() => { setTab("applications"); setSf(s.filter); }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                       <span style={{ fontSize: 22 }}>{s.icon}</span>
                       <span style={{ fontSize: 28, fontWeight: 800, color: s.val > 0 ? s.c : "#d1d5db" }}>{s.val}</span>
                     </div>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#6b7280" }}>{s.label}</div>
+                    <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 3 }}>Voir →</div>
                   </div>
                 ))}
               </div>
@@ -378,31 +392,6 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Pipeline */}
-              <div className="card" style={{ padding: "20px 22px", marginBottom: 16 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 800, marginBottom: 14 }}>Pipeline de candidatures</h3>
-                {total === 0 ? (
-                  <div style={{ textAlign: "center", padding: "20px", color: "#9ca3af", fontSize: 13 }}>
-                    Aucune candidature. <a href="/" style={{ color: "#7c3aed", fontWeight: 600 }}>Parcourez les offres →</a>
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {(Object.entries(STATUS) as [AppStatus, any][]).map(([key, cfg]) => {
-                      const count = apps.filter(a => a.status === key).length;
-                      return (
-                        <div key={key} onClick={() => { setTab("applications"); setSf(key); }}
-                          style={{ flex: 1, minWidth: 85, background: cfg.bg, border: `1.5px solid ${cfg.border}`, borderRadius: 10, padding: "12px 14px", textAlign: "center", cursor: "pointer", transition: "transform .15s" }}
-                          onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"}
-                          onMouseLeave={e => (e.currentTarget as HTMLElement).style.transform = "none"}>
-                          <div style={{ fontSize: 22, fontWeight: 800, color: cfg.color }}>{count}</div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: cfg.color, marginTop: 2 }}>{cfg.icon} {cfg.label}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
               {/* Recent */}
               <div className="card" style={{ padding: "20px 22px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -414,14 +403,15 @@ export default function DashboardPage() {
                     Aucune candidature. <a href="/" style={{ color: "#7c3aed", fontWeight: 600 }}>Parcourez les offres d'emploi →</a>
                   </div>
                 ) : apps.slice(0, 5).map(a => (
-                  <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid #f3f4f6", flexWrap: "wrap" }}>
+                  <a key={a.id} href={a.job_id ? `/jobs/${a.job_id}` : "#"}
+                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid #f3f4f6", flexWrap: "wrap", textDecoration: "none", color: "inherit" }}>
                     <Logo name={a.company} url={a.logo_url} />
                     <div style={{ flex: 1, minWidth: 140 }}>
                       <div style={{ fontSize: 13, fontWeight: 700 }}>{a.job_title}</div>
                       <div style={{ fontSize: 11, color: "#6b7280" }}>{a.company}{a.city ? ` · ${a.city}` : ""}</div>
                     </div>
                     <Badge status={a.status} />
-                  </div>
+                  </a>
                 ))}
               </div>
             </div>
