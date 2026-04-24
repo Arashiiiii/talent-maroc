@@ -112,8 +112,7 @@ export default function NewJobPage() {
         <nav style={{ background: "rgba(255,255,255,.96)", backdropFilter: "blur(12px)", borderBottom: "1.5px solid #f0f0f0", padding: "0 20px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-              <div style={{ width: 32, height: 32, background: "linear-gradient(135deg,#7c3aed,#5b21b6)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15, color: "white" }}>T</div>
-              <span style={{ fontWeight: 800, fontSize: 15, color: "#1e1147" }}>TalentMaroc</span>
+              <img src="/logo.png" alt="TalentMaroc" style={{ height:40, width:'auto', objectFit:'contain' }} />
             </a>
             <span style={{ fontSize: 12, fontWeight: 700, color: "#6d28d9", background: "#f5f3ff", padding: "4px 10px", borderRadius: 7 }}>Publier une offre</span>
           </div>

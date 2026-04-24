@@ -166,11 +166,7 @@ export default function EmployeurPage() {
       <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#1e1147 0%,#3b1fa3 100%)", display: "flex", flexDirection: "column" }}>
         <nav style={{ padding: "0 24px", height: 66, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <a href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-            <div style={{ width: 36, height: 36, background: "rgba(255,255,255,0.15)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 17, color: "white", border: "1.5px solid rgba(255,255,255,0.2)" }}>T</div>
-            <div>
-              <div style={{ color: "white", fontWeight: 800, fontSize: 15, lineHeight: 1 }}>TalentMaroc</div>
-              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 9, letterSpacing: "0.05em" }}>A WORLD OF OPPORTUNITY</div>
-            </div>
+            <img src="/logo.png" alt="TalentMaroc" style={{ height:42, width:'auto', objectFit:'contain', filter:'brightness(0) invert(1)', opacity:0.92 }} />
           </a>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <a href="/pricing" style={{ fontSize: 13, color: "rgba(255,255,255,.6)", fontWeight: 600, textDecoration: "none" }}>Tarifs</a>

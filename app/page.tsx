@@ -253,12 +253,8 @@ export default function Index({ searchParams }: { searchParams: any }) {
         {/* ══ NAVBAR ════════════════════════════════════════════════════ */}
         <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(255,255,255,0.97)', backdropFilter:'blur(16px)', borderBottom:'1.5px solid #ede9fe', padding:'0 24px', height:66, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div style={{ display:'flex', alignItems:'center', gap:32 }}>
-            <a href="/" style={{ display:'flex', alignItems:'center', gap:10, textDecoration:'none' }}>
-              <div style={{ width:36, height:36, background:'linear-gradient(135deg,#7c3aed,#5b21b6)', borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:17, color:'white', fontFamily:"'Plus Jakarta Sans',sans-serif", boxShadow:'0 4px 12px rgba(124,58,237,0.35)' }}>T</div>
-              <div>
-                <div style={{ color:'#1e1147', fontWeight:800, fontSize:15, fontFamily:"'Plus Jakarta Sans',sans-serif", lineHeight:1 }}>TalentMaroc</div>
-                <div style={{ color:'#9ca3af', fontSize:9, fontWeight:600, letterSpacing:'0.05em' }}>A WORLD OF OPPORTUNITY</div>
-              </div>
+            <a href="/" style={{ display:'flex', alignItems:'center', textDecoration:'none' }}>
+              <img src="/logo.png" alt="TalentMaroc" style={{ height:44, width:'auto', objectFit:'contain' }} />
             </a>
             <div className="hide-sm" style={{ display:'flex', gap:2 }}>
               <a href="/"          className="nl active">Emplois</a>
@@ -274,10 +270,11 @@ export default function Index({ searchParams }: { searchParams: any }) {
         </nav>
 
         {/* ══ HERO ══════════════════════════════════════════════════════ */}
-        <header style={{ background:'linear-gradient(160deg,#1e1147 0%,#3b1fa3 55%,#5b21b6 100%)', padding:'72px 24px 84px', position:'relative', overflow:'hidden' }}>
-          {/* Decorative blobs */}
-          <div style={{ position:'absolute', top:-80, right:-60, width:320, height:320, borderRadius:'50%', background:'rgba(124,58,237,0.25)', filter:'blur(60px)', pointerEvents:'none' }}/>
-          <div style={{ position:'absolute', bottom:-60, left:-40, width:240, height:240, borderRadius:'50%', background:'rgba(245,158,11,0.12)', filter:'blur(50px)', pointerEvents:'none' }}/>
+        <header style={{ position:'relative', overflow:'hidden', padding:'72px 24px 84px' }}>
+          {/* Background image */}
+          <div style={{ position:'absolute', inset:0, backgroundImage:'url("/hero-bg.jpg")', backgroundSize:'cover', backgroundPosition:'center 30%', backgroundRepeat:'no-repeat' }}/>
+          {/* Dark purple overlay */}
+          <div style={{ position:'absolute', inset:0, background:'linear-gradient(160deg, rgba(30,17,71,0.88) 0%, rgba(59,31,163,0.78) 55%, rgba(91,33,182,0.82) 100%)' }}/>
 
           <div style={{ maxWidth:700, margin:'0 auto', textAlign:'center', position:'relative' }}>
 
@@ -288,7 +285,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
 
             <h1 className="au d2" style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:'clamp(28px,5.5vw,54px)', fontWeight:900, color:'white', lineHeight:1.1, letterSpacing:'-0.02em', marginBottom:16 }}>
               Trouvez le job<br/>
-              <span style={{ color:'#f59e0b' }}>qui vous correspond</span>
+              <span style={{ color:'#f97316' }}>qui vous correspond</span>
             </h1>
 
             <p className="au d3" style={{ fontSize:'clamp(14px,2vw,17px)', color:'rgba(255,255,255,0.65)', lineHeight:1.7, maxWidth:460, margin:'0 auto 32px' }}>
@@ -358,8 +355,8 @@ export default function Index({ searchParams }: { searchParams: any }) {
             <div style={{ background:'linear-gradient(135deg,#1e1147,#3b1fa3)', border:'1px solid rgba(124,58,237,0.3)', borderRadius:14, padding:'16px 14px', position:'relative', overflow:'hidden' }}>
               <div style={{ position:'absolute', top:-20, right:-20, width:70, height:70, borderRadius:'50%', background:'rgba(245,158,11,0.15)', filter:'blur(20px)' }}/>
               <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8, position:'relative' }}>
-                <Zap size={13} style={{ color:'#f59e0b' }}/>
-                <span style={{ fontSize:10, fontWeight:700, color:'#f59e0b', textTransform:'uppercase', letterSpacing:'0.08em' }}>IA · Personnalisé</span>
+                <Zap size={13} style={{ color:'#f97316' }}/>
+                <span style={{ fontSize:10, fontWeight:700, color:'#f97316', textTransform:'uppercase', letterSpacing:'0.08em' }}>IA · Personnalisé</span>
               </div>
               <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:13, fontWeight:700, color:'white', marginBottom:5, lineHeight:1.35, position:'relative' }}>Créez votre CV IA</div>
               <p style={{ fontSize:11, color:'rgba(255,255,255,0.5)', lineHeight:1.6, marginBottom:12, position:'relative' }}>Gratuit pour importer, 1,99 € pour générer.</p>
@@ -425,8 +422,8 @@ export default function Index({ searchParams }: { searchParams: any }) {
             <div style={{ position:'absolute', bottom:-60, right:-40, width:200, height:200, borderRadius:'50%', background:'rgba(124,58,237,0.3)', filter:'blur(50px)', pointerEvents:'none' }}/>
             <div style={{ position:'relative' }}>
               <div style={{ display:'inline-flex', alignItems:'center', gap:6, background:'rgba(245,158,11,0.15)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:100, padding:'4px 12px', marginBottom:14 }}>
-                <Zap size={11} style={{ color:'#f59e0b' }}/>
-                <span style={{ color:'#f59e0b', fontSize:11, fontWeight:700 }}>Nouveau — Générateur de CV IA</span>
+                <Zap size={11} style={{ color:'#f97316' }}/>
+                <span style={{ color:'#f97316', fontSize:11, fontWeight:700 }}>Nouveau — Générateur de CV IA</span>
               </div>
               <h3 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:'clamp(17px,3vw,23px)', fontWeight:800, color:'white', lineHeight:1.25, marginBottom:10 }}>
                 Un CV qui se démarque, en 3 minutes
@@ -435,7 +432,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
                 Importez votre CV existant gratuitement, ou laissez l'IA le créer à partir de 1,99 €.
               </p>
               <div style={{ display:'flex', gap:10, marginTop:22, flexWrap:'wrap' }}>
-                <a href="/cv" className="btn-green" style={{ background:'#f59e0b', color:'#1e1147' }}>Créer mon CV IA →</a>
+                <a href="/cv" className="btn-green" style={{ background:'#f97316', color:'#1e1147' }}>Créer mon CV IA →</a>
                 <a href="/cv" style={{ display:'inline-flex', alignItems:'center', gap:7, background:'rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.7)', padding:'12px 22px', borderRadius:10, fontSize:14, fontWeight:600, textDecoration:'none', border:'1px solid rgba(255,255,255,0.15)', transition:'all .18s' }}>
                   Voir les modèles
                 </a>
@@ -486,12 +483,8 @@ export default function Index({ searchParams }: { searchParams: any }) {
           <div style={{ maxWidth:1060, margin:'0 auto' }}>
             <div className="footer-grid" style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:24, marginBottom:36 }}>
               <div>
-                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
-                  <div style={{ width:32, height:32, background:'linear-gradient(135deg,#7c3aed,#5b21b6)', borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:15, color:'white' }}>T</div>
-                  <div>
-                    <div style={{ color:'white', fontWeight:800, fontSize:14, lineHeight:1 }}>TalentMaroc</div>
-                    <div style={{ color:'rgba(255,255,255,0.3)', fontSize:8, letterSpacing:'0.05em', marginTop:2 }}>A WORLD OF OPPORTUNITY</div>
-                  </div>
+                <div style={{ marginBottom:14 }}>
+                  <img src="/logo.png" alt="TalentMaroc" style={{ height:40, width:'auto', filter:'brightness(0) invert(1)', opacity:0.85 }} />
                 </div>
                 <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', lineHeight:1.7, maxWidth:200 }}>La plateforme de référence pour l'emploi au Maroc. Propulsé par n8n & Supabase.</p>
               </div>

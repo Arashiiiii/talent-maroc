@@ -403,9 +403,8 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         {/* NAVBAR */}
         <nav style={{ position:'sticky', top:0, zIndex:100, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(12px)', borderBottom:'1.5px solid #f0f0f0', padding:'0 24px', height:62, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div style={{ display:'flex', alignItems:'center', gap:28 }}>
-            <a href="/" style={{ display:'flex', alignItems:'center', gap:9, textDecoration:'none' }}>
-              <div style={{ width:34, height:34, background:'linear-gradient(135deg,#7c3aed,#5b21b6)', borderRadius:9, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:16, color:'white' }}>T</div>
-              <span style={{ color:'#1e1147', fontWeight:800, fontSize:16 }}>TalentMaroc</span>
+            <a href="/" style={{ display:'flex', alignItems:'center', textDecoration:'none' }}>
+              <img src="/logo.png" alt="TalentMaroc" style={{ height:42, width:'auto', objectFit:'contain' }} />
             </a>
             <div className="hide-sm" style={{ display:'flex', gap:2 }}>
               <a href="/"          className="nl">Emplois</a>
@@ -436,10 +435,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         {/* FOOTER */}
         <footer style={{ background:'#1e1147', padding:'40px 24px 24px' }}>
           <div style={{ maxWidth:1060, margin:'0 auto', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:16 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <div style={{ width:28, height:28, background:'linear-gradient(135deg,#7c3aed,#5b21b6)', borderRadius:7, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:13, color:'white' }}>T</div>
-              <span style={{ color:'white', fontWeight:800, fontSize:14 }}>TalentMaroc</span>
-            </div>
+            <img src="/logo.png" alt="TalentMaroc" style={{ height:36, width:'auto', filter:'brightness(0) invert(1)', opacity:0.85 }} />
             <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
               <a href="/"      className="footer-link" style={{ margin:'0 8px' }}>Emplois</a>
               <a href="/terms" className="footer-link" style={{ margin:'0 8px' }}>CGU</a>

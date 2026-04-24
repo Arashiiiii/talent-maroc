@@ -35,8 +35,7 @@ export default function PricingPage() {
       {/* NAVBAR */}
       <nav style={{ background:"rgba(255,255,255,.96)", backdropFilter:"blur(12px)", borderBottom:"1.5px solid #f0f0f0", padding:"0 24px", height:62, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100 }}>
         <a href="/" style={{ display:"flex", alignItems:"center", gap:9, textDecoration:"none" }}>
-          <div style={{ width:34, height:34, background:"linear-gradient(135deg,#7c3aed,#5b21b6)", borderRadius:9, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:16, color:"white" }}>T</div>
-          <span style={{ color:"#1e1147", fontWeight:800, fontSize:16 }}>TalentMaroc</span>
+          <img src="/logo.png" alt="TalentMaroc" style={{ height:42, width:'auto', objectFit:'contain' }} />
         </a>
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <a href="/" className="nl">Emplois</a>
