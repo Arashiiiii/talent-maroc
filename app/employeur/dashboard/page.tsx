@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
+import JSZip from "jszip";
 
 function getSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
@@ -225,6 +226,42 @@ export default function EmployeurDashboard() {
   const setEF=(k:keyof Job)=>(e:React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>)=>
     setEditForm(p=>({...p,[k]:e.target.value}));
 
+  const [zipping, setZipping] = useState(false);
+
+  const downloadCvsZip = async () => {
+    const withCv = filteredApps.filter(a => a.cv_url);
+    if (!withCv.length) { setErr("Aucun CV disponible parmi les candidats filtrés."); return; }
+
+    setZipping(true);
+    const zip = new JSZip();
+    const folder = zip.folder("CVs_TalentMaroc")!;
+    let failed = 0;
+
+    await Promise.all(withCv.map(async (a) => {
+      const slug = (a.candidate_name || `candidat_${a.user_id.slice(0,6)}`).replace(/\s+/g, "_");
+      const filename = `${slug}_${a.job_title.replace(/\s+/g,"_").slice(0,30)}.pdf`;
+      try {
+        const res = await fetch(a.cv_url!);
+        if (!res.ok) throw new Error("fetch failed");
+        const blob = await res.blob();
+        folder.file(filename, blob);
+      } catch {
+        failed++;
+      }
+    }));
+
+    const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    const label = jobFilter !== "all" ? jobs.find(j=>j.id===jobFilter)?.title?.replace(/\s+/g,"_").slice(0,30) || "offre" : "toutes_offres";
+    a.href = url;
+    a.download = `CVs_${label}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setZipping(false);
+    if (failed > 0) setErr(`${failed} CV(s) n'ont pas pu être téléchargés (lien expiré ou inaccessible).`);
+  };
+
   const signOut = async () => {
     await getSupabase().auth.signOut();
     window.location.href = "/employeur";
@@ -258,38 +295,68 @@ export default function EmployeurDashboard() {
 
   // ── DOWNLOAD APPLICATION FILES ──────────────────────────────────────────
   const downloadApplicationFiles = (app: Application) => {
-    const slug = (app.candidate_name || "candidat").replace(/\s+/g, "_");
-    let downloaded = false;
-
-    // 1. CV — open in new tab (avoids CORS issues with external storage URLs)
-    if (app.cv_url) {
-      window.open(app.cv_url, "_blank");
-      downloaded = true;
+    if (!app.cv_url && !app.cover_letter) {
+      setErr("Ce candidat n'a pas joint de CV ni de lettre de motivation.");
+      return;
     }
 
-    // 2. Cover letter — download as .txt
-    if (app.cover_letter) {
-      setTimeout(() => {
-        const content = [
-          `LETTRE DE MOTIVATION`,
-          `Candidat : ${app.candidate_name || "—"}`,
-          `Poste    : ${app.job_title}`,
-          `Date     : ${app.applied_at ? new Date(app.applied_at).toLocaleDateString("fr-FR") : "—"}`,
-          "",
-          "─".repeat(60),
-          "",
-          app.cover_letter,
-        ].join("\n");
-        const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement("a");
-        a.href = url; a.download = `${slug}_lettre_motivation.txt`; a.click();
-        URL.revokeObjectURL(url);
-      }, 300);
-      downloaded = true;
-    }
+    const name    = app.candidate_name || "Candidat";
+    const date    = app.applied_at ? new Date(app.applied_at).toLocaleDateString("fr-FR") : new Date().toLocaleDateString("fr-FR");
+    const letter  = (app.cover_letter || "").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br/>");
 
-    if (!downloaded) setErr("Ce candidat n'a pas joint de CV ni de lettre de motivation.");
+    const html = `<!DOCTYPE html><html lang="fr"><head>
+      <meta charset="UTF-8"/>
+      <title>Dossier — ${name}</title>
+      <style>
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Segoe UI',Arial,sans-serif;color:#0f172a;background:white}
+        .page{max-width:780px;margin:0 auto;padding:48px 40px}
+        .header{border-bottom:3px solid #7c3aed;padding-bottom:20px;margin-bottom:32px}
+        .badge{display:inline-block;background:#7c3aed;color:white;font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;letter-spacing:.05em;margin-bottom:10px}
+        h1{font-size:22px;font-weight:800;color:#1e1147;margin-bottom:6px}
+        .meta{font-size:13px;color:#6b7280;display:flex;gap:24px;flex-wrap:wrap}
+        .section-title{font-size:13px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+        .section-title::after{content:'';flex:1;height:1px;background:#ede9fe}
+        .letter-box{background:#fafaf9;border:1px solid #e5e7eb;border-radius:10px;padding:28px 32px;font-size:14px;line-height:1.85;color:#374151;white-space:pre-wrap}
+        .cv-frame{width:100%;height:900px;border:1px solid #e5e7eb;border-radius:10px;margin-top:8px}
+        .cv-link{display:inline-block;margin-top:10px;font-size:13px;color:#7c3aed;font-weight:600}
+        .no-cv{padding:32px;text-align:center;background:#f5f3ff;border:1.5px dashed #ddd6fe;border-radius:10px;color:#6b7280;font-size:13px}
+        .print-btn{position:fixed;bottom:24px;right:24px;background:#7c3aed;color:white;border:none;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(124,58,237,.4);font-family:inherit}
+        @media print{.print-btn{display:none}.page{padding:24px 20px}.cv-frame{height:1000px}}
+      </style>
+    </head><body>
+      <div class="page">
+        <div class="header">
+          <div class="badge">DOSSIER DE CANDIDATURE</div>
+          <h1>${name}</h1>
+          <div class="meta">
+            ${app.candidate_email ? `<span>📧 ${app.candidate_email}</span>` : ""}
+            <span>💼 ${app.job_title}</span>
+            <span>📅 ${date}</span>
+          </div>
+        </div>
+
+        ${app.cover_letter ? `
+        <div style="margin-bottom:40px">
+          <div class="section-title">✉️ Lettre de motivation</div>
+          <div class="letter-box">${letter}</div>
+        </div>` : ""}
+
+        <div>
+          <div class="section-title">📄 CV</div>
+          ${app.cv_url
+            ? `<embed src="${app.cv_url}" type="application/pdf" class="cv-frame"/>
+               <a href="${app.cv_url}" target="_blank" class="cv-link">↗ Ouvrir le CV dans un nouvel onglet</a>`
+            : `<div class="no-cv">Aucun CV joint par ce candidat.</div>`}
+        </div>
+      </div>
+      <button class="print-btn" onclick="window.print()">🖨 Imprimer / Sauvegarder en PDF</button>
+    </body></html>`;
+
+    const win = window.open("", "_blank");
+    if (!win) { setErr("Autorisez les popups pour télécharger le dossier."); return; }
+    win.document.write(html);
+    win.document.close();
   };
 
   // ── AI COMPARE ─────────────────────────────────────────────────────────
@@ -641,18 +708,11 @@ export default function EmployeurDashboard() {
                   <button className="btn btn-outline" onClick={()=>dlCSV("candidatures.csv",filteredApps.map(a=>({ "Nom":a.candidate_name||"—", "Email":a.candidate_email||"—", "Poste":a.job_title, "Ville":a.city||"—", "Statut":STATUS_CFG[a.status].label, "Date":a.applied_at||"", "Notes":a.notes||"", "CV":a.cv_url||"" })))}>
                     ⬇ CSV ({filteredApps.length})
                   </button>
-                  <button className="btn btn-pro" style={{ background:"#0f172a", color:"white" }}
-                    title="Télécharger tous les CVs disponibles — Fonctionnalité Pro"
-                    onClick={()=>{
-                      const withCv = filteredApps.filter(a=>a.cv_url);
-                      if (!withCv.length) { setErr("Aucun CV disponible parmi les candidats filtrés."); return; }
-                      // Open each CV in a new tab (browsers may block multiple popups; CSV with links is the safe alternative)
-                      const rows = withCv.map(a=>({ "Nom":a.candidate_name||"—", "Email":a.candidate_email||"—", "Poste":a.job_title, "Lien CV":a.cv_url||"" }));
-                      dlCSV("cvs_liens.csv", rows);
-                      // Also open first CV directly
-                      withCv.forEach((a,i)=>{ if(i<5&&a.cv_url) setTimeout(()=>window.open(a.cv_url!,"_blank"),i*300); });
-                    }}>
-                    📦 CVs en lot ✦ Pro ({filteredApps.filter(a=>a.cv_url).length})
+                  <button className="btn btn-pro" style={{ background:"#0f172a", color:"white", opacity: zipping ? 0.7 : 1 }}
+                    disabled={zipping}
+                    title="Télécharger tous les CVs dans un fichier ZIP"
+                    onClick={downloadCvsZip}>
+                    {zipping ? "⏳ Préparation…" : `📦 CVs ZIP ✦ Pro (${filteredApps.filter(a=>a.cv_url).length})`}
                   </button>
                   <button className="btn btn-pro" onClick={aiCompare} disabled={comparing}
                     title="Comparaison IA des candidats — Fonctionnalité Pro">
