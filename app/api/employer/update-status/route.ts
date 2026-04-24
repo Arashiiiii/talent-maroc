@@ -9,13 +9,14 @@ export async function POST(req: NextRequest) {
     }
     const token = authHeader.slice(7);
 
-    // Verify employer identity
-    const anonSb = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-    const { data: { user }, error: authErr } = await anonSb.auth.getUser();
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceKey) {
+      return NextResponse.json({ error: 'Configuration serveur manquante' }, { status: 503 });
+    }
+
+    // Use admin client to verify the JWT — works with any Supabase key format
+    const adminSb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+    const { data: { user }, error: authErr } = await adminSb.auth.getUser(token);
     if (!user || authErr) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
@@ -24,11 +25,6 @@ export async function POST(req: NextRequest) {
     if (!applicationId || !status) {
       return NextResponse.json({ error: 'Paramètres manquants' }, { status: 400 });
     }
-
-    const adminSb = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
 
     // Verify the application belongs to one of this employer's jobs
     const { data: app } = await adminSb
@@ -48,7 +44,6 @@ export async function POST(req: NextRequest) {
 
     if (!job) return NextResponse.json({ error: 'Non autorisé' }, { status: 403 });
 
-    // Update status using service role (bypasses RLS)
     const { error } = await adminSb
       .from('applications')
       .update({ status })
