@@ -1373,7 +1373,7 @@ Retourne UNIQUEMENT le JSON.`}];
         {/* ── NAVBAR ── */}
         <nav style={{background:"rgba(255,255,255,.96)",backdropFilter:"blur(12px)",borderBottom:"1.5px solid #f0f0f0",padding:"0 24px",height:62,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
           <div style={{display:"flex",alignItems:"center",gap:28}}>
-            <a href="/" style={{display:"flex",alignItems:"center",gap:9,textDecoration:"none"}}>
+            <a href="/" style={{display:"flex",alignItems:"center",textDecoration:"none",overflow:"hidden",height:62}}>
               <img src="/logo.png" alt="TalentMaroc" style={{height:110,width:'auto',objectFit:'contain',margin:'-22px 0'}} />
             </a>
             <div className="hide-sm" style={{display:"flex",gap:2}}>
@@ -2042,8 +2042,8 @@ Retourne UNIQUEMENT le JSON.`}];
                     </div>
                   </div>
 
-                  {/* Hidden full-scale CV used for PDF capture — no transform parent */}
-                  <div style={{ position:"absolute", left:"-9999px", top:0, width:794, pointerEvents:"none" }}>
+                  {/* Hidden full-scale CV for PDF capture — fixed off-screen, never interactive */}
+                  <div style={{ position:"fixed", left:"-9999px", top:0, width:794, pointerEvents:"none" }}>
                     <div ref={printRef} id="cv-print" style={{ background:"white" }}>
                       <CvMultiPage id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
                     </div>
