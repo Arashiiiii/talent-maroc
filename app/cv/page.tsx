@@ -89,6 +89,34 @@ const BADGE_STYLES: Record<string,{bg:string;color:string}> = {
   nouveau:{ bg:"#eff6ff", color:"#1d4ed8" },
 };
 
+// ── EDITOR CUSTOMIZATION OPTIONS ───────────────────────────────────────────
+const ACCENT_COLORS = [
+  { name:'Violet',    value:'#7c3aed' },
+  { name:'Marine',    value:'#1e3a5f' },
+  { name:'Bleu',      value:'#1d4ed8' },
+  { name:'Vert',      value:'#059669' },
+  { name:'Rouge',     value:'#dc2626' },
+  { name:'Orange',    value:'#ea580c' },
+  { name:'Rose',      value:'#db2777' },
+  { name:'Ardoise',   value:'#374151' },
+];
+
+const FONT_OPTIONS = [
+  { name:'Inter',    value:"'Inter',sans-serif",                label:'Sans-serif moderne' },
+  { name:'Georgia',  value:"'Georgia',serif",                   label:'Classique élégant' },
+  { name:'Calibri',  value:"'Calibri','Segoe UI',sans-serif",  label:'Sobre professionnel' },
+  { name:'Garamond', value:"'Garamond','Times New Roman',serif", label:'Littéraire raffiné' },
+];
+
+const CV_SECTIONS = [
+  { id:'profile',        label:'Profil professionnel' },
+  { id:'experience',     label:'Expériences' },
+  { id:'education',      label:'Formation' },
+  { id:'skills',         label:'Compétences' },
+  { id:'languages',      label:'Langues' },
+  { id:'certifications', label:'Certifications' },
+];
+
 const PLANS: Plan[] = [
   { name:"Starter",       price:"1.99", paddlePriceId: PADDLE_PRICE_IDS.starter,       tier:"starter" },
   { name:"Professionnel", price:"4.99", paddlePriceId: PADDLE_PRICE_IDS.professionnel, tier:"pro"     },
@@ -105,79 +133,48 @@ const PLAN_FEATURES: Record<string,string[]> = {
 // ── CV TEMPLATE RENDERERS ─────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
 
+type TplProps = { cv: CVData; scale?: number; accent?: string; font?: string; hidden?: string[] };
+
 // ── 1. CLASSIQUE ──────────────────────────────────────────────────────────
-function TplClassique({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+function TplClassique({ cv, scale=1, accent="#1a1a1a", font="'Georgia',serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"white", fontFamily:"'Georgia',serif", color:"#1a1a1a", padding:"52px 60px", transform:`scale(${scale})`, transformOrigin:"top left" }}>
+    <div style={{ width:794, background:"white", fontFamily:font, color:"#1a1a1a", padding:"52px 60px", transform:`scale(${scale})`, transformOrigin:"top left" }}>
       {/* Header */}
-      <div style={{ textAlign:"center", borderBottom:"2px solid #1a1a1a", paddingBottom:18, marginBottom:20 }}>
-        <div style={{ fontSize:28, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:6 }}>{cv.name}</div>
+      <div style={{ textAlign:"center", borderBottom:`2px solid ${accent}`, paddingBottom:18, marginBottom:20 }}>
+        <div style={{ fontSize:28, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:6, color:accent }}>{cv.name}</div>
         <div style={{ fontSize:13, color:"#444", letterSpacing:"0.05em", marginBottom:8 }}>{cv.title}</div>
         <div style={{ fontSize:11, color:"#666", display:"flex", justifyContent:"center", gap:20, flexWrap:"wrap" }}>
           <span>{cv.email}</span><span>·</span><span>{cv.phone}</span><span>·</span><span>{cv.location}</span>
         </div>
       </div>
-      {/* Profile */}
-      <Section title="Profil Professionnel">
-        <p style={{ fontSize:12, lineHeight:1.8, color:"#333" }}>{cv.profile}</p>
-      </Section>
-      {/* Experience */}
-      <Section title="Expériences Professionnelles">
-        {cv.experiences.map((e,i) => (
-          <div key={i} style={{ marginBottom:14 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
-              <div style={{ fontSize:13, fontWeight:700 }}>{e.role} — {e.company}</div>
-              <div style={{ fontSize:11, color:"#666", flexShrink:0, marginLeft:12 }}>{e.period}</div>
-            </div>
-            <ul style={{ paddingLeft:18, margin:0 }}>{e.bullets.map((b,j)=><li key={j} style={{ fontSize:12, lineHeight:1.7, color:"#333" }}>{b}</li>)}</ul>
-          </div>
-        ))}
-      </Section>
-      {/* Education */}
-      <Section title="Formation">
-        {cv.education.map((e,i) => (
-          <div key={i} style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-            <div><span style={{ fontSize:12, fontWeight:700 }}>{e.degree}</span> <span style={{ fontSize:12, color:"#444" }}>— {e.school}</span></div>
-            <div style={{ fontSize:11, color:"#666" }}>{e.year}</div>
-          </div>
-        ))}
-      </Section>
-      {/* Two col */}
+      {!hidden.includes('profile') && <Section title="Profil Professionnel" accent={accent}><p style={{ fontSize:12, lineHeight:1.8, color:"#333" }}>{cv.profile}</p></Section>}
+      {!hidden.includes('experience') && <Section title="Expériences Professionnelles" accent={accent}>{cv.experiences.map((e,i) => (<div key={i} style={{ marginBottom:14 }}><div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}><div style={{ fontSize:13, fontWeight:700 }}>{e.role} — {e.company}</div><div style={{ fontSize:11, color:"#666", flexShrink:0, marginLeft:12 }}>{e.period}</div></div><ul style={{ paddingLeft:18, margin:0 }}>{e.bullets.map((b,j)=><li key={j} style={{ fontSize:12, lineHeight:1.7, color:"#333" }}>{b}</li>)}</ul></div>))}</Section>}
+      {!hidden.includes('education') && <Section title="Formation" accent={accent}>{cv.education.map((e,i) => (<div key={i} style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}><div><span style={{ fontSize:12, fontWeight:700 }}>{e.degree}</span> <span style={{ fontSize:12, color:"#444" }}>— {e.school}</span></div><div style={{ fontSize:11, color:"#666" }}>{e.year}</div></div>))}</Section>}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:32 }}>
-        <Section title="Compétences">
-          <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 12px" }}>
-            {cv.skills.map((s,i)=><span key={i} style={{ fontSize:12, color:"#333" }}>• {s}</span>)}
-          </div>
-        </Section>
-        <Section title="Langues">
-          {cv.languages.map((l,i)=><div key={i} style={{ fontSize:12, marginBottom:4 }}><strong>{l.lang}</strong> — {l.level}</div>)}
-        </Section>
+        {!hidden.includes('skills') && <Section title="Compétences" accent={accent}><div style={{ display:"flex", flexWrap:"wrap", gap:"4px 12px" }}>{cv.skills.map((s,i)=><span key={i} style={{ fontSize:12, color:"#333" }}>• {s}</span>)}</div></Section>}
+        {!hidden.includes('languages') && <Section title="Langues" accent={accent}>{cv.languages.map((l,i)=><div key={i} style={{ fontSize:12, marginBottom:4 }}><strong>{l.lang}</strong> — {l.level}</div>)}</Section>}
       </div>
-      {cv.certifications && cv.certifications.length > 0 && (
-        <Section title="Certifications">
-          {cv.certifications.map((c,i)=><div key={i} style={{ fontSize:12, marginBottom:4 }}>• {c}</div>)}
-        </Section>
-      )}
+      {!hidden.includes('certifications') && cv.certifications && cv.certifications.length > 0 && <Section title="Certifications" accent={accent}>{cv.certifications.map((c,i)=><div key={i} style={{ fontSize:12, marginBottom:4 }}>• {c}</div>)}</Section>}
     </div>
   );
 }
 
 // ── 2. MODERNE ────────────────────────────────────────────────────────────
-function TplModerne({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+function TplModerne({ cv, scale=1, accent="#1e3a5f", font="'Inter',sans-serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"white", fontFamily:"'Inter',sans-serif", display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600 }}>
+    <div style={{ width:794, background:"white", fontFamily:font, display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600 }}>
       {/* Sidebar */}
-      <div style={{ width:240, background:"#1e3a5f", padding:"40px 24px", flexShrink:0 }}>
+      <div style={{ width:240, background:accent, padding:"40px 24px", flexShrink:0 }}>
         {/* Avatar — photo if available, else initial */}
         {cv.photo ? (
           <img src={cv.photo} alt={cv.name} style={{ width:80, height:80, borderRadius:"50%", objectFit:"cover", marginBottom:20, border:"3px solid rgba(255,255,255,0.2)" }}/>
         ) : (
-          <div style={{ width:72, height:72, borderRadius:"50%", background:"#3b82f6", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, fontWeight:800, color:"white", marginBottom:20 }}>
+          <div style={{ width:72, height:72, borderRadius:"50%", background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, fontWeight:800, color:"white", marginBottom:20 }}>
             {cv.name.charAt(0)}
           </div>
         )}
         <div style={{ fontSize:16, fontWeight:800, color:"white", marginBottom:4, lineHeight:1.2 }}>{cv.name}</div>
-        <div style={{ fontSize:11, color:"#93c5fd", marginBottom:24, lineHeight:1.4 }}>{cv.title}</div>
+        <div style={{ fontSize:11, color:"rgba(255,255,255,0.7)", marginBottom:24, lineHeight:1.4 }}>{cv.title}</div>
         <SideSection title="Contact" light>
           <div style={{ fontSize:10, color:"rgba(255,255,255,0.7)", lineHeight:2 }}>
             <div>✉ {cv.email}</div><div>📞 {cv.phone}</div><div>📍 {cv.location}</div>
@@ -201,35 +198,28 @@ function TplModerne({ cv, scale=1 }: { cv: CVData; scale?: number }) {
       {/* Main */}
       <div style={{ flex:1, padding:"40px 36px" }}>
         <div style={{ fontSize:12, color:"#374151", lineHeight:1.8, marginBottom:24, paddingBottom:20, borderBottom:"2px solid #e5e7eb" }}>{cv.profile}</div>
-        <MSection title="Expériences" accent="#1e3a5f">
+        {!hidden.includes('experience') && <MSection title="Expériences" accent={accent}>
           {cv.experiences.map((e,i)=>(
             <div key={i} style={{ marginBottom:16 }}>
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</div>
                 <div style={{ fontSize:10, color:"#6b7280", background:"#f3f4f6", padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8 }}>{e.period}</div>
               </div>
-              <div style={{ fontSize:11, color:"#3b82f6", fontWeight:600, marginBottom:4 }}>{e.company}</div>
+              <div style={{ fontSize:11, color:accent, fontWeight:600, marginBottom:4 }}>{e.company}</div>
               <ul style={{ paddingLeft:16, margin:0 }}>{e.bullets.map((b,j)=><li key={j} style={{ fontSize:11, lineHeight:1.7, color:"#374151" }}>{b}</li>)}</ul>
             </div>
           ))}
-        </MSection>
-        <MSection title="Formation" accent="#1e3a5f">
-          {cv.education.map((e,i)=>(
-            <div key={i} style={{ marginBottom:10 }}>
-              <div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div>
-              <div style={{ fontSize:11, color:"#6b7280" }}>{e.school} · {e.year}</div>
-            </div>
-          ))}
-        </MSection>
+        </MSection>}
+        {!hidden.includes('education') && <MSection title="Formation" accent={accent}>{cv.education.map((e,i)=>(<div key={i} style={{ marginBottom:10 }}><div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div><div style={{ fontSize:11, color:"#6b7280" }}>{e.school} · {e.year}</div></div>))}</MSection>}
       </div>
     </div>
   );
 }
 
 // ── 3. MINIMALISTE ────────────────────────────────────────────────────────
-function TplMinimal({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+function TplMinimal({ cv, scale=1, accent="#0ea5e9", font="'Helvetica Neue',Helvetica,sans-serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"white", fontFamily:"'Helvetica Neue',Helvetica,sans-serif", padding:"60px 72px", transform:`scale(${scale})`, transformOrigin:"top left" }}>
+    <div style={{ width:794, background:"white", fontFamily:font, padding:"60px 72px", transform:`scale(${scale})`, transformOrigin:"top left" }}>
       {/* Header */}
       <div style={{ marginBottom:36 }}>
         <div style={{ fontSize:32, fontWeight:300, color:"#0f172a", letterSpacing:"-0.02em", marginBottom:4 }}>{cv.name}</div>
@@ -241,18 +231,18 @@ function TplMinimal({ cv, scale=1 }: { cv: CVData; scale?: number }) {
       {/* Thin rule */}
       <div style={{ height:1, background:"#e2e8f0", marginBottom:28 }}/>
       {/* Profile */}
-      <div style={{ marginBottom:28 }}>
-        <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:"#94a3b8", marginBottom:10 }}>À Propos</div>
+      {!hidden.includes('profile') && <div style={{ marginBottom:28 }}>
+        <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:accent, marginBottom:10 }}>À Propos</div>
         <p style={{ fontSize:12, lineHeight:1.9, color:"#475569", maxWidth:580 }}>{cv.profile}</p>
-      </div>
+      </div>}
       {/* Experience */}
-      <div style={{ marginBottom:28 }}>
-        <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:"#94a3b8", marginBottom:14 }}>Expérience</div>
+      {!hidden.includes('experience') && <div style={{ marginBottom:28 }}>
+        <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:accent, marginBottom:14 }}>Expérience</div>
         {cv.experiences.map((e,i)=>(
           <div key={i} style={{ display:"grid", gridTemplateColumns:"140px 1fr", gap:20, marginBottom:18 }}>
             <div>
               <div style={{ fontSize:11, color:"#64748b", lineHeight:1.5 }}>{e.period}</div>
-              <div style={{ fontSize:11, color:"#0ea5e9", fontWeight:500 }}>{e.company}</div>
+              <div style={{ fontSize:11, color:accent, fontWeight:500 }}>{e.company}</div>
             </div>
             <div>
               <div style={{ fontSize:13, fontWeight:500, color:"#0f172a", marginBottom:6 }}>{e.role}</div>
@@ -260,72 +250,76 @@ function TplMinimal({ cv, scale=1 }: { cv: CVData; scale?: number }) {
             </div>
           </div>
         ))}
-      </div>
+      </div>}
       <div style={{ height:1, background:"#e2e8f0", marginBottom:24 }}/>
       {/* Three col bottom */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:24 }}>
-        <div>
-          <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:"#94a3b8", marginBottom:10 }}>Formation</div>
+        {!hidden.includes('education') && <div>
+          <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:accent, marginBottom:10 }}>Formation</div>
           {cv.education.map((e,i)=><div key={i} style={{ marginBottom:8 }}><div style={{ fontSize:11, fontWeight:500, color:"#0f172a" }}>{e.degree}</div><div style={{ fontSize:10, color:"#64748b" }}>{e.school} · {e.year}</div></div>)}
-        </div>
-        <div>
-          <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:"#94a3b8", marginBottom:10 }}>Compétences</div>
+        </div>}
+        {!hidden.includes('skills') && <div>
+          <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:accent, marginBottom:10 }}>Compétences</div>
           {cv.skills.map((s,i)=><div key={i} style={{ fontSize:11, color:"#475569", marginBottom:4 }}>{s}</div>)}
-        </div>
-        <div>
-          <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:"#94a3b8", marginBottom:10 }}>Langues</div>
+        </div>}
+        {!hidden.includes('languages') && <div>
+          <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:accent, marginBottom:10 }}>Langues</div>
           {cv.languages.map((l,i)=><div key={i} style={{ fontSize:11, color:"#475569", marginBottom:4 }}>{l.lang} <span style={{ color:"#94a3b8" }}>/ {l.level}</span></div>)}
-        </div>
+        </div>}
       </div>
     </div>
   );
 }
 
 // ── 4. EXÉCUTIF ───────────────────────────────────────────────────────────
-function TplExecutif({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+function TplExecutif({ cv, scale=1, accent="#d4af37", font="'Georgia',serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"#0c0a09", fontFamily:"'Georgia',serif", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600 }}>
+    <div style={{ width:794, background:"#0c0a09", fontFamily:font, transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600 }}>
       {/* Gold header */}
-      <div style={{ background:"linear-gradient(135deg,#1c1410,#2d1f0e)", padding:"44px 56px 32px", borderBottom:"2px solid #d4af37" }}>
+      <div style={{ background:"linear-gradient(135deg,#1c1410,#2d1f0e)", padding:"44px 56px 32px", borderBottom:`2px solid ${accent}` }}>
         <div style={{ fontSize:30, fontWeight:700, color:"#f5f0e8", letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:6 }}>{cv.name}</div>
-        <div style={{ fontSize:13, color:"#d4af37", letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:14 }}>{cv.title}</div>
+        <div style={{ fontSize:13, color:accent, letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:14 }}>{cv.title}</div>
         <div style={{ display:"flex", gap:24, fontSize:11, color:"rgba(255,255,255,0.5)" }}>
           <span>{cv.email}</span><span>|</span><span>{cv.phone}</span><span>|</span><span>{cv.location}</span>
         </div>
       </div>
       <div style={{ padding:"32px 56px" }}>
         {/* Profile */}
-        <div style={{ marginBottom:24, paddingBottom:20, borderBottom:"1px solid rgba(212,175,55,0.2)" }}>
-          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:"#d4af37", marginBottom:10 }}>Profil Exécutif</div>
+        {!hidden.includes('profile') && <div style={{ marginBottom:24, paddingBottom:20, borderBottom:`1px solid ${accent}33` }}>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:accent, marginBottom:10 }}>Profil Exécutif</div>
           <p style={{ fontSize:12, lineHeight:1.9, color:"rgba(255,255,255,0.75)", fontStyle:"italic" }}>{cv.profile}</p>
-        </div>
+        </div>}
         {/* Experience */}
-        <div style={{ marginBottom:24 }}>
-          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:"#d4af37", marginBottom:14 }}>Parcours Professionnel</div>
+        {!hidden.includes('experience') && <div style={{ marginBottom:24 }}>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:accent, marginBottom:14 }}>Parcours Professionnel</div>
           {cv.experiences.map((e,i)=>(
-            <div key={i} style={{ marginBottom:18, paddingLeft:16, borderLeft:"2px solid #d4af37" }}>
+            <div key={i} style={{ marginBottom:18, paddingLeft:16, borderLeft:`2px solid ${accent}` }}>
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#f5f0e8" }}>{e.role}</div>
-                <div style={{ fontSize:11, color:"#d4af37" }}>{e.period}</div>
+                <div style={{ fontSize:11, color:accent }}>{e.period}</div>
               </div>
-              <div style={{ fontSize:12, color:"#d4af37", opacity:0.7, marginBottom:6 }}>{e.company}</div>
+              <div style={{ fontSize:12, color:accent, opacity:0.7, marginBottom:6 }}>{e.company}</div>
               {e.bullets.map((b,j)=><div key={j} style={{ fontSize:11, color:"rgba(255,255,255,0.65)", lineHeight:1.7, marginBottom:3 }}>◆ {b}</div>)}
             </div>
           ))}
-        </div>
+        </div>}
         {/* Two col */}
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:32 }}>
-          <div>
-            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:"#d4af37", marginBottom:12 }}>Formation</div>
+          {!hidden.includes('education') && <div>
+            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:accent, marginBottom:12 }}>Formation</div>
             {cv.education.map((e,i)=><div key={i} style={{ marginBottom:10 }}><div style={{ fontSize:12, color:"#f5f0e8", fontWeight:600 }}>{e.degree}</div><div style={{ fontSize:11, color:"rgba(255,255,255,0.5)" }}>{e.school} · {e.year}</div></div>)}
-          </div>
+          </div>}
           <div>
-            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:"#d4af37", marginBottom:12 }}>Compétences Clés</div>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-              {cv.skills.map((s,i)=><span key={i} style={{ fontSize:10, color:"#d4af37", border:"1px solid rgba(212,175,55,0.35)", padding:"3px 10px", borderRadius:2 }}>{s}</span>)}
-            </div>
-            <div style={{ marginTop:16, fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:"#d4af37", marginBottom:10 }}>Langues</div>
-            {cv.languages.map((l,i)=><div key={i} style={{ fontSize:11, color:"rgba(255,255,255,0.65)", marginBottom:4 }}>{l.lang} — {l.level}</div>)}
+            {!hidden.includes('skills') && <>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:accent, marginBottom:12 }}>Compétences Clés</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 }}>
+                {cv.skills.map((s,i)=><span key={i} style={{ fontSize:10, color:accent, border:`1px solid ${accent}55`, padding:"3px 10px", borderRadius:2 }}>{s}</span>)}
+              </div>
+            </>}
+            {!hidden.includes('languages') && <>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:accent, marginBottom:10 }}>Langues</div>
+              {cv.languages.map((l,i)=><div key={i} style={{ fontSize:11, color:"rgba(255,255,255,0.65)", marginBottom:4 }}>{l.lang} — {l.level}</div>)}
+            </>}
           </div>
         </div>
       </div>
@@ -334,72 +328,80 @@ function TplExecutif({ cv, scale=1 }: { cv: CVData; scale?: number }) {
 }
 
 // ── 5. CRÉATIF ────────────────────────────────────────────────────────────
-function TplCreatif({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+function TplCreatif({ cv, scale=1, accent="#7c3aed", font="'Inter',sans-serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"white", fontFamily:"'Inter',sans-serif", transform:`scale(${scale})`, transformOrigin:"top left" }}>
+    <div style={{ width:794, background:"white", fontFamily:font, transform:`scale(${scale})`, transformOrigin:"top left" }}>
       {/* Bold top bar */}
-      <div style={{ height:8, background:"linear-gradient(90deg,#7c3aed,#ec4899,#f97316)" }}/>
+      <div style={{ height:8, background:`linear-gradient(90deg,${accent},#ec4899,#f97316)` }}/>
       <div style={{ padding:"40px 52px" }}>
         {/* Header - big name */}
         <div style={{ marginBottom:28, display:"flex", alignItems:"flex-start", gap:20 }}>
           {cv.photo && (
-            <img src={cv.photo} alt={cv.name} style={{ width:80, height:80, borderRadius:12, objectFit:"cover", flexShrink:0, border:"2px solid #e9d5ff" }}/>
+            <img src={cv.photo} alt={cv.name} style={{ width:80, height:80, borderRadius:12, objectFit:"cover", flexShrink:0, border:`2px solid ${accent}44` }}/>
           )}
           <div>
             <div style={{ fontSize:34, fontWeight:900, color:"#0f172a", letterSpacing:"-0.03em", lineHeight:1, marginBottom:6 }}>{cv.name}</div>
-            <div style={{ fontSize:14, fontWeight:600, background:"linear-gradient(90deg,#7c3aed,#ec4899)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:12 }}>{cv.title}</div>
+            <div style={{ fontSize:14, fontWeight:600, color:accent, marginBottom:12 }}>{cv.title}</div>
             <div style={{ display:"flex", gap:20, fontSize:11, color:"#6b7280", flexWrap:"wrap" }}>
               <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
             </div>
           </div>
         </div>
         {/* Profile with left border */}
-        <div style={{ borderLeft:"4px solid #7c3aed", paddingLeft:16, marginBottom:28 }}>
+        {!hidden.includes('profile') && <div style={{ borderLeft:`4px solid ${accent}`, paddingLeft:16, marginBottom:28 }}>
           <p style={{ fontSize:12, lineHeight:1.8, color:"#374151" }}>{cv.profile}</p>
-        </div>
+        </div>}
         {/* Two col layout */}
         <div style={{ display:"grid", gridTemplateColumns:"1fr 280px", gap:36 }}>
           {/* Left */}
           <div>
-            <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:"#7c3aed", marginBottom:14 }}>Expériences</div>
-            {cv.experiences.map((e,i)=>(
-              <div key={i} style={{ marginBottom:18, position:"relative", paddingLeft:16 }}>
-                <div style={{ position:"absolute", left:0, top:5, width:6, height:6, borderRadius:"50%", background:"#7c3aed" }}/>
-                <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</div>
-                <div style={{ fontSize:11, color:"#7c3aed", marginBottom:4 }}>{e.company} · <span style={{ color:"#9ca3af" }}>{e.period}</span></div>
-                {e.bullets.map((b,j)=><div key={j} style={{ fontSize:11, color:"#374151", lineHeight:1.7 }}>→ {b}</div>)}
-              </div>
-            ))}
-            <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:"#7c3aed", marginBottom:12, marginTop:20 }}>Formation</div>
-            {cv.education.map((e,i)=>(
-              <div key={i} style={{ marginBottom:10 }}>
-                <div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div>
-                <div style={{ fontSize:11, color:"#6b7280" }}>{e.school} · {e.year}</div>
-              </div>
-            ))}
+            {!hidden.includes('experience') && <>
+              <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:accent, marginBottom:14 }}>Expériences</div>
+              {cv.experiences.map((e,i)=>(
+                <div key={i} style={{ marginBottom:18, position:"relative", paddingLeft:16 }}>
+                  <div style={{ position:"absolute", left:0, top:5, width:6, height:6, borderRadius:"50%", background:accent }}/>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</div>
+                  <div style={{ fontSize:11, color:accent, marginBottom:4 }}>{e.company} · <span style={{ color:"#9ca3af" }}>{e.period}</span></div>
+                  {e.bullets.map((b,j)=><div key={j} style={{ fontSize:11, color:"#374151", lineHeight:1.7 }}>→ {b}</div>)}
+                </div>
+              ))}
+            </>}
+            {!hidden.includes('education') && <>
+              <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:accent, marginBottom:12, marginTop:20 }}>Formation</div>
+              {cv.education.map((e,i)=>(
+                <div key={i} style={{ marginBottom:10 }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div>
+                  <div style={{ fontSize:11, color:"#6b7280" }}>{e.school} · {e.year}</div>
+                </div>
+              ))}
+            </>}
           </div>
           {/* Right */}
           <div>
-            <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:"#ec4899", marginBottom:12 }}>Compétences</div>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:20 }}>
-              {cv.skills.map((s,i)=>(
-                <span key={i} style={{ fontSize:10, background:i%3===0?"#f3e8ff":i%3===1?"#fce7f3":"#fff7ed", color:i%3===0?"#7c3aed":i%3===1?"#ec4899":"#ea580c", padding:"4px 10px", borderRadius:100, fontWeight:600 }}>{s}</span>
-              ))}
-            </div>
-            <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:"#f97316", marginBottom:12 }}>Langues</div>
-            {cv.languages.map((l,i)=>(
-              <div key={i} style={{ marginBottom:8 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, marginBottom:3 }}>
-                  <span style={{ fontWeight:600, color:"#0f172a" }}>{l.lang}</span>
-                  <span style={{ color:"#6b7280" }}>{l.level}</span>
-                </div>
-                <div style={{ height:4, background:"#f3f4f6", borderRadius:2 }}>
-                  <div style={{ height:4, borderRadius:2, width:l.level==="Natif"?"100%":l.level==="Courant"?"85%":"55%", background:"linear-gradient(90deg,#7c3aed,#ec4899)" }}/>
-                </div>
+            {!hidden.includes('skills') && <>
+              <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:accent, marginBottom:12 }}>Compétences</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:20 }}>
+                {cv.skills.map((s,i)=>(
+                  <span key={i} style={{ fontSize:10, background:`${accent}18`, color:accent, padding:"4px 10px", borderRadius:100, fontWeight:600 }}>{s}</span>
+                ))}
               </div>
-            ))}
-            {cv.certifications && cv.certifications.length > 0 && <>
-              <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:"#7c3aed", marginBottom:10, marginTop:16 }}>Certifications</div>
+            </>}
+            {!hidden.includes('languages') && <>
+              <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:accent, marginBottom:12 }}>Langues</div>
+              {cv.languages.map((l,i)=>(
+                <div key={i} style={{ marginBottom:8 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, marginBottom:3 }}>
+                    <span style={{ fontWeight:600, color:"#0f172a" }}>{l.lang}</span>
+                    <span style={{ color:"#6b7280" }}>{l.level}</span>
+                  </div>
+                  <div style={{ height:4, background:"#f3f4f6", borderRadius:2 }}>
+                    <div style={{ height:4, borderRadius:2, width:l.level==="Natif"?"100%":l.level==="Courant"?"85%":"55%", background:accent }}/>
+                  </div>
+                </div>
+              ))}
+            </>}
+            {!hidden.includes('certifications') && cv.certifications && cv.certifications.length > 0 && <>
+              <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:accent, marginBottom:10, marginTop:16 }}>Certifications</div>
               {cv.certifications.map((c,i)=><div key={i} style={{ fontSize:11, color:"#374151", marginBottom:5 }}>🏅 {c}</div>)}
             </>}
           </div>
@@ -414,16 +416,16 @@ function TplCreatif({ cv, scale=1 }: { cv: CVData; scale?: number }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── 6. AZURILL — clean single column, ATS-friendly ────────────────────────
-function TplAzurill({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+function TplAzurill({ cv, scale=1, accent="#0d9488", font="'Calibri','Segoe UI',sans-serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"white", fontFamily:"'Calibri','Segoe UI',sans-serif", padding:"48px 56px", transform:`scale(${scale})`, transformOrigin:"top left", color:"#1e293b" }}>
-      {/* Header — centered, teal accent */}
+    <div style={{ width:794, background:"white", fontFamily:font, padding:"48px 56px", transform:`scale(${scale})`, transformOrigin:"top left", color:"#1e293b" }}>
+      {/* Header — centered, accent */}
       <div style={{ textAlign:"center", marginBottom:24 }}>
         {cv.photo && (
-          <img src={cv.photo} alt={cv.name} style={{ width:88, height:88, borderRadius:"50%", objectFit:"cover", marginBottom:14, border:"3px solid #99f6e4", display:"block", margin:"0 auto 14px" }}/>
+          <img src={cv.photo} alt={cv.name} style={{ width:88, height:88, borderRadius:"50%", objectFit:"cover", marginBottom:14, border:`3px solid ${accent}55`, display:"block", margin:"0 auto 14px" }}/>
         )}
         <div style={{ fontSize:30, fontWeight:800, color:"#0f172a", letterSpacing:"-0.02em", marginBottom:4 }}>{cv.name}</div>
-        <div style={{ fontSize:14, color:"#0d9488", fontWeight:600, marginBottom:10 }}>{cv.title}</div>
+        <div style={{ fontSize:14, color:accent, fontWeight:600, marginBottom:10 }}>{cv.title}</div>
         <div style={{ display:"flex", justifyContent:"center", gap:20, fontSize:11, color:"#64748b", flexWrap:"wrap" }}>
           <span>✉ {cv.email}</span>
           <span>📞 {cv.phone}</span>
@@ -431,22 +433,20 @@ function TplAzurill({ cv, scale=1 }: { cv: CVData; scale?: number }) {
         </div>
       </div>
 
-      {/* Teal rule */}
-      <div style={{ height:3, background:"linear-gradient(90deg,#0d9488,#14b8a6,#0d9488)", borderRadius:2, marginBottom:22 }}/>
+      {/* Accent rule */}
+      <div style={{ height:3, background:`linear-gradient(90deg,${accent},${accent}99,${accent})`, borderRadius:2, marginBottom:22 }}/>
 
       {/* Profile */}
-      <ASection title="Résumé" accent="#0d9488">
-        <p style={{ fontSize:12, lineHeight:1.85, color:"#334155" }}>{cv.profile}</p>
-      </ASection>
+      {!hidden.includes('profile') && <ASection title="Résumé" accent={accent}><p style={{ fontSize:12, lineHeight:1.85, color:"#334155" }}>{cv.profile}</p></ASection>}
 
       {/* Experience */}
-      <ASection title="Expérience Professionnelle" accent="#0d9488">
+      {!hidden.includes('experience') && <ASection title="Expérience Professionnelle" accent={accent}>
         {cv.experiences.map((e,i)=>(
           <div key={i} style={{ marginBottom:16 }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:3 }}>
               <div>
                 <span style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</span>
-                <span style={{ fontSize:12, color:"#0d9488", fontWeight:600 }}> · {e.company}</span>
+                <span style={{ fontSize:12, color:accent, fontWeight:600 }}> · {e.company}</span>
               </div>
               <span style={{ fontSize:11, color:"#94a3b8", flexShrink:0, marginLeft:12, background:"#f1f5f9", padding:"2px 8px", borderRadius:100 }}>{e.period}</span>
             </div>
@@ -455,10 +455,10 @@ function TplAzurill({ cv, scale=1 }: { cv: CVData; scale?: number }) {
             </ul>
           </div>
         ))}
-      </ASection>
+      </ASection>}
 
       {/* Education */}
-      <ASection title="Formation" accent="#0d9488">
+      {!hidden.includes('education') && <ASection title="Formation" accent={accent}>
         {cv.education.map((e,i)=>(
           <div key={i} style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
             <div>
@@ -468,101 +468,99 @@ function TplAzurill({ cv, scale=1 }: { cv: CVData; scale?: number }) {
             <div style={{ fontSize:11, color:"#94a3b8", flexShrink:0 }}>{e.year}</div>
           </div>
         ))}
-      </ASection>
+      </ASection>}
 
       {/* Bottom row: skills + languages */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:28 }}>
-        <ASection title="Compétences" accent="#0d9488">
+        {!hidden.includes('skills') && <ASection title="Compétences" accent={accent}>
           <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
             {cv.skills.map((s,i)=>(
-              <span key={i} style={{ fontSize:10, background:"#f0fdfa", color:"#0d9488", border:"1px solid #99f6e4", padding:"3px 10px", borderRadius:100, fontWeight:600 }}>{s}</span>
+              <span key={i} style={{ fontSize:10, background:`${accent}18`, color:accent, border:`1px solid ${accent}44`, padding:"3px 10px", borderRadius:100, fontWeight:600 }}>{s}</span>
             ))}
           </div>
-        </ASection>
-        <ASection title="Langues" accent="#0d9488">
+        </ASection>}
+        {!hidden.includes('languages') && <ASection title="Langues" accent={accent}>
           {cv.languages.map((l,i)=>(
             <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:6, alignItems:"center" }}>
               <span style={{ fontWeight:600, color:"#0f172a" }}>{l.lang}</span>
-              <span style={{ fontSize:10, color:"#0d9488", background:"#f0fdfa", padding:"2px 8px", borderRadius:100, border:"1px solid #99f6e4" }}>{l.level}</span>
+              <span style={{ fontSize:10, color:accent, background:`${accent}18`, padding:"2px 8px", borderRadius:100, border:`1px solid ${accent}44` }}>{l.level}</span>
             </div>
           ))}
-          {cv.certifications?.map((c,i)=>(
+          {!hidden.includes('certifications') && cv.certifications?.map((c,i)=>(
             <div key={i} style={{ fontSize:11, color:"#334155", marginBottom:4 }}>🏅 {c}</div>
           ))}
-        </ASection>
+        </ASection>}
       </div>
     </div>
   );
 }
 
 // ── 7. BRONZOR — right sidebar layout ─────────────────────────────────────
-function TplBronzor({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+function TplBronzor({ cv, scale=1, accent="#6366f1", font="'Inter',sans-serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"white", fontFamily:"'Inter',sans-serif", display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600 }}>
+    <div style={{ width:794, background:"white", fontFamily:font, display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600 }}>
       {/* Main content — left */}
       <div style={{ flex:1, padding:"40px 36px 40px 44px", borderRight:"1px solid #e2e8f0" }}>
         {/* Name block */}
         <div style={{ marginBottom:24, paddingBottom:20, borderBottom:"2px solid #f1f5f9" }}>
           <div style={{ fontSize:28, fontWeight:800, color:"#0f172a", letterSpacing:"-0.02em", marginBottom:4 }}>{cv.name}</div>
-          <div style={{ fontSize:14, color:"#6366f1", fontWeight:600 }}>{cv.title}</div>
+          <div style={{ fontSize:14, color:accent, fontWeight:600 }}>{cv.title}</div>
         </div>
 
         {/* Profile */}
-        <BSection title="Profil" accent="#6366f1">
-          <p style={{ fontSize:12, lineHeight:1.85, color:"#475569" }}>{cv.profile}</p>
-        </BSection>
+        {!hidden.includes('profile') && <BSection title="Profil" accent={accent}><p style={{ fontSize:12, lineHeight:1.85, color:"#475569" }}>{cv.profile}</p></BSection>}
 
         {/* Experience */}
-        <BSection title="Expériences" accent="#6366f1">
+        {!hidden.includes('experience') && <BSection title="Expériences" accent={accent}>
           {cv.experiences.map((e,i)=>(
-            <div key={i} style={{ marginBottom:18, paddingLeft:12, borderLeft:"3px solid #e0e7ff" }}>
+            <div key={i} style={{ marginBottom:18, paddingLeft:12, borderLeft:`3px solid ${accent}33` }}>
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</div>
-                <div style={{ fontSize:10, color:"#6366f1", background:"#eef2ff", padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8, fontWeight:600 }}>{e.period}</div>
+                <div style={{ fontSize:10, color:accent, background:`${accent}18`, padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8, fontWeight:600 }}>{e.period}</div>
               </div>
-              <div style={{ fontSize:11, color:"#6366f1", fontWeight:600, marginBottom:5 }}>{e.company}</div>
+              <div style={{ fontSize:11, color:accent, fontWeight:600, marginBottom:5 }}>{e.company}</div>
               {e.bullets.map((b,j)=><div key={j} style={{ fontSize:11, color:"#475569", lineHeight:1.7, marginBottom:3, paddingLeft:8 }}>· {b}</div>)}
             </div>
           ))}
-        </BSection>
+        </BSection>}
 
         {/* Education */}
-        <BSection title="Formation" accent="#6366f1">
+        {!hidden.includes('education') && <BSection title="Formation" accent={accent}>
           {cv.education.map((e,i)=>(
             <div key={i} style={{ marginBottom:10 }}>
               <div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div>
               <div style={{ fontSize:11, color:"#64748b" }}>{e.school} · {e.year}</div>
             </div>
           ))}
-        </BSection>
+        </BSection>}
       </div>
 
       {/* Right sidebar */}
       <div style={{ width:200, background:"#f8fafc", padding:"40px 20px", flexShrink:0 }}>
         {/* Contact */}
         <div style={{ marginBottom:24 }}>
-          <div style={{ fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.14em", color:"#6366f1", marginBottom:12 }}>Contact</div>
+          <div style={{ fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.14em", color:accent, marginBottom:12 }}>Contact</div>
           {[cv.email, cv.phone, cv.location].map((v,i)=>(
             <div key={i} style={{ fontSize:10, color:"#475569", marginBottom:6, lineHeight:1.5, wordBreak:"break-all" }}>{v}</div>
           ))}
         </div>
 
         {/* Skills */}
-        <div style={{ marginBottom:24 }}>
-          <div style={{ fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.14em", color:"#6366f1", marginBottom:12 }}>Compétences</div>
+        {!hidden.includes('skills') && <div style={{ marginBottom:24 }}>
+          <div style={{ fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.14em", color:accent, marginBottom:12 }}>Compétences</div>
           {cv.skills.map((s,i)=>(
             <div key={i} style={{ marginBottom:7 }}>
               <div style={{ fontSize:10, color:"#334155", marginBottom:3, fontWeight:500 }}>{s}</div>
               <div style={{ height:3, background:"#e2e8f0", borderRadius:2 }}>
-                <div style={{ height:3, background:"#6366f1", borderRadius:2, width:`${70+((i*11)%30)}%`, transition:"width .6s" }}/>
+                <div style={{ height:3, background:accent, borderRadius:2, width:`${70+((i*11)%30)}%`, transition:"width .6s" }}/>
               </div>
             </div>
           ))}
-        </div>
+        </div>}
 
         {/* Languages */}
-        <div style={{ marginBottom:24 }}>
-          <div style={{ fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.14em", color:"#6366f1", marginBottom:12 }}>Langues</div>
+        {!hidden.includes('languages') && <div style={{ marginBottom:24 }}>
+          <div style={{ fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.14em", color:accent, marginBottom:12 }}>Langues</div>
           {cv.languages.map((l,i)=>(
             <div key={i} style={{ marginBottom:8 }}>
               <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, marginBottom:3 }}>
@@ -570,16 +568,16 @@ function TplBronzor({ cv, scale=1 }: { cv: CVData; scale?: number }) {
                 <span style={{ color:"#94a3b8" }}>{l.level}</span>
               </div>
               <div style={{ height:3, background:"#e2e8f0", borderRadius:2 }}>
-                <div style={{ height:3, background:"#a5b4fc", borderRadius:2, width:l.level==="Natif"?"100%":l.level==="Courant"?"80%":"50%" }}/>
+                <div style={{ height:3, background:`${accent}99`, borderRadius:2, width:l.level==="Natif"?"100%":l.level==="Courant"?"80%":"50%" }}/>
               </div>
             </div>
           ))}
-        </div>
+        </div>}
 
         {/* Certs */}
-        {cv.certifications && cv.certifications.length>0 && (
+        {!hidden.includes('certifications') && cv.certifications && cv.certifications.length>0 && (
           <div>
-            <div style={{ fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.14em", color:"#6366f1", marginBottom:10 }}>Certifications</div>
+            <div style={{ fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.14em", color:accent, marginBottom:10 }}>Certifications</div>
             {cv.certifications.map((c,i)=><div key={i} style={{ fontSize:10, color:"#475569", marginBottom:6, lineHeight:1.5 }}>✦ {c}</div>)}
           </div>
         )}
@@ -589,14 +587,14 @@ function TplBronzor({ cv, scale=1 }: { cv: CVData; scale?: number }) {
 }
 
 // ── 8. DITTO — balanced two-column layout ─────────────────────────────────
-function TplDitto({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+function TplDitto({ cv, scale=1, accent="#1e293b", font="'Georgia',serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"white", fontFamily:"'Georgia',serif", transform:`scale(${scale})`, transformOrigin:"top left" }}>
-      {/* Header — full width with slate bg */}
-      <div style={{ background:"#1e293b", padding:"36px 44px 28px", marginBottom:0 }}>
+    <div style={{ width:794, background:"white", fontFamily:font, transform:`scale(${scale})`, transformOrigin:"top left" }}>
+      {/* Header — full width with accent bg */}
+      <div style={{ background:accent, padding:"36px 44px 28px", marginBottom:0 }}>
         <div style={{ fontSize:30, fontWeight:700, color:"white", letterSpacing:"0.04em", textTransform:"uppercase", marginBottom:4 }}>{cv.name}</div>
-        <div style={{ fontSize:13, color:"#94a3b8", letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:14 }}>{cv.title}</div>
-        <div style={{ display:"flex", gap:24, fontSize:11, color:"#64748b", flexWrap:"wrap" }}>
+        <div style={{ fontSize:13, color:"rgba(255,255,255,0.6)", letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:14 }}>{cv.title}</div>
+        <div style={{ display:"flex", gap:24, fontSize:11, color:"rgba(255,255,255,0.5)", flexWrap:"wrap" }}>
           <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
         </div>
       </div>
@@ -605,80 +603,36 @@ function TplDitto({ cv, scale=1 }: { cv: CVData; scale?: number }) {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0 }}>
         {/* Left column */}
         <div style={{ padding:"28px 28px 28px 44px", borderRight:"1px solid #e2e8f0" }}>
-          <DSection title="Profil">
-            <p style={{ fontSize:12, lineHeight:1.85, color:"#334155" }}>{cv.profile}</p>
-          </DSection>
-          <DSection title="Formation">
-            {cv.education.map((e,i)=>(
-              <div key={i} style={{ marginBottom:12 }}>
-                <div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div>
-                <div style={{ fontSize:11, color:"#64748b" }}>{e.school}</div>
-                <div style={{ fontSize:10, color:"#94a3b8" }}>{e.year}</div>
-              </div>
-            ))}
-          </DSection>
-          <DSection title="Compétences">
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"4px 8px" }}>
-              {cv.skills.map((s,i)=>(
-                <div key={i} style={{ fontSize:11, color:"#334155", display:"flex", alignItems:"center", gap:5 }}>
-                  <div style={{ width:4, height:4, borderRadius:"50%", background:"#334155", flexShrink:0 }}/>{s}
-                </div>
-              ))}
-            </div>
-          </DSection>
-          <DSection title="Langues">
-            {cv.languages.map((l,i)=>(
-              <div key={i} style={{ fontSize:12, marginBottom:5 }}>
-                <strong style={{ color:"#0f172a" }}>{l.lang}</strong>
-                <span style={{ color:"#64748b" }}> — {l.level}</span>
-              </div>
-            ))}
-          </DSection>
+          {!hidden.includes('profile') && <DSection title="Profil" accent={accent}><p style={{ fontSize:12, lineHeight:1.85, color:"#334155" }}>{cv.profile}</p></DSection>}
+          {!hidden.includes('education') && <DSection title="Formation" accent={accent}>{cv.education.map((e,i)=>(<div key={i} style={{ marginBottom:12 }}><div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div><div style={{ fontSize:11, color:"#64748b" }}>{e.school}</div><div style={{ fontSize:10, color:"#94a3b8" }}>{e.year}</div></div>))}</DSection>}
+          {!hidden.includes('skills') && <DSection title="Compétences" accent={accent}><div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"4px 8px" }}>{cv.skills.map((s,i)=>(<div key={i} style={{ fontSize:11, color:"#334155", display:"flex", alignItems:"center", gap:5 }}><div style={{ width:4, height:4, borderRadius:"50%", background:accent, flexShrink:0 }}/>{s}</div>))}</div></DSection>}
+          {!hidden.includes('languages') && <DSection title="Langues" accent={accent}>{cv.languages.map((l,i)=>(<div key={i} style={{ fontSize:12, marginBottom:5 }}><strong style={{ color:"#0f172a" }}>{l.lang}</strong><span style={{ color:"#64748b" }}> — {l.level}</span></div>))}</DSection>}
         </div>
 
         {/* Right column */}
         <div style={{ padding:"28px 44px 28px 28px" }}>
-          <DSection title="Expériences Professionnelles">
-            {cv.experiences.map((e,i)=>(
-              <div key={i} style={{ marginBottom:18 }}>
-                <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:1 }}>{e.role}</div>
-                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
-                  <div style={{ fontSize:11, color:"#475569", fontStyle:"italic" }}>{e.company}</div>
-                  <div style={{ fontSize:10, color:"#94a3b8" }}>{e.period}</div>
-                </div>
-                <ul style={{ paddingLeft:14, margin:0 }}>
-                  {e.bullets.map((b,j)=><li key={j} style={{ fontSize:11, lineHeight:1.7, color:"#334155", marginBottom:2 }}>{b}</li>)}
-                </ul>
-              </div>
-            ))}
-          </DSection>
-          {cv.certifications && cv.certifications.length>0 && (
-            <DSection title="Certifications">
-              {cv.certifications.map((c,i)=>(
-                <div key={i} style={{ fontSize:11, color:"#334155", marginBottom:5 }}>🏅 {c}</div>
-              ))}
-            </DSection>
-          )}
+          {!hidden.includes('experience') && <DSection title="Expériences Professionnelles" accent={accent}>{cv.experiences.map((e,i)=>(<div key={i} style={{ marginBottom:18 }}><div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:1 }}>{e.role}</div><div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}><div style={{ fontSize:11, color:"#475569", fontStyle:"italic" }}>{e.company}</div><div style={{ fontSize:10, color:"#94a3b8" }}>{e.period}</div></div><ul style={{ paddingLeft:14, margin:0 }}>{e.bullets.map((b,j)=><li key={j} style={{ fontSize:11, lineHeight:1.7, color:"#334155", marginBottom:2 }}>{b}</li>)}</ul></div>))}</DSection>}
+          {!hidden.includes('certifications') && cv.certifications && cv.certifications.length>0 && <DSection title="Certifications" accent={accent}>{cv.certifications.map((c,i)=>(<div key={i} style={{ fontSize:11, color:"#334155", marginBottom:5 }}>🏅 {c}</div>))}</DSection>}
         </div>
       </div>
     </div>
   );
 }
 
-// ── 9. LEAFISH — timeline layout, green nature accent ─────────────────────
-function TplLeafish({ cv, scale=1 }: { cv: CVData; scale?: number }) {
+// ── 9. LEAFISH — timeline layout, nature accent ───────────────────────────
+function TplLeafish({ cv, scale=1, accent="#16a34a", font="'Inter',sans-serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"#fafaf9", fontFamily:"'Inter',sans-serif", transform:`scale(${scale})`, transformOrigin:"top left" }}>
+    <div style={{ width:794, background:"#fafaf9", fontFamily:font, transform:`scale(${scale})`, transformOrigin:"top left" }}>
       {/* Top header band */}
-      <div style={{ background:"white", borderBottom:"3px solid #16a34a", padding:"36px 48px 28px", position:"relative", overflow:"hidden" }}>
-        <div style={{ position:"absolute", top:0, right:0, width:160, height:"100%", background:"linear-gradient(135deg,#f0fdf4,#dcfce7)", opacity:0.6 }}/>
+      <div style={{ background:"white", borderBottom:`3px solid ${accent}`, padding:"36px 48px 28px", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", top:0, right:0, width:160, height:"100%", background:`linear-gradient(135deg,${accent}18,${accent}33)`, opacity:0.6 }}/>
         <div style={{ position:"relative", display:"flex", alignItems:"flex-start", gap:18 }}>
           {cv.photo && (
-            <img src={cv.photo} alt={cv.name} style={{ width:76, height:76, borderRadius:10, objectFit:"cover", flexShrink:0, border:"2px solid #bbf7d0" }}/>
+            <img src={cv.photo} alt={cv.name} style={{ width:76, height:76, borderRadius:10, objectFit:"cover", flexShrink:0, border:`2px solid ${accent}55` }}/>
           )}
           <div>
             <div style={{ fontSize:30, fontWeight:800, color:"#0f172a", letterSpacing:"-0.02em", marginBottom:4 }}>{cv.name}</div>
-            <div style={{ fontSize:14, color:"#16a34a", fontWeight:700, marginBottom:12 }}>{cv.title}</div>
+            <div style={{ fontSize:14, color:accent, fontWeight:700, marginBottom:12 }}>{cv.title}</div>
             <div style={{ display:"flex", gap:20, fontSize:11, color:"#64748b", flexWrap:"wrap" }}>
               <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
             </div>
@@ -687,38 +641,31 @@ function TplLeafish({ cv, scale=1 }: { cv: CVData; scale?: number }) {
       </div>
 
       <div style={{ padding:"28px 48px", display:"grid", gridTemplateColumns:"1fr 220px", gap:36 }}>
-        {/* Left — timeline experience */}
+        {/* Left — timeline */}
         <div>
-          {/* Profile */}
-          <div style={{ marginBottom:24 }}>
-            <div style={{ fontSize:10, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:"#16a34a", marginBottom:10 }}>À Propos</div>
+          {!hidden.includes('profile') && <div style={{ marginBottom:24 }}>
+            <div style={{ fontSize:10, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:accent, marginBottom:10 }}>À Propos</div>
             <p style={{ fontSize:12, lineHeight:1.85, color:"#374151" }}>{cv.profile}</p>
-          </div>
+          </div>}
 
-          {/* Timeline experience */}
           <div style={{ marginBottom:24 }}>
-            <div style={{ fontSize:10, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:"#16a34a", marginBottom:16 }}>Parcours</div>
+            <div style={{ fontSize:10, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:accent, marginBottom:16 }}>Parcours</div>
             <div style={{ position:"relative", paddingLeft:24 }}>
-              {/* Vertical line */}
-              <div style={{ position:"absolute", left:7, top:6, bottom:0, width:2, background:"#bbf7d0", borderRadius:2 }}/>
-
-              {cv.experiences.map((e,i)=>(
+              <div style={{ position:"absolute", left:7, top:6, bottom:0, width:2, background:`${accent}44`, borderRadius:2 }}/>
+              {!hidden.includes('experience') && cv.experiences.map((e,i)=>(
                 <div key={i} style={{ position:"relative", marginBottom:20 }}>
-                  {/* Timeline dot */}
-                  <div style={{ position:"absolute", left:-24, top:4, width:12, height:12, borderRadius:"50%", background:"#16a34a", border:"2px solid white", boxShadow:"0 0 0 2px #16a34a" }}/>
+                  <div style={{ position:"absolute", left:-24, top:4, width:12, height:12, borderRadius:"50%", background:accent, border:"2px solid white", boxShadow:`0 0 0 2px ${accent}` }}/>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:3 }}>
                     <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</div>
-                    <div style={{ fontSize:10, color:"#6b7280", background:"#f0fdf4", border:"1px solid #bbf7d0", padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8 }}>{e.period}</div>
+                    <div style={{ fontSize:10, color:"#6b7280", background:`${accent}18`, border:`1px solid ${accent}44`, padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8 }}>{e.period}</div>
                   </div>
-                  <div style={{ fontSize:11, color:"#16a34a", fontWeight:600, marginBottom:5 }}>{e.company}</div>
+                  <div style={{ fontSize:11, color:accent, fontWeight:600, marginBottom:5 }}>{e.company}</div>
                   {e.bullets.map((b,j)=><div key={j} style={{ fontSize:11, color:"#374151", lineHeight:1.7, marginBottom:2 }}>→ {b}</div>)}
                 </div>
               ))}
-
-              {/* Education in timeline */}
-              {cv.education.map((e,i)=>(
+              {!hidden.includes('education') && cv.education.map((e,i)=>(
                 <div key={i} style={{ position:"relative", marginBottom:14 }}>
-                  <div style={{ position:"absolute", left:-24, top:4, width:12, height:12, borderRadius:"50%", background:"white", border:"2px solid #16a34a" }}/>
+                  <div style={{ position:"absolute", left:-24, top:4, width:12, height:12, borderRadius:"50%", background:"white", border:`2px solid ${accent}` }}/>
                   <div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div>
                   <div style={{ fontSize:11, color:"#6b7280" }}>{e.school} · {e.year}</div>
                 </div>
@@ -729,19 +676,17 @@ function TplLeafish({ cv, scale=1 }: { cv: CVData; scale?: number }) {
 
         {/* Right sidebar */}
         <div>
-          {/* Skills */}
-          <div style={{ background:"white", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"16px", marginBottom:14 }}>
-            <div style={{ fontSize:9, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:"#16a34a", marginBottom:12 }}>Compétences</div>
+          {!hidden.includes('skills') && <div style={{ background:"white", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"16px", marginBottom:14 }}>
+            <div style={{ fontSize:9, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:accent, marginBottom:12 }}>Compétences</div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
               {cv.skills.map((s,i)=>(
-                <span key={i} style={{ fontSize:10, background:"#f0fdf4", color:"#15803d", border:"1px solid #bbf7d0", padding:"3px 9px", borderRadius:100, fontWeight:600 }}>{s}</span>
+                <span key={i} style={{ fontSize:10, background:`${accent}18`, color:accent, border:`1px solid ${accent}44`, padding:"3px 9px", borderRadius:100, fontWeight:600 }}>{s}</span>
               ))}
             </div>
-          </div>
+          </div>}
 
-          {/* Languages */}
-          <div style={{ background:"white", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"16px", marginBottom:14 }}>
-            <div style={{ fontSize:9, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:"#16a34a", marginBottom:12 }}>Langues</div>
+          {!hidden.includes('languages') && <div style={{ background:"white", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"16px", marginBottom:14 }}>
+            <div style={{ fontSize:9, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:accent, marginBottom:12 }}>Langues</div>
             {cv.languages.map((l,i)=>(
               <div key={i} style={{ marginBottom:10 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, marginBottom:4 }}>
@@ -749,16 +694,15 @@ function TplLeafish({ cv, scale=1 }: { cv: CVData; scale?: number }) {
                   <span style={{ color:"#6b7280", fontSize:10 }}>{l.level}</span>
                 </div>
                 <div style={{ height:4, background:"#f3f4f6", borderRadius:100 }}>
-                  <div style={{ height:4, borderRadius:100, background:"linear-gradient(90deg,#16a34a,#4ade80)", width:l.level==="Natif"?"100%":l.level==="Courant"?"82%":"50%" }}/>
+                  <div style={{ height:4, borderRadius:100, background:accent, width:l.level==="Natif"?"100%":l.level==="Courant"?"82%":"50%" }}/>
                 </div>
               </div>
             ))}
-          </div>
+          </div>}
 
-          {/* Certifications */}
-          {cv.certifications && cv.certifications.length>0 && (
+          {!hidden.includes('certifications') && cv.certifications && cv.certifications.length>0 && (
             <div style={{ background:"white", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"16px" }}>
-              <div style={{ fontSize:9, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:"#16a34a", marginBottom:10 }}>Certifications</div>
+              <div style={{ fontSize:9, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:accent, marginBottom:10 }}>Certifications</div>
               {cv.certifications.map((c,i)=>(
                 <div key={i} style={{ fontSize:10, color:"#374151", marginBottom:6, lineHeight:1.5 }}>🏅 {c}</div>
               ))}
@@ -790,20 +734,20 @@ function BSection({ title, accent, children }: { title:string; accent:string; ch
     </div>
   );
 }
-function DSection({ title, children }: { title:string; children:React.ReactNode }) {
+function DSection({ title, children, accent="#1e293b" }: { title:string; children:React.ReactNode; accent?:string }) {
   return (
     <div style={{ marginBottom:18 }}>
-      <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", color:"#1e293b", borderBottom:"2px solid #1e293b", paddingBottom:4, marginBottom:10, display:"inline-block" }}>{title}</div>
+      <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", color:accent, borderBottom:`2px solid ${accent}`, paddingBottom:4, marginBottom:10, display:"inline-block" }}>{title}</div>
       <div>{children}</div>
     </div>
   );
 }
 
 // ── HELPER SUB-COMPONENTS ─────────────────────────────────────────────────
-function Section({ title, children }: { title:string; children:React.ReactNode }) {
+function Section({ title, children, accent="#1a1a1a" }: { title:string; children:React.ReactNode; accent?:string }) {
   return (
     <div style={{ marginBottom:18 }}>
-      <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", borderBottom:"1px solid #1a1a1a", paddingBottom:3, marginBottom:10 }}>{title}</div>
+      <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", borderBottom:`1px solid ${accent}`, paddingBottom:3, marginBottom:10, color:accent }}>{title}</div>
       {children}
     </div>
   );
@@ -826,29 +770,26 @@ function MSection({ title, children, accent }: { title:string; children:React.Re
 }
 
 // ── MULTI-PAGE CV RENDERER ────────────────────────────────────────────────
-// Renders the CV at 794px width. For long CVs, the browser/PDF engine
-// handles page breaks naturally. We also render a second "continuation page"
-// that repeats the header accent so the design stays consistent.
-function CvMultiPage({ id, cv }: { id:number; cv:CVData }) {
+function CvMultiPage({ id, cv, accent, font, hidden }: { id:number; cv:CVData; accent?:string; font?:string; hidden?:string[] }) {
   return (
     <div style={{ width:794, margin:"0 auto" }}>
-      {/* Page 1 — always rendered */}
-      <RenderCV id={id} cv={cv} scale={1}/>
+      <RenderCV id={id} cv={cv} scale={1} accent={accent} font={font} hidden={hidden}/>
     </div>
   );
 }
 
 // ── RENDER CV BY TEMPLATE ID ───────────────────────────────────────────────
-function RenderCV({ id, cv, scale=1 }: { id:number; cv:CVData; scale?:number }) {
-  if (id===1) return <TplClassique  cv={cv} scale={scale}/>;
-  if (id===2) return <TplModerne    cv={cv} scale={scale}/>;
-  if (id===3) return <TplMinimal    cv={cv} scale={scale}/>;
-  if (id===4) return <TplExecutif   cv={cv} scale={scale}/>;
-  if (id===5) return <TplCreatif    cv={cv} scale={scale}/>;
-  if (id===6) return <TplAzurill    cv={cv} scale={scale}/>;
-  if (id===7) return <TplBronzor    cv={cv} scale={scale}/>;
-  if (id===8) return <TplDitto      cv={cv} scale={scale}/>;
-  if (id===9) return <TplLeafish    cv={cv} scale={scale}/>;
+function RenderCV({ id, cv, scale=1, accent, font, hidden=[] }: { id:number; cv:CVData; scale?:number; accent?:string; font?:string; hidden?:string[] }) {
+  const p = { cv, scale, accent, font, hidden };
+  if (id===1) return <TplClassique  {...p}/>;
+  if (id===2) return <TplModerne    {...p}/>;
+  if (id===3) return <TplMinimal    {...p}/>;
+  if (id===4) return <TplExecutif   {...p}/>;
+  if (id===5) return <TplCreatif    {...p}/>;
+  if (id===6) return <TplAzurill    {...p}/>;
+  if (id===7) return <TplBronzor    {...p}/>;
+  if (id===8) return <TplDitto      {...p}/>;
+  if (id===9) return <TplLeafish    {...p}/>;
   return null;
 }
 
@@ -860,6 +801,13 @@ export default function CVPage() {
   const [step,        setStep]        = useState<Step>(1);
   const [selectedTpl, setSelectedTpl] = useState<number>(1);
   const [previewTpl,  setPreviewTpl]  = useState<number|null>(null);
+
+  // ── EDITOR CUSTOMIZATION STATE ─────────────────────────────────────────
+  const [editorAccent,  setEditorAccent]  = useState<string>("");  // "" = use template default
+  const [editorFont,    setEditorFont]    = useState<string>("");  // "" = use template default
+  const [hiddenSections,setHiddenSections]= useState<string[]>([]);
+  const [editorTab,     setEditorTab]     = useState<"template"|"color"|"font"|"sections"|"content">("template");
+  const [editingCv,     setEditingCv]     = useState<CVData|null>(null); // live-editable copy
 
   // Upload state
   const [uploadedFile,    setUploadedFile]    = useState<string|null>(null);
@@ -1195,6 +1143,7 @@ Retourne UNIQUEMENT le JSON.`}];
 
       await tick(5);
       setCvData(parsed);
+      setEditingCv(parsed);
       setStep(5);
     } catch(e:any) {
       setGenError(e.message || "Erreur inconnue. Réessayez.");
@@ -1357,6 +1306,12 @@ Retourne UNIQUEMENT le JSON.`}];
 
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+        /* Live editor layout */
+        .cv-editor-wrap { --cv-scale: 0.82; }
+        @media(min-width:1400px){ .cv-editor-wrap { --cv-scale: 0.95; } }
+        @media(max-width:1100px){ .cv-editor-wrap { --cv-scale: 0.68; } }
 
         .au{animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both}
         .spinner{width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#7c3aed;border-radius:50%;animation:spin .7s linear infinite}
@@ -1419,7 +1374,7 @@ Retourne UNIQUEMENT le JSON.`}];
         </nav>
 
         {/* ── HERO ── */}
-        <div style={{background:"white",borderBottom:"1.5px solid #ede9fe",padding:"44px 24px 48px",textAlign:"center"}}>
+        {step !== 5 && <div style={{background:"white",borderBottom:"1.5px solid #ede9fe",padding:"44px 24px 48px",textAlign:"center"}}>
           <div className="au" style={{display:"inline-flex",alignItems:"center",gap:7,background:"#f5f3ff",border:"1.5px solid #ddd6fe",borderRadius:100,padding:"5px 14px",marginBottom:18}}>
             <span style={{width:7,height:7,borderRadius:"50%",background:"#7c3aed",display:"inline-block"}}/>
             <span style={{fontSize:12,fontWeight:700,color:"#6d28d9"}}>9 modèles professionnels · IA de rédaction · PDF téléchargeable</span>
@@ -1430,10 +1385,10 @@ Retourne UNIQUEMENT le JSON.`}];
           <p className="au" style={{fontSize:15,color:"#6b7280",maxWidth:500,margin:"0 auto",lineHeight:1.7,animationDelay:".14s"}}>
             Importez votre CV existant pour l'améliorer et le sauvegarder, ou créez-en un nouveau à partir de zéro avec l'aide de l'IA.
           </p>
-        </div>
+        </div>}
 
         {/* ── MAIN ── */}
-        <div style={{maxWidth:1080,margin:"0 auto",padding:"36px 20px 80px"}}>
+        <div style={{maxWidth: step===5 ? "100%" : 1080, margin:"0 auto", padding: step===5 ? "0" : "36px 20px 80px"}}>
 
           {/* ─────── JOB CHOICE: use uploaded CV or fill manually ─────── */}
           {showJobChoice && jobContext && (
@@ -1890,42 +1845,207 @@ Retourne UNIQUEMENT le JSON.`}];
             </div>
           )}
 
-          {/* ─────── RESULT: step 5 ─────── */}
-          {step===5 && cvData && (
-            <div className="au">
-              <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:14,padding:"18px 22px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:20,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
-                <div>
-                  <div style={{fontSize:17,fontWeight:800,color:"#0f172a"}}>🎉 Votre CV est prêt !</div>
-                  <div style={{fontSize:13,color:"#6b7280",marginTop:2}}>Modèle : <strong>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong> · Changez de modèle ci-dessous sans régénérer.</div>
+          {/* ─────── LIVE EDITOR: step 5 ─────── */}
+          {step===5 && cvData && (() => {
+            const cv = editingCv || cvData;
+            const ac = editorAccent || undefined;
+            const fn = editorFont    || undefined;
+            const upd = (patch: Partial<CVData>) => setEditingCv(prev => ({ ...(prev||cvData), ...patch }));
+            const IS: React.CSSProperties = { border:"1.5px solid #e5e7eb", borderRadius:8, padding:"8px 10px", width:"100%", fontSize:12, fontFamily:"inherit", outline:"none", background:"white" };
+            const tabBtn = (id: typeof editorTab, label: string) => (
+              <button key={id} onClick={()=>setEditorTab(id)}
+                style={{ flex:1, padding:"9px 4px", border:"none", background:editorTab===id?"white":"transparent", color:editorTab===id?"#7c3aed":"#6b7280", fontWeight:700, fontSize:11, borderRadius:8, cursor:"pointer", fontFamily:"inherit", boxShadow:editorTab===id?"0 1px 4px rgba(0,0,0,.08)":"none" }}>
+                {label}
+              </button>
+            );
+            return (
+              <div className="cv-editor-wrap" style={{ display:"flex", gap:0, height:"calc(100vh - 120px)", minHeight:700 }}>
+
+                {/* ── LEFT PANEL: editor ── */}
+                <div style={{ width:300, flexShrink:0, background:"white", border:"1.5px solid #ede9fe", borderRadius:"14px 0 0 14px", display:"flex", flexDirection:"column", overflow:"hidden" }}>
+
+                  {/* Tab bar */}
+                  <div style={{ display:"flex", background:"#f5f3ff", padding:4, gap:2, borderBottom:"1.5px solid #ede9fe" }}>
+                    {tabBtn("template","🎨 Modèle")}
+                    {tabBtn("color","🎨 Couleur")}
+                    {tabBtn("font","Aa Police")}
+                    {tabBtn("sections","☰ Sections")}
+                    {tabBtn("content","✏️ Contenu")}
+                  </div>
+
+                  <div style={{ flex:1, overflowY:"auto", padding:"16px 14px" }}>
+
+                    {/* TEMPLATE TAB */}
+                    {editorTab==="template" && (
+                      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                        <div style={{ fontSize:11, fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:4 }}>Choisir un modèle</div>
+                        {TEMPLATES.map(t => (
+                          <button key={t.id} onClick={()=>setSelectedTpl(t.id)}
+                            style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", border:`1.5px solid ${selectedTpl===t.id?"#7c3aed":"#e5e7eb"}`, background:selectedTpl===t.id?"#f5f3ff":"white", borderRadius:10, cursor:"pointer", textAlign:"left", fontFamily:"inherit", transition:"all .15s" }}>
+                            <div style={{ width:32, height:40, background:selectedTpl===t.id?"#ede9fe":"#f3f4f6", borderRadius:6, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>
+                              {["📄","🎨","⬜","👔","✨","🌿","📊","⚡","🍃"][t.id-1]}
+                            </div>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ fontSize:12, fontWeight:700, color:selectedTpl===t.id?"#7c3aed":"#0f172a" }}>{t.name}</div>
+                              <div style={{ fontSize:10, color:"#9ca3af", lineHeight:1.4, marginTop:1 }}>{t.desc.slice(0,45)}…</div>
+                            </div>
+                            {selectedTpl===t.id && <span style={{ color:"#7c3aed", fontWeight:700, fontSize:14 }}>✓</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* COLOR TAB */}
+                    {editorTab==="color" && (
+                      <div>
+                        <div style={{ fontSize:11, fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:12 }}>Couleur d'accent</div>
+                        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
+                          {ACCENT_COLORS.map(c => (
+                            <button key={c.value} onClick={()=>setEditorAccent(editorAccent===c.value?"":c.value)} title={c.name}
+                              style={{ width:"100%", aspectRatio:"1", borderRadius:10, background:c.value, border:editorAccent===c.value?"3px solid #0f172a":"3px solid transparent", cursor:"pointer", transition:"all .15s", boxShadow:"0 2px 8px rgba(0,0,0,.15)" }}/>
+                          ))}
+                        </div>
+                        <button onClick={()=>setEditorAccent("")}
+                          style={{ width:"100%", padding:"8px", border:"1.5px dashed #e5e7eb", borderRadius:8, background:"none", color:"#9ca3af", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
+                          ↺ Couleur par défaut du modèle
+                        </button>
+                        {editorAccent && (
+                          <div style={{ marginTop:12, display:"flex", alignItems:"center", gap:8, padding:"10px 12px", background:"#f9fafb", borderRadius:8 }}>
+                            <div style={{ width:20, height:20, borderRadius:4, background:editorAccent }}/>
+                            <span style={{ fontSize:12, color:"#374151", fontWeight:600 }}>Couleur sélectionnée : {ACCENT_COLORS.find(c=>c.value===editorAccent)?.name}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* FONT TAB */}
+                    {editorTab==="font" && (
+                      <div>
+                        <div style={{ fontSize:11, fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:12 }}>Police de caractères</div>
+                        {FONT_OPTIONS.map(f => (
+                          <button key={f.value} onClick={()=>setEditorFont(editorFont===f.value?"":f.value)}
+                            style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", padding:"12px 14px", border:`1.5px solid ${editorFont===f.value?"#7c3aed":"#e5e7eb"}`, background:editorFont===f.value?"#f5f3ff":"white", borderRadius:10, cursor:"pointer", textAlign:"left", fontFamily:"inherit", marginBottom:8, transition:"all .15s" }}>
+                            <div>
+                              <div style={{ fontSize:15, fontFamily:f.value, fontWeight:600, color:"#0f172a", marginBottom:2 }}>{f.name}</div>
+                              <div style={{ fontSize:10, color:"#9ca3af" }}>{f.label}</div>
+                            </div>
+                            {editorFont===f.value && <span style={{ color:"#7c3aed", fontWeight:700 }}>✓</span>}
+                          </button>
+                        ))}
+                        <button onClick={()=>setEditorFont("")}
+                          style={{ width:"100%", padding:"8px", border:"1.5px dashed #e5e7eb", borderRadius:8, background:"none", color:"#9ca3af", fontSize:12, cursor:"pointer", fontFamily:"inherit", marginTop:4 }}>
+                          ↺ Police par défaut
+                        </button>
+                      </div>
+                    )}
+
+                    {/* SECTIONS TAB */}
+                    {editorTab==="sections" && (
+                      <div>
+                        <div style={{ fontSize:11, fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:12 }}>Afficher / masquer</div>
+                        {CV_SECTIONS.map(s => {
+                          const visible = !hiddenSections.includes(s.id);
+                          return (
+                            <div key={s.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"11px 12px", border:"1.5px solid #f0f0f0", borderRadius:9, marginBottom:6, background:"white" }}>
+                              <span style={{ fontSize:13, fontWeight:600, color:visible?"#0f172a":"#9ca3af" }}>{s.label}</span>
+                              <button onClick={()=>setHiddenSections(prev=>prev.includes(s.id)?prev.filter(x=>x!==s.id):[...prev,s.id])}
+                                style={{ width:42, height:24, borderRadius:12, border:"none", background:visible?"#7c3aed":"#e5e7eb", cursor:"pointer", position:"relative", transition:"background .2s" }}>
+                                <div style={{ width:18, height:18, borderRadius:"50%", background:"white", position:"absolute", top:3, left:visible?21:3, transition:"left .2s", boxShadow:"0 1px 3px rgba(0,0,0,.2)" }}/>
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* CONTENT TAB */}
+                    {editorTab==="content" && (
+                      <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                        <div style={{ fontSize:11, fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.08em" }}>Modifier le contenu</div>
+
+                        {/* Personal info */}
+                        <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
+                          <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>📋 Informations personnelles</div>
+                          {([["name","Nom complet"],["title","Titre"],["email","Email"],["phone","Téléphone"],["location","Localisation"]] as [keyof CVData, string][]).map(([k,label])=>(
+                            <div key={k} style={{ marginBottom:6 }}>
+                              <label style={{ fontSize:10, color:"#6b7280", display:"block", marginBottom:2 }}>{label}</label>
+                              <input value={String(cv[k]||"")} onChange={e=>upd({[k]:e.target.value})} style={IS}/>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Profile */}
+                        <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
+                          <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>👤 Profil professionnel</div>
+                          <textarea value={cv.profile} onChange={e=>upd({profile:e.target.value})} rows={4} style={{ ...IS, resize:"vertical" }}/>
+                        </div>
+
+                        {/* Skills */}
+                        <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
+                          <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>🔧 Compétences <span style={{ fontWeight:400, color:"#9ca3af" }}>(séparées par virgule)</span></div>
+                          <textarea value={cv.skills.join(", ")} onChange={e=>upd({skills:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)})} rows={3} style={{ ...IS, resize:"vertical" }}/>
+                        </div>
+
+                        {/* Experience */}
+                        <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
+                          <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>💼 Expériences</div>
+                          {cv.experiences.map((e,i)=>(
+                            <div key={i} style={{ marginBottom:10, paddingBottom:10, borderBottom:i<cv.experiences.length-1?"1px solid #e5e7eb":"none" }}>
+                              <input value={e.role} onChange={ev=>{const ex=[...cv.experiences];ex[i]={...ex[i],role:ev.target.value};upd({experiences:ex});}} placeholder="Intitulé du poste" style={{ ...IS, marginBottom:4 }}/>
+                              <input value={e.company} onChange={ev=>{const ex=[...cv.experiences];ex[i]={...ex[i],company:ev.target.value};upd({experiences:ex});}} placeholder="Entreprise" style={{ ...IS, marginBottom:4 }}/>
+                              <input value={e.period} onChange={ev=>{const ex=[...cv.experiences];ex[i]={...ex[i],period:ev.target.value};upd({experiences:ex});}} placeholder="Période" style={IS}/>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+
+                  {/* Bottom actions */}
+                  <div style={{ padding:"12px 14px", borderTop:"1.5px solid #ede9fe", display:"flex", gap:8 }}>
+                    <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");goStep(1);}} style={{ flex:1, fontSize:12, padding:"9px" }}>↺ Recommencer</button>
+                    <button className="btn-green" onClick={downloadPDF} disabled={generating} style={{ flex:1, fontSize:12, padding:"9px" }}>
+                      {generating ? "…" : "⬇ PDF"}
+                    </button>
+                  </div>
                 </div>
-                <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                  <button className="btn-outline" onClick={()=>{setCvData(null);setMode("upload");goStep(1);}}>↺ Recommencer</button>
-                  <button className="btn-green" onClick={downloadPDF} disabled={generating}>
-                    {generating ? <><span className="spinner" style={{width:18,height:18,borderWidth:2}}/> Génération…</> : "⬇ Télécharger PDF"}
-                  </button>
+
+                {/* ── RIGHT PANEL: live preview ── */}
+                <div style={{ flex:1, overflowY:"auto", overflowX:"hidden", background:"#e8e5f0", borderRadius:"0 14px 14px 0", padding:"20px 24px 40px", display:"flex", flexDirection:"column", alignItems:"center" }}>
+                  {/* Toolbar */}
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", maxWidth:794, marginBottom:14 }}>
+                    <div style={{ fontSize:12, color:"#6b7280", display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ width:8, height:8, borderRadius:"50%", background:"#7c3aed", display:"inline-block", animation:"pulse 2s infinite" }}/>
+                      Aperçu en direct · <strong style={{ color:"#1e1147" }}>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong>
+                    </div>
+                    <div style={{ display:"flex", gap:8 }}>
+                      <button className="btn-outline" style={{ fontSize:11, padding:"5px 12px" }}
+                        onClick={()=>{ const w=window.open("","_blank"); if(!w)return; w.document.write("<html><body style='margin:0'>"); w.document.write(printRef.current?.outerHTML||""); w.document.write("</body></html>"); w.document.close(); w.print(); }}>
+                        🖨 Imprimer
+                      </button>
+                      <button className="btn-green" onClick={downloadPDF} disabled={generating} style={{ fontSize:11, padding:"5px 14px" }}>
+                        {generating ? "…" : "⬇ Télécharger PDF"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Scaled preview */}
+                  <div style={{ width:"100%", display:"flex", justifyContent:"center" }}>
+                    <div style={{ transformOrigin:"top center", transform:"scale(var(--cv-scale, 0.85))", width:794 }}>
+                      <div ref={printRef} id="cv-print"
+                        style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", borderRadius:2, overflow:"hidden" }}>
+                        <CvMultiPage id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
+                      </div>
+                    </div>
+                  </div>
+
+                  {genError && <div style={{ marginTop:16, background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"12px 16px", fontSize:13, color:"#dc2626", maxWidth:794, width:"100%" }}>⚠ {genError}</div>}
                 </div>
-              </div>
 
-              {/* Template switcher */}
-              <div style={{background:"white",border:"1.5px solid #f0f0f0",borderRadius:12,padding:"14px 20px",marginBottom:20,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
-                <span style={{fontSize:13,fontWeight:600,color:"#374151",flexShrink:0}}>Changer de modèle :</span>
-                {TEMPLATES.map(t=>(
-                  <button key={t.id} onClick={()=>setSelectedTpl(t.id)}
-                    style={{padding:"6px 14px",borderRadius:8,border:`1.5px solid ${selectedTpl===t.id?"#16a34a":"#e5e7eb"}`,background:selectedTpl===t.id?"#f0fdf4":"white",color:selectedTpl===t.id?"#15803d":"#374151",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .15s",fontFamily:"inherit"}}>
-                    {t.name}
-                  </button>
-                ))}
               </div>
-
-              {/* CV Preview — multi-page aware */}
-              <div ref={printRef} id="cv-print"
-                style={{background:"white",borderRadius:14,boxShadow:"0 4px 24px rgba(0,0,0,.08)",overflow:"hidden",marginBottom:24}}>
-                <CvMultiPage id={selectedTpl} cv={cvData}/>
-              </div>
-
-              {genError && <div style={{background:"#fef2f2",border:"1.5px solid #fecaca",borderRadius:8,padding:"12px 16px",fontSize:13,color:"#dc2626"}}>⚠ {genError}</div>}
-            </div>
-          )}
+            );
+          })()}
 
           {/* ─────── UPLOAD PAYWALL MODAL ─────── */}
           {uploadPaywall && (

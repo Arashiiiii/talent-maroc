@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:www.super-resume.com)",
+      "Bash(npx tsc *)"
+    ]
+  }
+}
