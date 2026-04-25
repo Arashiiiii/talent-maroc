@@ -1156,43 +1156,39 @@ Retourne UNIQUEMENT le JSON.`}];
   // ── PADDLE CHECKOUT ───────────────────────────────────────────────────────
   const openPaddle = (plan: Plan, triggerMode: Mode = "ai") => {
     if (!paddle) {
-      setGenError("Le système de paiement n'est pas encore chargé. Veuillez patienter quelques secondes et réessayer.");
+      setGenError("Le système de paiement n'est pas encore chargé. Actualisez la page et réessayez.");
       return;
     }
     pendingModeRef.current   = triggerMode;
     purchasedPlanRef.current = plan;
-    setCurrentPlan(plan); setPayPending(true);
+    setCurrentPlan(plan);
+    setPayPending(true);
 
-    // Safety timeout — reset if Paddle event never fires (e.g. overlay blocked)
-    const safetyTimer = setTimeout(() => setPayPending(false), 30_000);
+    // Persist form data before Paddle redirects on success
+    sessionStorage.setItem("cv_form",        JSON.stringify(formRef.current));
+    sessionStorage.setItem("cv_mode",        triggerMode);
+    sessionStorage.setItem("cv_plan",        JSON.stringify(plan));
+    sessionStorage.setItem("cv_template",    String(selectedTpl));
+    sessionStorage.setItem("cv_enhance",     enhanceTypeRef.current);
+    sessionStorage.setItem("cv_photo",       photoBase64Ref.current || "");
+    sessionStorage.setItem("cv_upload_b64",  uploadedBase64Ref.current || "");
+    sessionStorage.setItem("cv_upload_mime", uploadedMimeRef.current || "");
+    sessionStorage.setItem("cv_upload_text", uploadedContentRef.current || "");
 
-    // Persist all form data to sessionStorage BEFORE Paddle redirects on success
-    sessionStorage.setItem("cv_form",         JSON.stringify(formRef.current));
-    sessionStorage.setItem("cv_mode",         triggerMode);
-    sessionStorage.setItem("cv_plan",         JSON.stringify(plan));
-    sessionStorage.setItem("cv_template",     String(selectedTpl));
-    sessionStorage.setItem("cv_enhance",      enhanceTypeRef.current);
-    sessionStorage.setItem("cv_photo",        photoBase64Ref.current || "");
-    sessionStorage.setItem("cv_upload_b64",   uploadedBase64Ref.current || "");
-    sessionStorage.setItem("cv_upload_mime",  uploadedMimeRef.current || "");
-    sessionStorage.setItem("cv_upload_text",  uploadedContentRef.current || "");
+    // Open Paddle overlay — close upload modal AFTER (keeps user gesture intact)
+    paddle.Checkout.open({
+      items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
+      ...(formRef.current.email ? { customer: { email: formRef.current.email } } : {}),
+      settings: {
+        displayMode: "overlay",
+        theme: "light",
+        locale: "fr",
+        successUrl: `${window.location.origin}/cv?payment=success`,
+      },
+    });
 
-    try {
-      paddle.Checkout.open({
-        items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
-        ...(formRef.current.email ? { customer: { email: formRef.current.email } } : {}),
-        settings: {
-          displayMode: "overlay",
-          theme: "light",
-          locale: "fr",
-          successUrl: `${window.location.origin}/cv?payment=success`,
-        },
-      });
-    } catch(e: any) {
-      clearTimeout(safetyTimer);
-      setPayPending(false);
-      setGenError("Erreur paiement : " + e.message);
-    }
+    // Close the upload paywall modal now that Paddle overlay is open
+    if (triggerMode === "upload") setUploadPaywall(false);
   };
 
   // ── DOWNLOAD PDF — multi-page aware, no print dialog ─────────────────────
@@ -2097,7 +2093,7 @@ Retourne UNIQUEMENT le JSON.`}];
                           <ul style={{listStyle:"none",marginBottom:16}}>
                             {PLAN_FEATURES[plan.name].map(f=><li key={f} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,marginBottom:6,color:"#374151"}}><span style={{color:"#16a34a",fontWeight:700}}>✓</span>{f}</li>)}
                           </ul>
-                          <button className="btn-green" disabled={payPending&&currentPlan.name===plan.name} onClick={()=>{if(paddle)setUploadPaywall(false);openPaddle(plan,"upload");}}
+                          <button className="btn-green" disabled={payPending&&currentPlan.name===plan.name} onClick={()=>openPaddle(plan,"upload")}
                             style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a",fontSize:13,padding:"10px"}}>
                             {payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer €${plan.price}`}
                           </button>
