@@ -1214,6 +1214,11 @@ Retourne UNIQUEMENT le JSON.`}];
         logging: false,
         width:  A4_W_PX,
         windowWidth: A4_W_PX,
+        x: 0,
+        y: 0,
+        scrollX: 0,
+        scrollY: 0,
+        ignoreElements: (el: Element) => (el as HTMLElement).id === "cv-print-preview",
       });
 
       const totalH    = canvas.height;           // full canvas height in device px
@@ -2030,11 +2035,17 @@ Retourne UNIQUEMENT le JSON.`}];
                     </div>
                   </div>
 
-                  {/* Scaled preview */}
+                  {/* Hidden full-scale CV used for PDF capture — no transform parent */}
+                  <div style={{ position:"absolute", left:"-9999px", top:0, width:794, pointerEvents:"none" }}>
+                    <div ref={printRef} id="cv-print" style={{ background:"white" }}>
+                      <CvMultiPage id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
+                    </div>
+                  </div>
+
+                  {/* Scaled visual preview */}
                   <div style={{ width:"100%", display:"flex", justifyContent:"center" }}>
                     <div style={{ transformOrigin:"top center", transform:"scale(var(--cv-scale, 0.85))", width:794 }}>
-                      <div ref={printRef} id="cv-print"
-                        style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", borderRadius:2, overflow:"hidden" }}>
+                      <div style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", borderRadius:2, overflow:"hidden" }}>
                         <CvMultiPage id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
                       </div>
                     </div>
