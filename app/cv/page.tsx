@@ -162,9 +162,10 @@ function TplClassique({ cv, scale=1, accent="#1a1a1a", font="'Georgia',serif", h
 // ── 2. MODERNE ────────────────────────────────────────────────────────────
 function TplModerne({ cv, scale=1, accent="#1e3a5f", font="'Inter',sans-serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"white", fontFamily:font, display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600 }}>
+    // background gradient on parent ensures sidebar color fills full height regardless of content length
+    <div style={{ width:794, fontFamily:font, display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600, background:`linear-gradient(to right, ${accent} 240px, white 240px)` }}>
       {/* Sidebar */}
-      <div style={{ width:240, background:accent, padding:"40px 24px", flexShrink:0 }}>
+      <div style={{ width:240, padding:"40px 24px", flexShrink:0, boxSizing:"border-box" }}>
         {/* Avatar — photo if available, else initial */}
         {cv.photo ? (
           <img src={cv.photo} alt={cv.name} style={{ width:80, height:80, borderRadius:"50%", objectFit:"cover", marginBottom:20, border:"3px solid rgba(255,255,255,0.2)" }}/>
