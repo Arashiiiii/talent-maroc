@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { Search, MapPin, Briefcase, Clock, ChevronRight, Zap } from 'lucide-react';
 import CompanyLogo from '@/components/CompanyLogo';
 import NavbarAuth from '@/components/NavbarAuth';
+import JobFunctionFilters from '@/components/JobFunctionFilters';
 
 export const metadata = {
   title: 'Talent Maroc | Trouvez votre prochain job au Maroc',
@@ -394,22 +395,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
         </div>
 
         {/* ══ JOB FUNCTION QUICK FILTERS ════════════════════════════════ */}
-        <div style={{ background:'white', borderBottom:'1.5px solid #ede9fe', padding:'16px 24px', overflowX:'auto' }}>
-          <div style={{ maxWidth:1060, margin:'0 auto', display:'flex', gap:8, alignItems:'center', flexWrap:'nowrap' }}>
-            <span style={{ fontSize:12, fontWeight:700, color:'#9ca3af', whiteSpace:'nowrap', marginRight:4 }}>Parcourir :</span>
-            {JOB_FUNCTIONS.map(fn => (
-              <a key={fn.q} href={`/?q=${encodeURIComponent(fn.q)}`}
-                style={{ display:'inline-flex', alignItems:'center', padding:'7px 14px', borderRadius:100, border:'1.5px solid #ede9fe', background:'white', fontSize:12, fontWeight:600, color:'#374151', whiteSpace:'nowrap', textDecoration:'none', transition:'all .18s' }}
-                onMouseEnter={e=>(e.currentTarget as HTMLAnchorElement).style.cssText+='border-color:#7c3aed;color:#7c3aed;background:#f5f3ff'}
-                onMouseLeave={e=>{ const el=e.currentTarget as HTMLAnchorElement; el.style.borderColor='#ede9fe'; el.style.color='#374151'; el.style.background='white'; }}>
-                {fn.label}
-              </a>
-            ))}
-            <a href="/?q=Télétravail" style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'7px 14px', borderRadius:100, border:'1.5px solid #f0fdf4', background:'#f0fdf4', fontSize:12, fontWeight:700, color:'#065f46', whiteSpace:'nowrap', textDecoration:'none' }}>
-              🏠 Télétravail
-            </a>
-          </div>
-        </div>
+        <JobFunctionFilters />
 
         {/* ══ MAIN ══════════════════════════════════════════════════════ */}
         <div style={{ maxWidth:1060, margin:'0 auto', padding:'36px 24px 72px', display:'flex', gap:28 }} className="main-grid">

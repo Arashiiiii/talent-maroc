@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 // ── GET /api/employer/applications ────────────────────────────────────────────
 // Returns all applications for the authenticated employer's jobs.
 // Uses service role key (SUPABASE_SERVICE_ROLE_KEY) to bypass candidate-scoped
