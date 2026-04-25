@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-export const dynamic = 'force-dynamic';
-
 function createAuthClient(accessToken: string) {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
