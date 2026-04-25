@@ -860,10 +860,9 @@ export default function CVPage() {
         if (event.name === "checkout.completed") {
           setPayPending(false);
           setPurchasedPlan(purchasedPlanRef.current);
-          // Small delay ensures Paddle overlay is dismissed before we start generating
           setTimeout(() => runGeneration(pendingModeRef.current), 300);
         }
-        if (event.name === "checkout.closed") {
+        if (event.name === "checkout.closed" || event.name === "checkout.error") {
           setPayPending(false);
         }
       },
@@ -1156,13 +1155,18 @@ Retourne UNIQUEMENT le JSON.`}];
 
   // ── PADDLE CHECKOUT ───────────────────────────────────────────────────────
   const openPaddle = (plan: Plan, triggerMode: Mode = "ai") => {
-    if (!paddle) { alert("Paddle non chargé. Rafraîchissez la page."); return; }
+    if (!paddle) {
+      setGenError("Le système de paiement n'est pas encore chargé. Veuillez patienter quelques secondes et réessayer.");
+      return;
+    }
     pendingModeRef.current   = triggerMode;
     purchasedPlanRef.current = plan;
     setCurrentPlan(plan); setPayPending(true);
 
+    // Safety timeout — reset if Paddle event never fires (e.g. overlay blocked)
+    const safetyTimer = setTimeout(() => setPayPending(false), 30_000);
+
     // Persist all form data to sessionStorage BEFORE Paddle redirects on success
-    // so we can restore it after the page reloads at ?payment=success
     sessionStorage.setItem("cv_form",         JSON.stringify(formRef.current));
     sessionStorage.setItem("cv_mode",         triggerMode);
     sessionStorage.setItem("cv_plan",         JSON.stringify(plan));
@@ -1173,16 +1177,22 @@ Retourne UNIQUEMENT le JSON.`}];
     sessionStorage.setItem("cv_upload_mime",  uploadedMimeRef.current || "");
     sessionStorage.setItem("cv_upload_text",  uploadedContentRef.current || "");
 
-    paddle.Checkout.open({
-      items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
-      ...(formRef.current.email ? { customer: { email: formRef.current.email } } : {}),
-      settings: {
-        displayMode: "overlay",
-        theme: "light",
-        locale: "fr",
-        successUrl: `${window.location.origin}/cv?payment=success`,
-      },
-    });
+    try {
+      paddle.Checkout.open({
+        items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
+        ...(formRef.current.email ? { customer: { email: formRef.current.email } } : {}),
+        settings: {
+          displayMode: "overlay",
+          theme: "light",
+          locale: "fr",
+          successUrl: `${window.location.origin}/cv?payment=success`,
+        },
+      });
+    } catch(e: any) {
+      clearTimeout(safetyTimer);
+      setPayPending(false);
+      setGenError("Erreur paiement : " + e.message);
+    }
   };
 
   // ── DOWNLOAD PDF — multi-page aware, no print dialog ─────────────────────
@@ -1837,7 +1847,7 @@ Retourne UNIQUEMENT le JSON.`}];
                       <ul style={{listStyle:"none",marginBottom:20}}>
                         {PLAN_FEATURES[plan.name].map(f=><li key={f} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,marginBottom:8,color:"#374151"}}><span style={{color:"#16a34a",fontWeight:700,fontSize:14}}>✓</span>{f}</li>)}
                       </ul>
-                      <button className="btn-green" disabled={!paddle||payPending} onClick={()=>openPaddle(plan,"ai")} style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a"}}>
+                      <button className="btn-green" disabled={payPending&&currentPlan.name===plan.name} onClick={()=>openPaddle(plan,"ai")} style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a"}}>
                         {payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer €${plan.price} →`}
                       </button>
                     </div>
@@ -2087,7 +2097,7 @@ Retourne UNIQUEMENT le JSON.`}];
                           <ul style={{listStyle:"none",marginBottom:16}}>
                             {PLAN_FEATURES[plan.name].map(f=><li key={f} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,marginBottom:6,color:"#374151"}}><span style={{color:"#16a34a",fontWeight:700}}>✓</span>{f}</li>)}
                           </ul>
-                          <button className="btn-green" disabled={!paddle||payPending} onClick={()=>{setUploadPaywall(false);openPaddle(plan,"upload");}}
+                          <button className="btn-green" disabled={payPending&&currentPlan.name===plan.name} onClick={()=>{if(paddle)setUploadPaywall(false);openPaddle(plan,"upload");}}
                             style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a",fontSize:13,padding:"10px"}}>
                             {payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer €${plan.price}`}
                           </button>
@@ -2095,7 +2105,9 @@ Retourne UNIQUEMENT le JSON.`}];
                       );
                     })}
                   </div>
-                  <p style={{fontSize:11,color:"#9ca3af",textAlign:"center",marginTop:16}}>🔒 Paiement sécurisé via Paddle · Aucune donnée bancaire stockée</p>
+                  {!paddle && <p style={{fontSize:12,color:"#dc2626",textAlign:"center",marginTop:8,marginBottom:0}}>⚠ Système de paiement en cours de chargement…</p>}
+                  {genError && <p style={{fontSize:12,color:"#dc2626",textAlign:"center",marginTop:8,marginBottom:0}}>⚠ {genError}</p>}
+                  <p style={{fontSize:11,color:"#9ca3af",textAlign:"center",marginTop:8}}>🔒 Paiement sécurisé via Paddle · Aucune donnée bancaire stockée</p>
                 </div>
               </div>
             </div>
