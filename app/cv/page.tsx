@@ -1013,6 +1013,7 @@ export default function CVPage() {
     const plan     = purchasedPlanRef.current; // which plan was paid
 
     setGenerating(true); setGenError(null); setCvData(null); setGenStep(0);
+    setCoverLetter(null); setInterviewQuestions(null); setBonusLoading(false);
 
     const tick = (i:number) => new Promise<void>(r=>setTimeout(()=>{setGenStep(i);r()},600));
 
@@ -1143,23 +1144,35 @@ Retourne UNIQUEMENT le JSON.`}];
 
       if (!parsed.name && !parsed.experiences) throw new Error("CV incomplet retourné par l'IA. Réessayez.");
 
-      // Inject photo
-      if (photo) parsed.photo = photo;
+      // Normalize: ensure all array fields exist so templates never crash calling .map() on undefined
+      const safe: CVData = {
+        name:           parsed.name           || "",
+        title:          parsed.title          || "",
+        email:          parsed.email          || "",
+        phone:          parsed.phone          || "",
+        location:       parsed.location       || "",
+        profile:        parsed.profile        || "",
+        experiences:    Array.isArray(parsed.experiences)    ? parsed.experiences    : [],
+        education:      Array.isArray(parsed.education)      ? parsed.education      : [],
+        skills:         Array.isArray(parsed.skills)         ? parsed.skills         : [],
+        languages:      Array.isArray(parsed.languages)      ? parsed.languages      : [],
+        certifications: Array.isArray(parsed.certifications) ? parsed.certifications : [],
+        photo:          photo || parsed.photo,
+      };
 
       await tick(5);
-      setCvData(parsed);
-      setEditingCv(parsed);
+      setCvData(safe);
+      setEditingCv(safe);
       setStep(5);
 
       // Generate bonus content for Pro/Cadre plans in background
       if (plan.tier === "pro" || plan.tier === "cadre") {
         setBonusLoading(true);
-        setCoverLetter(null); setInterviewQuestions(null);
         (async () => {
           try {
             const bonusPrompt = plan.tier === "cadre"
-              ? `Tu es expert RH. À partir de ce profil CV, génère:\n1. Une lettre de motivation percutante (4 paragraphes)\n2. 5 questions d'entretien avec réponses suggérées\n\nProfil: ${parsed.name}, ${parsed.title}. ${parsed.profile}\n\nRéponds en JSON: {"cover_letter":"...","questions":[{"q":"...","a":"..."}]}`
-              : `Tu es expert RH. À partir de ce profil CV, génère une lettre de motivation percutante en 4 paragraphes.\n\nProfil: ${parsed.name}, ${parsed.title}. ${parsed.profile}\n\nRéponds en JSON: {"cover_letter":"..."}`;
+              ? `Tu es expert RH. À partir de ce profil CV, génère:\n1. Une lettre de motivation percutante (4 paragraphes)\n2. 5 questions d'entretien avec réponses suggérées\n\nProfil: ${safe.name}, ${safe.title}. ${safe.profile}\n\nRéponds en JSON: {"cover_letter":"...","questions":[{"q":"...","a":"..."}]}`
+              : `Tu es expert RH. À partir de ce profil CV, génère une lettre de motivation percutante en 4 paragraphes.\n\nProfil: ${safe.name}, ${safe.title}. ${safe.profile}\n\nRéponds en JSON: {"cover_letter":"..."}`;
             const bonusRes = await fetch("/api/generate-cv", {
               method:"POST", headers:{"Content-Type":"application/json"},
               body: JSON.stringify({ model:"claude-haiku-4-5-20251001", max_tokens:1500,
