@@ -118,15 +118,15 @@ const CV_SECTIONS = [
 ];
 
 const PLANS: Plan[] = [
-  { name:"Starter",       price:"1.99", paddlePriceId: PADDLE_PRICE_IDS.starter,       tier:"starter" },
-  { name:"Professionnel", price:"4.99", paddlePriceId: PADDLE_PRICE_IDS.professionnel, tier:"pro"     },
-  { name:"Cadre",         price:"9.99", paddlePriceId: PADDLE_PRICE_IDS.cadre,         tier:"cadre"   },
+  { name:"Starter",       price:"19",  paddlePriceId: PADDLE_PRICE_IDS.starter,       tier:"starter" },
+  { name:"Professionnel", price:"49",  paddlePriceId: PADDLE_PRICE_IDS.professionnel, tier:"pro"     },
+  { name:"Cadre",         price:"99",  paddlePriceId: PADDLE_PRICE_IDS.cadre,         tier:"cadre"   },
 ];
 
 const PLAN_FEATURES: Record<string,string[]> = {
-  Starter:       ["1 CV généré","Téléchargement PDF","Compatible ATS","Livraison instantanée"],
-  Professionnel: ["3 versions","PDF + Word","Lettre de motivation","Résumé LinkedIn","Prioritaire"],
-  Cadre:         ["Révisions illimitées","PDF + Word + HTML","Lettre + Bio","Questions d'entretien IA","Support prioritaire"],
+  Starter:       ["1 CV optimisé ATS","Téléchargement PDF","Reformulation professionnelle","Livraison instantanée"],
+  Professionnel: ["Amélioration avancée","PDF téléchargeable","Lettre de motivation incluse","Résumé LinkedIn généré","Résultats quantifiés"],
+  Cadre:         ["Réécriture exécutive","PDF téléchargeable","Lettre de motivation + Bio","Questions d'entretien IA","Vocabulaire C-Suite"],
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -842,6 +842,11 @@ export default function CVPage() {
   const [genError,    setGenError]    = useState<string|null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
+  // Bonus content generated for Pro/Cadre plans
+  const [coverLetter,       setCoverLetter]       = useState<string|null>(null);
+  const [interviewQuestions,setInterviewQuestions] = useState<string[]|null>(null);
+  const [bonusLoading,      setBonusLoading]       = useState(false);
+
   // Refs to always hold latest values — solves stale closure in Paddle eventCallback
   const uploadedBase64Ref  = useRef<string|null>(null);
   const uploadedMimeRef    = useRef<string|null>(null);
@@ -1145,6 +1150,32 @@ Retourne UNIQUEMENT le JSON.`}];
       setCvData(parsed);
       setEditingCv(parsed);
       setStep(5);
+
+      // Generate bonus content for Pro/Cadre plans in background
+      if (plan.tier === "pro" || plan.tier === "cadre") {
+        setBonusLoading(true);
+        setCoverLetter(null); setInterviewQuestions(null);
+        (async () => {
+          try {
+            const bonusPrompt = plan.tier === "cadre"
+              ? `Tu es expert RH. À partir de ce profil CV, génère:\n1. Une lettre de motivation percutante (4 paragraphes)\n2. 5 questions d'entretien avec réponses suggérées\n\nProfil: ${parsed.name}, ${parsed.title}. ${parsed.profile}\n\nRéponds en JSON: {"cover_letter":"...","questions":[{"q":"...","a":"..."}]}`
+              : `Tu es expert RH. À partir de ce profil CV, génère une lettre de motivation percutante en 4 paragraphes.\n\nProfil: ${parsed.name}, ${parsed.title}. ${parsed.profile}\n\nRéponds en JSON: {"cover_letter":"..."}`;
+            const bonusRes = await fetch("/api/generate-cv", {
+              method:"POST", headers:{"Content-Type":"application/json"},
+              body: JSON.stringify({ model:"claude-haiku-4-5-20251001", max_tokens:1500,
+                system:"Réponds UNIQUEMENT avec un objet JSON valide.", messages:[{role:"user",content:bonusPrompt}] }),
+            });
+            if (bonusRes.ok) {
+              const bonusData = await bonusRes.json();
+              const raw = bonusData.content?.map((c:any)=>c.text??"").join("")??"";
+              const clean = raw.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/\s*```$/i,"").trim();
+              const bonus = JSON.parse(clean);
+              if (bonus.cover_letter) setCoverLetter(bonus.cover_letter);
+              if (bonus.questions) setInterviewQuestions(bonus.questions.map((q:any)=>`${q.q}\n→ ${q.a}`));
+            }
+          } catch { /* bonus failed silently */ } finally { setBonusLoading(false); }
+        })();
+      }
     } catch(e:any) {
       setGenError(e.message || "Erreur inconnue. Réessayez.");
     } finally {
@@ -1208,10 +1239,8 @@ Retourne UNIQUEMENT le JSON.`}];
       const html2canvas = (window as any).html2canvas;
       const { jsPDF }   = (window as any).jspdf;
 
-      // A4 dimensions in px at 96dpi: 794 × 1123
       const A4_W_PX = 794;
-      const A4_H_PX = 1122;
-      const SCALE   = 2; // retina
+      const SCALE   = 2;
 
       const canvas = await html2canvas(node, {
         scale: SCALE,
@@ -1219,47 +1248,18 @@ Retourne UNIQUEMENT le JSON.`}];
         allowTaint: true,
         backgroundColor: "#ffffff",
         logging: false,
-        width:  A4_W_PX,
+        width: A4_W_PX,
         windowWidth: A4_W_PX,
-        x: 0,
-        y: 0,
-        scrollX: 0,
-        scrollY: 0,
-        ignoreElements: (el: Element) => (el as HTMLElement).id === "cv-print-preview",
+        x: 0, y: 0, scrollX: 0, scrollY: 0,
       });
 
-      const totalH    = canvas.height;           // full canvas height in device px
-      const pageH_dev = A4_H_PX * SCALE;        // one A4 page in device px
-      const numPages  = Math.ceil(totalH / pageH_dev);
+      // Single-page PDF: height matches content exactly (no page splits that cut through text)
+      const pdfW_mm  = 210;                                          // A4 width in mm
+      const pdfH_mm  = (canvas.height / canvas.width) * pdfW_mm;   // proportional height
+      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:[pdfW_mm, pdfH_mm] });
 
-      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
-      const pdfW = pdf.internal.pageSize.getWidth();  // 210mm
-      const pdfH = pdf.internal.pageSize.getHeight(); // 297mm
-
-      for (let pg = 0; pg < numPages; pg++) {
-        if (pg > 0) pdf.addPage();
-
-        // Slice the canvas for this page
-        const sliceCanvas  = document.createElement("canvas");
-        sliceCanvas.width  = canvas.width;
-        sliceCanvas.height = Math.min(pageH_dev, totalH - pg * pageH_dev);
-        const ctx = sliceCanvas.getContext("2d")!;
-
-        // White background
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-
-        ctx.drawImage(canvas,
-          0, pg * pageH_dev,            // source x, y
-          canvas.width, sliceCanvas.height, // source w, h
-          0, 0,                          // dest x, y
-          sliceCanvas.width, sliceCanvas.height // dest w, h
-        );
-
-        const imgData = sliceCanvas.toDataURL("image/jpeg", 0.95);
-        const imgH    = (sliceCanvas.height / canvas.width) * pdfW;
-        pdf.addImage(imgData, "JPEG", 0, 0, pdfW, imgH);
-      }
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfW_mm, pdfH_mm);
 
       const filename = (cvData?.name || "CV")
         .replace(/[^a-zA-Z0-9À-ɏ\s-]/g, "")
@@ -1496,7 +1496,7 @@ Retourne UNIQUEMENT le JSON.`}];
                   </div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
                     <span style={{fontSize:11,fontWeight:700,background:"#f0fdf4",color:"#15803d",border:"1px solid #bbf7d0",padding:"3px 10px",borderRadius:100}}>✓ Sauvegardé dans votre dashboard</span>
-                    <span style={{fontSize:11,fontWeight:700,background:"#fef3c7",color:"#92400e",border:"1px solid #fde68a",padding:"3px 10px",borderRadius:100}}>À partir de €1.99</span>
+                    <span style={{fontSize:11,fontWeight:700,background:"#fef3c7",color:"#92400e",border:"1px solid #fde68a",padding:"3px 10px",borderRadius:100}}>À partir de 19 MAD</span>
                   </div>
                 </button>
 
@@ -1509,7 +1509,7 @@ Retourne UNIQUEMENT le JSON.`}];
                   </div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
                     <span style={{fontSize:11,fontWeight:700,background:"#eff6ff",color:"#1d4ed8",border:"1px solid #bfdbfe",padding:"3px 10px",borderRadius:100}}>✓ Modèles professionnels</span>
-                    <span style={{fontSize:11,fontWeight:700,background:"#fef3c7",color:"#92400e",border:"1px solid #fde68a",padding:"3px 10px",borderRadius:100}}>À partir de €1.99</span>
+                    <span style={{fontSize:11,fontWeight:700,background:"#fef3c7",color:"#92400e",border:"1px solid #fde68a",padding:"3px 10px",borderRadius:100}}>À partir de 19 MAD</span>
                   </div>
                 </button>
               </div>
@@ -1838,14 +1838,14 @@ Retourne UNIQUEMENT le JSON.`}];
                     <div key={plan.name} className={`pay-card${featured?" featured":""}`} style={{position:"relative"}}>
                       {featured && <div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",background:"#16a34a",color:"white",fontSize:11,fontWeight:700,padding:"4px 14px",borderRadius:100,whiteSpace:"nowrap"}}>⭐ Le plus populaire</div>}
                       <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#6b7280",marginBottom:10}}>{plan.name}</div>
-                      <div style={{fontSize:38,fontWeight:800,color:"#0f172a",lineHeight:1,marginBottom:3}}>€{plan.price}</div>
+                      <div style={{fontSize:38,fontWeight:800,color:"#0f172a",lineHeight:1,marginBottom:3}}>{plan.price} MAD</div>
                       <div style={{fontSize:12,color:"#6b7280",marginBottom:18}}>Paiement unique</div>
                       <div style={{height:1,background:"#e5e7eb",marginBottom:16}}/>
                       <ul style={{listStyle:"none",marginBottom:20}}>
                         {PLAN_FEATURES[plan.name].map(f=><li key={f} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,marginBottom:8,color:"#374151"}}><span style={{color:"#16a34a",fontWeight:700,fontSize:14}}>✓</span>{f}</li>)}
                       </ul>
                       <button className="btn-green" disabled={payPending&&currentPlan.name===plan.name} onClick={()=>openPaddle(plan,"ai")} style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a"}}>
-                        {payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer €${plan.price} →`}
+                        {payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer ${plan.price} MAD →`}
                       </button>
                     </div>
                   );
@@ -1975,6 +1975,30 @@ Retourne UNIQUEMENT le JSON.`}];
                       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
                         <div style={{ fontSize:11, fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.08em" }}>Modifier le contenu</div>
 
+                        {/* Photo upload */}
+                        <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
+                          <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>📷 Photo de profil</div>
+                          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                            {cv.photo ? (
+                              <img src={cv.photo} style={{ width:56, height:56, borderRadius:"50%", objectFit:"cover", border:"2px solid #e5e7eb", flexShrink:0 }}/>
+                            ) : (
+                              <div style={{ width:56, height:56, borderRadius:"50%", background:"#e5e7eb", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>👤</div>
+                            )}
+                            <div style={{ flex:1 }}>
+                              <label style={{ display:"inline-block", cursor:"pointer", background:"#7c3aed", color:"white", fontSize:11, fontWeight:700, padding:"6px 12px", borderRadius:8 }}>
+                                {cv.photo ? "Changer" : "Ajouter une photo"}
+                                <input type="file" accept="image/*" style={{ display:"none" }} onChange={e=>{
+                                  const file = e.target.files?.[0]; if(!file) return;
+                                  const reader = new FileReader();
+                                  reader.onload = ev => { const data = ev.target?.result as string; upd({photo:data}); };
+                                  reader.readAsDataURL(file);
+                                }}/>
+                              </label>
+                              {cv.photo && <button onClick={()=>upd({photo:undefined})} style={{ marginLeft:8, fontSize:11, color:"#ef4444", background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>✕ Supprimer</button>}
+                            </div>
+                          </div>
+                        </div>
+
                         {/* Personal info */}
                         <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>📋 Informations personnelles</div>
@@ -2059,6 +2083,42 @@ Retourne UNIQUEMENT le JSON.`}];
                   </div>
 
                   {genError && <div style={{ marginTop:16, background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"12px 16px", fontSize:13, color:"#dc2626", maxWidth:794, width:"100%" }}>⚠ {genError}</div>}
+
+                  {/* ── BONUS CONTENT (Pro / Cadre) ── */}
+                  {bonusLoading && (
+                    <div style={{ marginTop:24, maxWidth:794, width:"100%", background:"white", borderRadius:12, padding:"18px 20px", border:"1.5px solid #ede9fe", display:"flex", alignItems:"center", gap:12 }}>
+                      <div className="spinner" style={{ width:20, height:20 }}/>
+                      <span style={{ fontSize:13, color:"#7c3aed", fontWeight:600 }}>Génération des extras inclus dans votre formule…</span>
+                    </div>
+                  )}
+                  {coverLetter && (
+                    <div style={{ marginTop:24, maxWidth:794, width:"100%", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #ede9fe", boxShadow:"0 2px 16px rgba(124,58,237,.07)" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                        <span style={{ fontSize:18 }}>✉</span>
+                        <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Lettre de motivation</div>
+                        <span style={{ marginLeft:"auto", fontSize:11, background:"#f5f3ff", color:"#7c3aed", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #ddd6fe" }}>Incluse dans votre formule</span>
+                      </div>
+                      <pre style={{ fontSize:12, lineHeight:1.85, color:"#374151", whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0 }}>{coverLetter}</pre>
+                      <button onClick={()=>{const b=new Blob([coverLetter],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="lettre_motivation.txt";a.click();URL.revokeObjectURL(u);}}
+                        style={{ marginTop:14, background:"#7c3aed", color:"white", border:"none", borderRadius:8, padding:"8px 18px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                        ⬇ Télécharger la lettre
+                      </button>
+                    </div>
+                  )}
+                  {interviewQuestions && (
+                    <div style={{ marginTop:16, maxWidth:794, width:"100%", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #ede9fe", boxShadow:"0 2px 16px rgba(124,58,237,.07)" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                        <span style={{ fontSize:18 }}>🎯</span>
+                        <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Questions d'entretien IA</div>
+                        <span style={{ marginLeft:"auto", fontSize:11, background:"#f5f3ff", color:"#7c3aed", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #ddd6fe" }}>Cadre exclusif</span>
+                      </div>
+                      {interviewQuestions.map((q,i) => (
+                        <div key={i} style={{ marginBottom:14, paddingBottom:14, borderBottom:i<interviewQuestions.length-1?"1px solid #f3f4f6":"none" }}>
+                          <pre style={{ fontSize:12, lineHeight:1.8, color:"#374151", whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0 }}>{q}</pre>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
               </div>
@@ -2090,13 +2150,13 @@ Retourne UNIQUEMENT le JSON.`}];
                         <div key={plan.name} className={`pay-card${featured?" featured":""}`} style={{position:"relative",padding:"20px 18px"}}>
                           {featured && <div style={{position:"absolute",top:-10,left:"50%",transform:"translateX(-50%)",background:"#16a34a",color:"white",fontSize:10,fontWeight:700,padding:"3px 12px",borderRadius:100,whiteSpace:"nowrap"}}>⭐ Populaire</div>}
                           <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",color:"#6b7280",marginBottom:8}}>{plan.name}</div>
-                          <div style={{fontSize:32,fontWeight:800,color:"#0f172a",lineHeight:1,marginBottom:12}}>€{plan.price}</div>
+                          <div style={{fontSize:32,fontWeight:800,color:"#0f172a",lineHeight:1,marginBottom:12}}>{plan.price} MAD</div>
                           <ul style={{listStyle:"none",marginBottom:16}}>
                             {PLAN_FEATURES[plan.name].map(f=><li key={f} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,marginBottom:6,color:"#374151"}}><span style={{color:"#16a34a",fontWeight:700}}>✓</span>{f}</li>)}
                           </ul>
                           <button className="btn-green" disabled={payPending&&currentPlan.name===plan.name} onClick={()=>openPaddle(plan,"upload")}
                             style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a",fontSize:13,padding:"10px"}}>
-                            {payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer €${plan.price}`}
+                            {payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer ${plan.price} MAD`}
                           </button>
                         </div>
                       );
