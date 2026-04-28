@@ -846,6 +846,7 @@ export default function CVPage() {
   const [coverLetter,       setCoverLetter]       = useState<string|null>(null);
   const [interviewQuestions,setInterviewQuestions] = useState<string[]|null>(null);
   const [bonusLoading,      setBonusLoading]       = useState(false);
+  const [bonusError,        setBonusError]         = useState<string|null>(null);
 
   // Refs to always hold latest values — solves stale closure in Paddle eventCallback
   const uploadedBase64Ref  = useRef<string|null>(null);
@@ -1013,7 +1014,7 @@ export default function CVPage() {
     const plan     = purchasedPlanRef.current; // which plan was paid
 
     setGenerating(true); setGenError(null); setCvData(null); setGenStep(0);
-    setCoverLetter(null); setInterviewQuestions(null); setBonusLoading(false);
+    setCoverLetter(null); setInterviewQuestions(null); setBonusLoading(false); setBonusError(null);
 
     const tick = (i:number) => new Promise<void>(r=>setTimeout(()=>{setGenStep(i);r()},600));
 
@@ -1165,28 +1166,38 @@ Retourne UNIQUEMENT le JSON.`}];
       setEditingCv(safe);
       setStep(5);
 
-      // Generate bonus content for Pro/Cadre plans in background
+      // Generate bonus content for Pro/Cadre plans
       if (plan.tier === "pro" || plan.tier === "cadre") {
-        setBonusLoading(true);
+        setBonusLoading(true); setBonusError(null);
         (async () => {
           try {
-            const bonusPrompt = plan.tier === "cadre"
-              ? `Tu es expert RH. À partir de ce profil CV, génère:\n1. Une lettre de motivation percutante (4 paragraphes)\n2. 5 questions d'entretien avec réponses suggérées\n\nProfil: ${safe.name}, ${safe.title}. ${safe.profile}\n\nRéponds en JSON: {"cover_letter":"...","questions":[{"q":"...","a":"..."}]}`
-              : `Tu es expert RH. À partir de ce profil CV, génère une lettre de motivation percutante en 4 paragraphes.\n\nProfil: ${safe.name}, ${safe.title}. ${safe.profile}\n\nRéponds en JSON: {"cover_letter":"..."}`;
+            const isCadre = plan.tier === "cadre";
+            const bonusSystem = `Tu es un expert RH senior. Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant ou après.`;
+            const bonusUser = isCadre
+              ? `Candidat: ${safe.name}, ${safe.title}.\nProfil: ${safe.profile}\nExpériences: ${safe.experiences.map(e=>`${e.role} chez ${e.company}`).join(", ")}\n\nGénère un objet JSON avec:\n- "cover_letter": une lettre de motivation percutante de 4 paragraphes\n- "questions": un tableau de 5 objets {"q": "question d'entretien", "a": "réponse suggérée courte"}`
+              : `Candidat: ${safe.name}, ${safe.title}.\nProfil: ${safe.profile}\nExpériences: ${safe.experiences.map(e=>`${e.role} chez ${e.company}`).join(", ")}\n\nGénère un objet JSON avec:\n- "cover_letter": une lettre de motivation percutante de 4 paragraphes`;
+
             const bonusRes = await fetch("/api/generate-cv", {
               method:"POST", headers:{"Content-Type":"application/json"},
-              body: JSON.stringify({ model:"claude-haiku-4-5-20251001", max_tokens:1500,
-                system:"Réponds UNIQUEMENT avec un objet JSON valide.", messages:[{role:"user",content:bonusPrompt}] }),
+              body: JSON.stringify({ max_tokens:1800, system:bonusSystem, messages:[{role:"user",content:bonusUser}] }),
             });
-            if (bonusRes.ok) {
-              const bonusData = await bonusRes.json();
-              const raw = bonusData.content?.map((c:any)=>c.text??"").join("")??"";
-              const clean = raw.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/\s*```$/i,"").trim();
-              const bonus = JSON.parse(clean);
-              if (bonus.cover_letter) setCoverLetter(bonus.cover_letter);
-              if (bonus.questions) setInterviewQuestions(bonus.questions.map((q:any)=>`${q.q}\n→ ${q.a}`));
-            }
-          } catch { /* bonus failed silently */ } finally { setBonusLoading(false); }
+
+            if (!bonusRes.ok) throw new Error(`API ${bonusRes.status}`);
+
+            const bonusData = await bonusRes.json();
+            if (bonusData.error) throw new Error(bonusData.error.message || "Erreur IA");
+
+            const raw   = bonusData.content?.map((c:any)=>c.text??"").join("") ?? "";
+            const clean = raw.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/\s*```$/i,"").trim();
+            const bonus = JSON.parse(clean);
+
+            if (bonus.cover_letter) setCoverLetter(bonus.cover_letter);
+            if (bonus.questions)    setInterviewQuestions((bonus.questions as any[]).map(q=>`${q.q}\n→ ${q.a}`));
+          } catch(e:any) {
+            setBonusError("Les extras n'ont pas pu être générés : " + (e.message || "erreur inconnue"));
+          } finally {
+            setBonusLoading(false);
+          }
         })();
       }
     } catch(e:any) {
@@ -1266,13 +1277,23 @@ Retourne UNIQUEMENT le JSON.`}];
         x: 0, y: 0, scrollX: 0, scrollY: 0,
       });
 
-      // Single-page PDF: height matches content exactly (no page splits that cut through text)
-      const pdfW_mm  = 210;                                          // A4 width in mm
-      const pdfH_mm  = (canvas.height / canvas.width) * pdfW_mm;   // proportional height
-      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:[pdfW_mm, pdfH_mm] });
+      // Standard A4 PDF — scale content to fit, never exceed 297mm height
+      const A4_W = 210, A4_H = 297;                          // mm
+      const contentH = (canvas.height / canvas.width) * A4_W; // proportional mm height
 
+      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
       const imgData = canvas.toDataURL("image/jpeg", 0.95);
-      pdf.addImage(imgData, "JPEG", 0, 0, pdfW_mm, pdfH_mm);
+
+      if (contentH <= A4_H) {
+        // Content fits — place at top, full width
+        pdf.addImage(imgData, "JPEG", 0, 0, A4_W, contentH);
+      } else {
+        // Content too tall — scale down proportionally to fit A4
+        const scale  = A4_H / contentH;
+        const imgW   = A4_W * scale;
+        const offsetX = (A4_W - imgW) / 2;
+        pdf.addImage(imgData, "JPEG", offsetX, 0, imgW, A4_H);
+      }
 
       const filename = (cvData?.name || "CV")
         .replace(/[^a-zA-Z0-9À-ɏ\s-]/g, "")
@@ -2101,7 +2122,12 @@ Retourne UNIQUEMENT le JSON.`}];
                   {bonusLoading && (
                     <div style={{ marginTop:24, maxWidth:794, width:"100%", background:"white", borderRadius:12, padding:"18px 20px", border:"1.5px solid #ede9fe", display:"flex", alignItems:"center", gap:12 }}>
                       <div className="spinner" style={{ width:20, height:20 }}/>
-                      <span style={{ fontSize:13, color:"#7c3aed", fontWeight:600 }}>Génération des extras inclus dans votre formule…</span>
+                      <span style={{ fontSize:13, color:"#7c3aed", fontWeight:600 }}>Génération de la lettre de motivation et des questions d'entretien…</span>
+                    </div>
+                  )}
+                  {bonusError && (
+                    <div style={{ marginTop:16, maxWidth:794, width:"100%", background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:10, padding:"14px 16px", fontSize:13, color:"#dc2626" }}>
+                      ⚠ {bonusError}
                     </div>
                   )}
                   {coverLetter && (
