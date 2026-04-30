@@ -82,9 +82,12 @@ export default function DashboardPage() {
   const [editNotes,  setEditNotes]  = useState("");
   const [editStatus, setEditStatus] = useState<AppStatus>("applied");
   const [saving,     setSaving]     = useState(false);
-  const [pName,      setPName]      = useState("");
-  const [pSaving,    setPSaving]    = useState(false);
-  const [pMsg,       setPMsg]       = useState<string | null>(null);
+  const [pName,          setPName]          = useState("");
+  const [pPhotoUrl,      setPPhotoUrl]      = useState("");
+  const [pPhotoPreview,  setPPhotoPreview]  = useState("");
+  const [pPhotoUploading,setPPhotoUploading]= useState(false);
+  const [pSaving,        setPSaving]        = useState(false);
+  const [pMsg,           setPMsg]           = useState<string | null>(null);
   // AI tools state — cover letter
   const [clJobTitle,   setClJobTitle]   = useState("");
   const [clCompany,    setClCompany]    = useState("");
@@ -126,6 +129,7 @@ export default function DashboardPage() {
       }
       setUser(user);
       setPName(user.user_metadata?.name || "");
+      setPPhotoUrl(user.user_metadata?.photo_url || "");
       setStoredCvUrl(user.user_metadata?.cv_url || null);
       setAiUses(user.user_metadata?.[aiMonthKey()] || 0);
       loadApps(user.id);
@@ -317,11 +321,30 @@ export default function DashboardPage() {
     if (user) localStorage.setItem(`tm_cvs_${user.id}`, JSON.stringify(next));
   };
 
+  const handlePhotoUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) { setPMsg("Veuillez sélectionner une image."); return; }
+    if (file.size > 5 * 1024 * 1024) { setPMsg("Image trop volumineuse (max 5 Mo)."); return; }
+    const reader = new FileReader();
+    reader.onload = e => setPPhotoPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+    setPPhotoUploading(true);
+    const ext  = file.name.split(".").pop() || "jpg";
+    const path = `photos/${user.id}/avatar.${ext}`;
+    const sb   = getSB();
+    const { error: upErr } = await sb.storage.from("cvs").upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) { setPMsg("Erreur upload : " + upErr.message); setPPhotoUploading(false); return; }
+    const { data: { publicUrl } } = sb.storage.from("cvs").getPublicUrl(path);
+    setPPhotoUrl(publicUrl);
+    setPPhotoUploading(false);
+    setPMsg("Photo chargée — cliquez sur Sauvegarder pour confirmer.");
+  };
+
   const saveProfile = async () => {
     setPSaving(true);
-    const { error } = await getSB().auth.updateUser({ data: { name: pName } });
+    const { error } = await getSB().auth.updateUser({ data: { name: pName, photo_url: pPhotoUrl || null } });
     setPMsg(error ? "Erreur lors de la sauvegarde." : "Profil mis à jour ✓");
     setPSaving(false);
+    if (!error) { const { data: { user: u } } = await getSB().auth.getUser(); if (u) setUser(u); }
     setTimeout(() => setPMsg(null), 3000);
   };
 
@@ -801,13 +824,25 @@ export default function DashboardPage() {
             <div className="au" style={{ maxWidth: 560 }}>
               <div className="card" style={{ padding: "24px 26px", marginBottom: 14 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 22 }}>
-                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: "linear-gradient(135deg,#7c3aed,#5b21b6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, color: "white" }}>
-                    {(pName || user?.email || "?").charAt(0).toUpperCase()}
-                  </div>
+                  {/* Avatar with upload */}
+                  <label style={{ position:"relative", cursor:"pointer", flexShrink:0 }} title="Changer la photo">
+                    <div style={{ width: 64, height: 64, borderRadius: "50%", background: "linear-gradient(135deg,#7c3aed,#5b21b6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, fontWeight: 800, color: "white", overflow:"hidden", border:"2px solid #ddd6fe" }}>
+                      {(pPhotoPreview || pPhotoUrl)
+                        ? <img src={pPhotoPreview || pPhotoUrl} alt="avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+                        : (pName || user?.email || "?").charAt(0).toUpperCase()}
+                    </div>
+                    {/* Camera overlay */}
+                    <div style={{ position:"absolute", bottom:0, right:0, width:20, height:20, borderRadius:"50%", background:"#7c3aed", border:"2px solid white", display:"flex", alignItems:"center", justifyContent:"center", fontSize:10 }}>
+                      {pPhotoUploading ? "⏳" : "📷"}
+                    </div>
+                    <input type="file" accept="image/*" style={{ display:"none" }} disabled={pPhotoUploading}
+                      onChange={e=>{ const f=e.target.files?.[0]; if(f) handlePhotoUpload(f); }}/>
+                  </label>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 800 }}>{pName || user?.email?.split("@")[0]}</div>
                     <div style={{ fontSize: 12, color: "#9ca3af" }}>{user?.email}</div>
                     <div style={{ fontSize: 11, color: "#7c3aed", fontWeight: 600, marginTop: 2 }}>✅ Compte Candidat actif</div>
+                    <div style={{ fontSize: 11, color: "#9ca3af", marginTop:2 }}>Cliquez sur la photo pour la changer</div>
                   </div>
                 </div>
 
@@ -911,8 +946,7 @@ export default function DashboardPage() {
                   if (!paddle) { alert("Chargement Paddle…"); return; }
                   paddle.Checkout.open({
                     items:[{ priceId: PADDLE_AI_PRICE_ID, quantity:1 }],
-                    settings:{ displayMode:"overlay", theme:"light", locale:"fr",
-                      successUrl:`${window.location.origin}/dashboard?tab=outils` },
+                    settings:{ displayMode:"overlay", theme:"light", locale:"fr" },
                   });
                 }}
                 style={{ width:"100%", background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white", border:"none", borderRadius:10, padding:"13px", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 4px 14px rgba(124,58,237,.35)", marginBottom:10 }}>
