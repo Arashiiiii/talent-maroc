@@ -119,8 +119,8 @@ const CV_SECTIONS = [
 
 const PLANS: Plan[] = [
   { name:"Starter",       price:"19",  paddlePriceId: PADDLE_PRICE_IDS.starter,       tier:"starter" },
-  { name:"Professionnel", price:"49",  paddlePriceId: PADDLE_PRICE_IDS.professionnel, tier:"pro"     },
-  { name:"Cadre",         price:"99",  paddlePriceId: PADDLE_PRICE_IDS.cadre,         tier:"cadre"   },
+  { name:"Professionnel", price:"35",  paddlePriceId: PADDLE_PRICE_IDS.professionnel, tier:"pro"     },
+  { name:"Cadre",         price:"55",  paddlePriceId: PADDLE_PRICE_IDS.cadre,         tier:"cadre"   },
 ];
 
 const PLAN_FEATURES: Record<string,string[]> = {
@@ -138,7 +138,7 @@ type TplProps = { cv: CVData; scale?: number; accent?: string; font?: string; hi
 // ── 1. CLASSIQUE ──────────────────────────────────────────────────────────
 function TplClassique({ cv, scale=1, accent="#1a1a1a", font="'Georgia',serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"white", fontFamily:font, color:"#1a1a1a", padding:"52px 60px", transform:`scale(${scale})`, transformOrigin:"top left" }}>
+    <div style={{ width:794, background:"white", fontFamily:font, color:"#1a1a1a", padding:"36px 52px 36px", transform:`scale(${scale})`, transformOrigin:"top left" }}>
       {/* Header */}
       <div style={{ textAlign:"center", borderBottom:`2px solid ${accent}`, paddingBottom:18, marginBottom:20 }}>
         <div style={{ fontSize:28, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:6, color:accent }}>{cv.name}</div>
@@ -220,7 +220,7 @@ function TplModerne({ cv, scale=1, accent="#1e3a5f", font="'Inter',sans-serif", 
 // ── 3. MINIMALISTE ────────────────────────────────────────────────────────
 function TplMinimal({ cv, scale=1, accent="#0ea5e9", font="'Helvetica Neue',Helvetica,sans-serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"white", fontFamily:font, padding:"60px 72px", transform:`scale(${scale})`, transformOrigin:"top left" }}>
+    <div style={{ width:794, background:"white", fontFamily:font, padding:"40px 56px", transform:`scale(${scale})`, transformOrigin:"top left" }}>
       {/* Header */}
       <div style={{ marginBottom:36 }}>
         <div style={{ fontSize:32, fontWeight:300, color:"#0f172a", letterSpacing:"-0.02em", marginBottom:4 }}>{cv.name}</div>
@@ -1269,10 +1269,14 @@ Retourne UNIQUEMENT le JSON.`}];
       const html2canvas = (window as any).html2canvas;
       const { jsPDF }   = (window as any).jspdf;
 
-      const A4_W_PX = 794;
-      const SCALE   = 2;
+      const SCALE     = 2;
+      const A4_W_PX   = 794;
+      const A4_H_PX   = 1123; // exact A4 height at 96dpi
+      const A4_PX_W   = A4_W_PX * SCALE; // 1588 device px
+      const A4_PX_H   = A4_H_PX * SCALE; // 2246 device px
 
-      const canvas = await html2canvas(node, {
+      // 1. Capture the CV at full natural height
+      const src = await html2canvas(node, {
         scale: SCALE,
         useCORS: true,
         allowTaint: true,
@@ -1283,23 +1287,25 @@ Retourne UNIQUEMENT le JSON.`}];
         x: 0, y: 0, scrollX: 0, scrollY: 0,
       });
 
-      // Standard A4 PDF — scale content to fit, never exceed 297mm height
-      const A4_W = 210, A4_H = 297;                          // mm
-      const contentH = (canvas.height / canvas.width) * A4_W; // proportional mm height
+      // 2. Compose into an exactly A4-sized canvas
+      //    Scale proportionally to fit: if content taller than A4, shrink;
+      //    if shorter, draw at top with white space below — never distort.
+      const fitScale = Math.min(1, A4_PX_H / src.height);
+      const drawW    = src.width  * fitScale;   // may be < A4_PX_W when scaling down
+      const drawH    = src.height * fitScale;   // capped at A4_PX_H
+      const drawX    = (A4_PX_W - drawW) / 2;  // center horizontally if narrower
 
+      const a4Canvas = document.createElement("canvas");
+      a4Canvas.width  = A4_PX_W;
+      a4Canvas.height = A4_PX_H;
+      const ctx = a4Canvas.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, A4_PX_W, A4_PX_H);
+      ctx.drawImage(src, 0, 0, src.width, src.height, drawX, 0, drawW, drawH);
+
+      // 3. Embed into standard A4 PDF page (always 210×297mm)
       const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
-
-      if (contentH <= A4_H) {
-        // Content fits — place at top, full width
-        pdf.addImage(imgData, "JPEG", 0, 0, A4_W, contentH);
-      } else {
-        // Content too tall — scale down proportionally to fit A4
-        const scale  = A4_H / contentH;
-        const imgW   = A4_W * scale;
-        const offsetX = (A4_W - imgW) / 2;
-        pdf.addImage(imgData, "JPEG", offsetX, 0, imgW, A4_H);
-      }
+      pdf.addImage(a4Canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 210, 297);
 
       const filename = (cvData?.name || "CV")
         .replace(/[^a-zA-Z0-9À-ɏ\s-]/g, "")

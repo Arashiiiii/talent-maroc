@@ -69,106 +69,63 @@ export default function PricingPage() {
           <div style={{ marginBottom:56 }}>
             <div style={{ textAlign:"center", marginBottom:32 }}>
               <h2 style={{ fontSize:22, fontWeight:800, marginBottom:6 }}>Pour les candidats</h2>
-              <p style={{ fontSize:14, color:"#6b7280" }}>Trouvez votre emploi idéal au Maroc</p>
+              <p style={{ fontSize:14, color:"#6b7280" }}>Accès gratuit à toutes les offres d'emploi</p>
             </div>
 
-            <div className="plans-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:20 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, maxWidth:780, margin:"0 auto" }}>
 
               {/* FREE CANDIDAT */}
               <div className="plan au" style={{ animationDelay:".05s" }}>
                 <div style={{ marginBottom:24 }}>
                   <span className="tag" style={{ background:"#f3f4f6", color:"#374151", marginBottom:12 }}>Gratuit</span>
-                  <div style={{ fontSize:28, fontWeight:800, marginBottom:4 }}>0 MAD</div>
-                  <div style={{ fontSize:13, color:"#6b7280" }}>Pour toujours</div>
+                  <div style={{ fontSize:32, fontWeight:800, marginBottom:4 }}>0 MAD</div>
+                  <div style={{ fontSize:13, color:"#6b7280" }}>Pour toujours · Aucune carte requise</div>
                 </div>
-                <div style={{ marginBottom:24, flex:1 }}>
+                <div style={{ marginBottom:28, flex:1 }}>
                   {[
-                    [CHECK, "Recherche d'offres illimitée"],
-                    [CHECK, "Sauvegarder des offres"],
-                    [CHECK, "Suivi des candidatures"],
-                    [CHECK, "Import de CV (PDF)"],
-                    [CHECK, "1 CV généré par IA"],
-                    [CROSS, "CV amélioré par IA"],
-                    [CROSS, "Modèles Pro (Exécutif, Créatif…)"],
-                    [CROSS, "Lettre de motivation IA"],
-                    [CROSS, "Adaptation CV au poste"],
-                  ].map(([icon, label], i) => (
+                    "Recherche d'offres illimitée",
+                    "Sauvegarder des offres",
+                    "Postuler en un clic",
+                    "Suivi des candidatures en temps réel",
+                    "Import de CV (PDF, DOCX)",
+                    "1 génération de CV par IA offerte",
+                    "Dashboard candidat complet",
+                  ].map((label, i) => (
                     <div key={i} className="feature-row">
-                      <span className={icon === CHECK ? "check" : "cross"}>{icon}</span>
-                      <span style={{ color: icon === CROSS ? "#9ca3af" : "#374151" }}>{label}</span>
-                    </div>
-                  ))}
-                </div>
-                <a href="/auth/login" style={{ display:"block", background:"#f3f4f6", color:"#374151", padding:"12px", borderRadius:10, textAlign:"center", textDecoration:"none", fontWeight:700, fontSize:13, transition:"all .18s" }}>
-                  Commencer gratuitement →
-                </a>
-              </div>
-
-              {/* PRO CANDIDAT */}
-              <div className="plan featured au" style={{ animationDelay:".12s" }}>
-                <div style={{ marginBottom:24 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
-                    <span className="tag" style={{ background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white" }}>✦ Pro</span>
-                    <span style={{ fontSize:11, fontWeight:700, color:"#6d28d9", background:"#f5f3ff", padding:"2px 8px", borderRadius:100 }}>Le plus populaire</span>
-                  </div>
-                  <div style={{ fontSize:28, fontWeight:800, marginBottom:4 }}>
-                    49 MAD <span style={{ fontSize:14, fontWeight:500, color:"#6b7280" }}>/mois</span>
-                  </div>
-                  <div style={{ fontSize:13, color:"#6b7280" }}>Ou 399 MAD/an · Économisez 32%</div>
-                </div>
-                <div style={{ marginBottom:24, flex:1 }}>
-                  {[
-                    [CHECK, "Tout le plan Gratuit"],
-                    [CHECK, "CV amélioré par IA"],
-                    [CHECK, "5 modèles Pro (Exécutif, Créatif…)"],
-                    [CHECK, "Lettre de motivation générée par IA"],
-                    [CHECK, "Adaptation du CV au poste ciblé"],
-                    [CHECK, "Export PDF + Word"],
-                    [CHECK, "Résumé LinkedIn généré par IA"],
-                    [CROSS, "Modèles premium illimités"],
-                    [CROSS, "Support prioritaire"],
-                  ].map(([icon, label], i) => (
-                    <div key={i} className="feature-row">
-                      <span className={icon === CHECK ? "check" : "cross"}>{icon}</span>
-                      <span style={{ color: icon === CROSS ? "#9ca3af" : "#374151" }}>{label}</span>
-                    </div>
-                  ))}
-                </div>
-                <a href="/cv" style={{ display:"block", background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white", padding:"12px", borderRadius:10, textAlign:"center", textDecoration:"none", fontWeight:700, fontSize:13, transition:"all .18s", boxShadow:"0 4px 14px rgba(124,58,237,.35)" }}>
-                  Commencer avec Pro →
-                </a>
-              </div>
-
-              {/* CADRE CANDIDAT */}
-              <div className="plan au" style={{ animationDelay:".19s" }}>
-                <div style={{ marginBottom:24 }}>
-                  <span className="tag" style={{ background:"#0f172a", color:"white", marginBottom:12 }}>Cadre</span>
-                  <div style={{ fontSize:28, fontWeight:800, marginBottom:4 }}>
-                    99 MAD <span style={{ fontSize:14, fontWeight:500, color:"#6b7280" }}>/mois</span>
-                  </div>
-                  <div style={{ fontSize:13, color:"#6b7280" }}>Ou 799 MAD/an · Économisez 33%</div>
-                </div>
-                <div style={{ marginBottom:24, flex:1 }}>
-                  {[
-                    [CHECK, "Tout le plan Pro"],
-                    [CHECK, "Modèles premium illimités"],
-                    [CHECK, "Coaching entretien par IA"],
-                    [CHECK, "Analyse de votre profil vs. le marché"],
-                    [CHECK, "Alertes emploi personnalisées"],
-                    [CHECK, "Export multi-formats"],
-                    [CHECK, "Support prioritaire 24h"],
-                    [CHECK, "Accès anticipé aux nouvelles fonctions"],
-                  ].map(([icon, label], i) => (
-                    <div key={i} className="feature-row">
-                      <span className="check">{icon}</span>
+                      <span className="check">{CHECK}</span>
                       <span>{label}</span>
                     </div>
                   ))}
                 </div>
-                <a href="/cv" style={{ display:"block", background:"#0f172a", color:"white", padding:"12px", borderRadius:10, textAlign:"center", textDecoration:"none", fontWeight:700, fontSize:13, transition:"all .18s" }}>
-                  Choisir Cadre →
+                <a href="/auth/login" style={{ display:"block", background:"#f3f4f6", color:"#374151", padding:"13px", borderRadius:10, textAlign:"center", textDecoration:"none", fontWeight:700, fontSize:13 }}>
+                  Créer un compte gratuit →
                 </a>
               </div>
+
+              {/* CV ONE-TIME PURCHASES */}
+              <div className="plan au" style={{ animationDelay:".12s", background:"linear-gradient(160deg,#f5f3ff 0%,#ede9fe 100%)", borderColor:"#ddd6fe" }}>
+                <div style={{ marginBottom:20 }}>
+                  <span className="tag" style={{ background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white", marginBottom:12 }}>✦ CV par IA</span>
+                  <div style={{ fontSize:18, fontWeight:800, color:"#1e1147", marginBottom:4 }}>Paiement unique</div>
+                  <div style={{ fontSize:13, color:"#6b7280" }}>Payez une seule fois, sans abonnement</div>
+                </div>
+                <div style={{ marginBottom:24, flex:1 }}>
+                  {[
+                    { label:"Starter — 19 MAD", desc:"CV optimisé ATS + PDF" },
+                    { label:"Professionnel — 35 MAD", desc:"CV avancé + Lettre de motivation + Résumé LinkedIn" },
+                    { label:"Cadre — 55 MAD", desc:"Réécriture exécutive + Lettre + Bio + Questions d'entretien IA" },
+                  ].map((item, i) => (
+                    <div key={i} style={{ padding:"10px 0", borderBottom: i < 2 ? "1px solid #e9d5ff" : "none" }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#4c1d95" }}>{item.label}</div>
+                      <div style={{ fontSize:12, color:"#6b7280", marginTop:2 }}>{item.desc}</div>
+                    </div>
+                  ))}
+                </div>
+                <a href="/cv" style={{ display:"block", background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white", padding:"13px", borderRadius:10, textAlign:"center", textDecoration:"none", fontWeight:700, fontSize:13, boxShadow:"0 4px 14px rgba(124,58,237,.3)" }}>
+                  Créer mon CV →
+                </a>
+              </div>
+
             </div>
           </div>
 
@@ -286,7 +243,7 @@ export default function PricingPage() {
               ["Comment fonctionne la comparaison IA ?", "Notre IA (Claude par Anthropic) analyse les profils des candidats, leur lettre de motivation, leurs notes et leur statut pour produire une analyse comparative structurée. Disponible pour les recruteurs Pro."],
               ["Mon CV importé est-il visible par les recruteurs ?", "Votre CV est joint automatiquement lorsque vous postulez à une offre d'un recruteur inscrit sur TalentMaroc. Pour les offres externes, vous postulez directement sur le site de l'entreprise."],
               ["Puis-je utiliser le même compte pour candidater et recruter ?", "Non. Les comptes candidat et recruteur sont séparés pour protéger la vie privée et garantir la cohérence de l'expérience. Créez deux comptes avec des emails différents si besoin."],
-              ["Comment annuler mon abonnement ?", "Vous pouvez annuler à tout moment depuis votre tableau de bord. Vous conservez l'accès jusqu'à la fin de la période payée."],
+              ["Comment fonctionnent les achats CV ?", "Les achats CV sont des paiements uniques — pas d'abonnement, pas de renouvellement. Vous payez une seule fois et recevez votre CV amélioré immédiatement."],
             ].map(([q, a], i) => (
               <div key={i} style={{ background:"white", border:"1.5px solid #f0f0f0", borderRadius:12, padding:"18px 22px", marginBottom:10 }}>
                 <div style={{ fontSize:14, fontWeight:700, marginBottom:8 }}>{q}</div>
