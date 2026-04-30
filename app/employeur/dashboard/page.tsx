@@ -121,6 +121,8 @@ export default function EmployeurDashboard() {
   const [saving,       setSaving]       = useState(false);
   const [delId,        setDelId]        = useState<string|null>(null);
   const [err,          setErr]          = useState<string|null>(null);
+  // Expanded candidate card
+  const [expandedCard, setExpandedCard] = useState<string|null>(null);
   // AI compare
   const [comparing,    setComparing]    = useState(false);
   const [compareResult,setCompareResult]= useState<AIResult|null>(null);
@@ -817,57 +819,83 @@ export default function EmployeurDashboard() {
                     const job=jobs.find(j=>j.id===a.job_id);
                     const displayName = a.candidate_name || `Candidat #${a.user_id.slice(0,8)}`;
                     const displayEmail = a.candidate_email;
+                    const isExpanded = expandedCard === a.id;
                     return (
-                      <div key={a.id} className="card" style={{ padding:"14px 18px" }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+                      <div key={a.id} className="card" style={{ padding:0, overflow:"hidden", transition:"box-shadow .18s" }}>
+                        {/* ── Clickable header row ── */}
+                        <div
+                          onClick={()=>setExpandedCard(isExpanded ? null : a.id)}
+                          style={{ display:"flex", alignItems:"center", gap:12, padding:"14px 18px", cursor:"pointer", userSelect:"none" }}
+                        >
                           {/* Avatar */}
                           <div style={{ width:40, height:40, borderRadius:"50%", background:"linear-gradient(135deg,#f5f3ff,#ede9fe)", border:"1.5px solid #ddd6fe", display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, fontWeight:700, color:"#6d28d9", flexShrink:0 }}>
                             {displayName.charAt(0).toUpperCase()}
                           </div>
                           {/* Info */}
-                          <div style={{ flex:1, minWidth:160 }}>
-                            <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:2 }}>{displayName}</div>
-                            {displayEmail && (
-                              <a href={`mailto:${displayEmail}`} style={{ fontSize:11, color:"#1d4ed8", textDecoration:"none", display:"block", marginBottom:2 }}>📧 {displayEmail}</a>
-                            )}
-                            <div style={{ fontSize:11, color:"#6b7280" }}>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontSize:13, fontWeight:700, color:"#0f172a", marginBottom:1 }}>{displayName}</div>
+                            <div style={{ fontSize:11, color:"#6b7280", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                               {a.job_title} · {a.city||"—"} · {a.applied_at?new Date(a.applied_at).toLocaleDateString("fr-FR"):new Date(a.created_at).toLocaleDateString("fr-FR")}
                             </div>
-                            {a.notes&&<div style={{ fontSize:11, color:"#4b5563", marginTop:4, background:"#f9fafb", padding:"3px 8px", borderRadius:5 }}>📝 {a.notes.slice(0,80)}{a.notes.length>80?"…":""}</div>}
-                            {a.cover_letter&&(
-                              <div style={{ fontSize:11, color:"#374151", marginTop:5, background:"#f8fafc", border:"1px solid #e5e7eb", borderRadius:6, padding:"6px 10px", lineHeight:1.6 }}>
-                                <span style={{ fontWeight:700, color:"#6b7280" }}>✉️ Lettre : </span>
-                                {a.cover_letter.slice(0,120)}{a.cover_letter.length>120?"…":""}
+                          </div>
+                          {/* Status badge */}
+                          <span style={{ fontSize:11, fontWeight:700, color:sc.color, background:sc.bg, border:`1px solid ${sc.border}`, borderRadius:100, padding:"3px 10px", flexShrink:0, whiteSpace:"nowrap" }}>
+                            {sc.label}
+                          </span>
+                          {/* Expand chevron */}
+                          <span style={{ fontSize:14, color:"#9ca3af", flexShrink:0, transition:"transform .2s", transform:isExpanded?"rotate(180deg)":"rotate(0deg)", display:"inline-block" }}>▾</span>
+                        </div>
+
+                        {/* ── Expanded body ── */}
+                        {isExpanded && (
+                          <div style={{ borderTop:"1.5px solid #f0f0f0", padding:"16px 18px", background:"#fafafa", display:"flex", flexDirection:"column", gap:14 }}
+                            onClick={e=>e.stopPropagation()}>
+
+                            {/* Contact row */}
+                            <div style={{ display:"flex", gap:16, flexWrap:"wrap", alignItems:"center" }}>
+                              {displayEmail && <a href={`mailto:${displayEmail}`} style={{ fontSize:12, color:"#1d4ed8", textDecoration:"none", fontWeight:600 }}>📧 {displayEmail}</a>}
+                              {a.city && <span style={{ fontSize:12, color:"#6b7280" }}>📍 {a.city}</span>}
+                              {a.applied_at && <span style={{ fontSize:12, color:"#6b7280" }}>🗓 {new Date(a.applied_at).toLocaleDateString("fr-FR")}</span>}
+                            </div>
+
+                            {/* Cover letter — full */}
+                            {a.cover_letter && (
+                              <div style={{ background:"white", border:"1.5px solid #e5e7eb", borderRadius:8, padding:"12px 14px" }}>
+                                <div style={{ fontSize:11, fontWeight:700, color:"#6b7280", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:6 }}>✉ Lettre de motivation</div>
+                                <div style={{ fontSize:12, lineHeight:1.75, color:"#374151", whiteSpace:"pre-wrap" }}>{a.cover_letter}</div>
                               </div>
                             )}
+
+                            {/* Notes — full */}
+                            {a.notes && (
+                              <div style={{ background:"#fffbeb", border:"1.5px solid #fde68a", borderRadius:8, padding:"10px 14px" }}>
+                                <div style={{ fontSize:11, fontWeight:700, color:"#92400e", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:4 }}>📝 Notes recruteur</div>
+                                <div style={{ fontSize:12, lineHeight:1.7, color:"#374151" }}>{a.notes}</div>
+                              </div>
+                            )}
+
+                            {/* Status change + actions */}
+                            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                              <select value={a.status} onChange={e=>updateStatus(a.id,e.target.value as AppStatus)}
+                                style={{ border:`1.5px solid ${sc.border}`, background:sc.bg, color:sc.color, borderRadius:8, padding:"7px 10px", fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer", outline:"none" }}>
+                                {(["applied","interview","offer","rejected"] as AppStatus[]).map(s=>(
+                                  <option key={s} value={s}>{STATUS_CFG[s].label}</option>
+                                ))}
+                              </select>
+                              <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginLeft:"auto" }}>
+                                {job && <a href={`/jobs/${job.id}`} target="_blank" className="btn btn-outline" style={{ textDecoration:"none", fontSize:11, padding:"6px 10px" }}>👁 Offre</a>}
+                                {a.cv_url && <a href={a.cv_url} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ textDecoration:"none", fontSize:11, padding:"6px 10px", color:"#7c3aed", borderColor:"#ddd6fe" }}>📄 CV</a>}
+                                {displayEmail && <a href={`mailto:${displayEmail}?subject=Votre candidature pour ${a.job_title}`} className="btn btn-outline" style={{ textDecoration:"none", fontSize:11, padding:"6px 10px" }}>✉️ Email</a>}
+                                {(a.cv_url || a.cover_letter) && (
+                                  <button onClick={()=>downloadApplicationFiles(a)}
+                                    style={{ fontSize:11, padding:"6px 10px", background:"#f5f3ff", color:"#6d28d9", borderRadius:6, fontWeight:700, border:"1px solid #ddd6fe", cursor:"pointer", fontFamily:"inherit" }}>
+                                    ⬇ Dossier
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          {/* Status selector — recruiter-relevant statuses only */}
-                          <select value={a.status} onChange={e=>updateStatus(a.id,e.target.value as AppStatus)}
-                            style={{ border:`1.5px solid ${sc.border}`, background:sc.bg, color:sc.color, borderRadius:8, padding:"6px 10px", fontSize:11, fontWeight:700, fontFamily:"inherit", cursor:"pointer", outline:"none" }}>
-                            {(["applied","interview","offer","rejected"] as AppStatus[]).map(s=>(
-                              <option key={s} value={s}>{STATUS_CFG[s].label}</option>
-                            ))}
-                          </select>
-                          {/* Actions */}
-                          <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
-                            {job&&<a href={`/jobs/${job.id}`} target="_blank" className="btn btn-outline" style={{ textDecoration:"none", fontSize:11, padding:"5px 8px" }}>👁 Offre</a>}
-                            {a.cv_url && (
-                              <a href={a.cv_url} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ textDecoration:"none", fontSize:11, padding:"5px 8px", color:"#7c3aed", borderColor:"#ddd6fe" }}>📄 CV</a>
-                            )}
-                            {displayEmail && (
-                              <a href={`mailto:${displayEmail}?subject=Votre candidature pour ${a.job_title}`} className="btn btn-outline" style={{ textDecoration:"none", fontSize:11, padding:"5px 8px" }}>✉️</a>
-                            )}
-                            {/* Download CV + cover letter as named files */}
-                            {(a.cv_url || a.cover_letter) && (
-                              <button
-                                onClick={()=>downloadApplicationFiles(a)}
-                                title={`Télécharger CV + lettre — ${displayName}`}
-                                style={{ fontSize:11, padding:"5px 8px", background:"#f5f3ff", color:"#6d28d9", borderRadius:6, fontWeight:600, border:"1px solid #ddd6fe", cursor:"pointer", fontFamily:"inherit" }}>
-                                ⬇ Dossier
-                              </button>
-                            )}
-                          </div>
-                        </div>
+                        )}
                       </div>
                     );
                   })}
