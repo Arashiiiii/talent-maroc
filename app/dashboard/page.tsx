@@ -75,7 +75,11 @@ export default function DashboardPage() {
   const [apps,       setApps]       = useState<Application[]>([]);
   const [cvs,        setCvs]        = useState<SavedCV[]>([]);
   const [loading,    setLoading]    = useState(true);
-  const [tab,        setTab]        = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "overview";
+    const t = new URLSearchParams(window.location.search).get("tab");
+    return (["overview","applications","cvs","outils","profile"].includes(t||"") ? t : "overview") as Tab;
+  });
   const [search,     setSearch]     = useState("");
   const [sf,         setSf]         = useState<AppStatus | "all">("all");
   const [editApp,    setEditApp]    = useState<Application | null>(null);
@@ -321,22 +325,31 @@ export default function DashboardPage() {
     if (user) localStorage.setItem(`tm_cvs_${user.id}`, JSON.stringify(next));
   };
 
-  const handlePhotoUpload = async (file: File) => {
+  const handlePhotoUpload = (file: File) => {
     if (!file.type.startsWith("image/")) { setPMsg("Veuillez sélectionner une image."); return; }
-    if (file.size > 5 * 1024 * 1024) { setPMsg("Image trop volumineuse (max 5 Mo)."); return; }
-    const reader = new FileReader();
-    reader.onload = e => setPPhotoPreview(e.target?.result as string);
-    reader.readAsDataURL(file);
+    if (file.size > 2 * 1024 * 1024) { setPMsg("Image trop volumineuse (max 2 Mo)."); return; }
     setPPhotoUploading(true);
-    const ext  = file.name.split(".").pop() || "jpg";
-    const path = `photos/${user.id}/avatar.${ext}`;
-    const sb   = getSB();
-    const { error: upErr } = await sb.storage.from("cvs").upload(path, file, { upsert: true, contentType: file.type });
-    if (upErr) { setPMsg("Erreur upload : " + upErr.message); setPPhotoUploading(false); return; }
-    const { data: { publicUrl } } = sb.storage.from("cvs").getPublicUrl(path);
-    setPPhotoUrl(publicUrl);
-    setPPhotoUploading(false);
-    setPMsg("Photo chargée — cliquez sur Sauvegarder pour confirmer.");
+    const reader = new FileReader();
+    reader.onload = e => {
+      const dataUrl = e.target?.result as string;
+      // Resize to max 256×256 via canvas to keep metadata small
+      const img = new Image();
+      img.onload = () => {
+        const size = 256;
+        const canvas = document.createElement("canvas");
+        const ratio = Math.min(size / img.width, size / img.height, 1);
+        canvas.width  = Math.round(img.width  * ratio);
+        canvas.height = Math.round(img.height * ratio);
+        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL("image/jpeg", 0.82);
+        setPPhotoPreview(compressed);
+        setPPhotoUrl(compressed);   // base64 stored directly — no bucket RLS issue
+        setPPhotoUploading(false);
+        setPMsg("Photo prête — cliquez sur Sauvegarder pour confirmer.");
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
   };
 
   const saveProfile = async () => {

@@ -66,3 +66,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Collapsible sidebar sections */
+summary::-webkit-details-marker { display: none; }
+summary::marker { display: none; }
+
+.collapse-chevron {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+details[open] .collapse-chevron {
+  transform: rotate(180deg);
+}

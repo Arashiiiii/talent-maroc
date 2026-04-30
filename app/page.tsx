@@ -263,8 +263,9 @@ export default function Index({ searchParams }: { searchParams: any }) {
         .sl-count { font-size:11px; color:#7c3aed; font-weight:600; background:#ede9fe; padding:2px 8px; border-radius:100px; }
 
         /* City card */
-        .cc { background:white; border:1.5px solid #ede9fe; border-radius:14px; padding:20px 14px; text-align:center; transition:all .18s; text-decoration:none; display:block; box-shadow:0 2px 8px rgba(109,40,217,0.06); }
+        .cc { background:white; border:1.5px solid #ede9fe; border-radius:14px; padding:14px 10px; text-align:center; transition:all .18s; text-decoration:none; display:block; box-shadow:0 2px 8px rgba(109,40,217,0.06); }
         .cc:hover { border-color:#7c3aed; box-shadow:0 6px 20px rgba(124,58,237,0.15); transform:translateY(-3px); }
+        @media(max-width:480px){ .cc{ padding:10px 8px; border-radius:10px; } }
 
         /* Buttons */
         .btn-green { display:inline-flex; align-items:center; gap:7px; background:#7c3aed; color:white; padding:12px 22px; border-radius:10px; font-size:14px; font-weight:700; text-decoration:none; font-family:'Plus Jakarta Sans',sans-serif; border:none; cursor:pointer; transition:all .18s; }
@@ -403,22 +404,28 @@ export default function Index({ searchParams }: { searchParams: any }) {
           {/* ── SIDEBAR ──────────────────────────────────────────────── */}
           <aside className="sidebar" style={{ width:200, flexShrink:0 }}>
 
-            <div style={{ marginBottom:28 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:10, padding:'0 12px' }}>Villes</div>
+            <details open style={{ marginBottom:28 }}>
+              <summary style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.1em', padding:'0 12px', marginBottom:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', listStyle:'none', userSelect:'none' }}>
+                <span>Villes</span>
+                <span className="collapse-chevron">▾</span>
+              </summary>
               {CITIES.map(city => (
                 <a key={city} href={`/?l=${city}`} className="sl">
                   <span><span style={{ marginRight:6 }}>{CITY_META[city]?.icon}</span>{city}</span>
                   <span className="sl-count">{CITY_META[city]?.count}</span>
                 </a>
               ))}
-            </div>
+            </details>
 
-            <div style={{ marginBottom:28 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:10, padding:'0 12px' }}>Secteurs</div>
+            <details open style={{ marginBottom:28 }}>
+              <summary style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.1em', padding:'0 12px', marginBottom:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', listStyle:'none', userSelect:'none' }}>
+                <span>Secteurs</span>
+                <span className="collapse-chevron">▾</span>
+              </summary>
               {SECTORS.map(s => (
                 <a key={s} href={`/?q=${s}`} className="sl">{s}<ChevronRight size={13} style={{ opacity:0.3 }}/></a>
               ))}
-            </div>
+            </details>
 
             {/* CV mini card */}
             <div style={{ background:'linear-gradient(135deg,#1e1147,#3b1fa3)', border:'1px solid rgba(124,58,237,0.3)', borderRadius:14, padding:'16px 14px', position:'relative', overflow:'hidden' }}>
@@ -473,12 +480,12 @@ export default function Index({ searchParams }: { searchParams: any }) {
               <p style={{ fontSize:12, color:'#9ca3af', marginTop:4, fontWeight:500 }}>Les marchés de l'emploi les plus actifs</p>
             </div>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(148px,1fr))', gap:10 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(120px,100%),1fr))', gap:8 }}>
             {CITIES.map(city=>(
               <a key={city} href={`/?l=${city}`} className="cc">
-                <div style={{ fontSize:24, marginBottom:8 }}>{CITY_META[city]?.icon}</div>
-                <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:13, fontWeight:700, color:'#0f172a', marginBottom:3 }}>{city}</div>
-                <div style={{ fontSize:11, color:'#9ca3af', fontWeight:500 }}>{CITY_META[city]?.count} offres</div>
+                <div style={{ fontSize:'clamp(18px,4vw,24px)', marginBottom:6 }}>{CITY_META[city]?.icon}</div>
+                <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:'clamp(11px,2.5vw,13px)', fontWeight:700, color:'#0f172a', marginBottom:2 }}>{city}</div>
+                <div style={{ fontSize:'clamp(10px,2vw,11px)', color:'#9ca3af', fontWeight:500 }}>{CITY_META[city]?.count} offres</div>
               </a>
             ))}
           </div>
