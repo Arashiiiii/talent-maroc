@@ -438,7 +438,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:18 }}>
               <div>
                 <h2 style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:18, fontWeight:800, color:'#0f172a' }}>Dernières Offres</h2>
-                <p style={{ fontSize:12, color:'#9ca3af', marginTop:3, fontWeight:500 }}>Actualisées en temps réel via n8n & SerpAPI</p>
+                <p style={{ fontSize:12, color:'#9ca3af', marginTop:3, fontWeight:500 }}>Mises à jour quotidiennement</p>
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, fontWeight:700, color:'#7c3aed', textTransform:'uppercase', letterSpacing:'0.08em' }}>
                 <span style={{ width:6, height:6, borderRadius:'50%', background:'#7c3aed', display:'inline-block', animation:'pulse 2s ease infinite' }}/>
@@ -555,7 +555,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
                 <div style={{ marginBottom:14 }}>
                   <img src="/logo.png" alt="TalentMaroc" style={{ height:80, width:"auto", filter:"brightness(0) invert(1)", opacity:0.85 }} />
                 </div>
-                <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', lineHeight:1.7, maxWidth:200 }}>La plateforme de référence pour l'emploi au Maroc. Propulsé par n8n & Supabase.</p>
+                <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', lineHeight:1.7, maxWidth:200 }}>La plateforme de référence pour l'emploi au Maroc.</p>
               </div>
               {[
                 { title:'Candidats',  links:[['Chercher un emploi','/'],['Créer mon CV','/cv'],['Connexion','/auth/login']] },
@@ -571,7 +571,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
               ))}
             </div>
             <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', paddingTop:20, display:'flex', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
-              <span style={{ fontSize:12, color:'rgba(255,255,255,0.25)' }}>© 2026 Talent Maroc — Propulsé par n8n & Supabase</span>
+              <span style={{ fontSize:12, color:'rgba(255,255,255,0.25)' }}>© 2026 Talent Maroc</span>
               <span style={{ fontSize:12, color:'rgba(255,255,255,0.18)' }}>🇲🇦 Fait avec ❤️ au Maroc</span>
             </div>
           </div>

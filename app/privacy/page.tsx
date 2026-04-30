@@ -458,7 +458,7 @@ export default function PrivacyPage() {
 
         {/* ── FOOTER ── */}
         <footer style={{ background:"#0f172a", color:"rgba(255,255,255,.4)", textAlign:"center", padding:24, fontSize:13 }}>
-          © 2026 Talent Maroc — Propulsé par n8n & Supabase &nbsp;·&nbsp;
+          © 2026 Talent Maroc &nbsp;·&nbsp;
           <a href="/terms"   style={{ color:"rgba(255,255,255,.55)", textDecoration:"none" }}>CGU</a> &nbsp;·&nbsp;
           <a href="/privacy" style={{ color:"white", textDecoration:"none", fontWeight:600 }}>Confidentialité</a> &nbsp;·&nbsp;
           <a href={`mailto:${CONTACT_EMAIL}`} style={{ color:"rgba(255,255,255,.55)", textDecoration:"none" }}>Contact</a>

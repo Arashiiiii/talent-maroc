@@ -1,6 +1,15 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { initializePaddle, type Paddle } from "@paddle/paddle-js";
+
+// ── AI TOOL PRICING ────────────────────────────────────────────────────────
+const FREE_USES_PER_MONTH = 3;
+const PAY_PER_USE_PRICE   = "7";     // MAD displayed to user
+// 🔑 Create a 7 MAD one-time price in your Paddle dashboard and paste the ID here:
+const PADDLE_AI_PRICE_ID  = "pri_REPLACE_WITH_7MAD_PRICE_ID";
+const PADDLE_TOKEN         = "test_f6beac788c5a1289b346269ad2a";
+const PADDLE_ENV           = "sandbox" as "sandbox" | "production";
 
 function getSB() {
   return createClient(
@@ -83,6 +92,12 @@ export default function DashboardPage() {
   const [liLoading,    setLiLoading]    = useState(false);
   const [liResult,     setLiResult]     = useState<string|null>(null);
   const [liErr,        setLiErr]        = useState<string|null>(null);
+  // Usage tracking (3 free / month, then 7 MAD per use)
+  const monthKey = `ai_uses_${new Date().toISOString().slice(0,7)}`; // e.g. "ai_uses_2026-04"
+  const [aiUses,       setAiUses]       = useState(0);   // uses this month
+  const [aiPaywall,    setAiPaywall]    = useState(false); // show paywall modal
+  const [paddle,       setPaddle]       = useState<Paddle|undefined>(undefined);
+  const pendingToolRef = useRef<"cover_letter"|"linkedin"|null>(null);
 
   // CV upload state
   const [cvUploading,  setCvUploading]  = useState(false);
@@ -109,6 +124,7 @@ export default function DashboardPage() {
       setUser(user);
       setPName(user.user_metadata?.name || "");
       setStoredCvUrl(user.user_metadata?.cv_url || null);
+      setAiUses(user.user_metadata?.[`ai_uses_${new Date().toISOString().slice(0,7)}`] || 0);
       loadApps(user.id);
       loadCVs(user.id);
 
@@ -141,6 +157,91 @@ export default function DashboardPage() {
       if (raw) setCvs(JSON.parse(raw));
     } catch { /* ignore */ }
   }, []);
+
+  // ── PADDLE INIT ────────────────────────────────────────────────────────
+  useEffect(() => {
+    initializePaddle({ environment: PADDLE_ENV, token: PADDLE_TOKEN,
+      eventCallback(event) {
+        if (event.name === "checkout.completed") {
+          // Payment succeeded — run the queued AI tool, increment usage
+          const tool = pendingToolRef.current;
+          pendingToolRef.current = null;
+          setAiPaywall(false);
+          if (tool === "cover_letter") runCoverLetter(true);
+          if (tool === "linkedin")     runLinkedin(true);
+        }
+        if (event.name === "checkout.closed" || event.name === "checkout.error") {
+          pendingToolRef.current = null;
+        }
+      }
+    }).then(p => { if (p) setPaddle(p); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── AI TOOL GATE ───────────────────────────────────────────────────────
+  // Returns true if the user can run the tool (free or already paid).
+  // If over limit, queues the tool and opens the paywall instead.
+  const gateAiTool = (tool: "cover_letter"|"linkedin"): boolean => {
+    if (aiUses < FREE_USES_PER_MONTH) return true;
+    pendingToolRef.current = tool;
+    setAiPaywall(true);
+    return false;
+  };
+
+  // Increment usage count in Supabase user_metadata
+  const incrementUsage = async () => {
+    const next = aiUses + 1;
+    setAiUses(next);
+    await getSB().auth.updateUser({ data: { [monthKey]: next } });
+  };
+
+  // ── AI TOOL RUNNERS ────────────────────────────────────────────────────
+  const runCoverLetter = async (paid = false) => {
+    if (!paid && !gateAiTool("cover_letter")) return;
+    if (!clJobTitle.trim() || !clCompany.trim()) return;
+    setClLoading(true); setClErr(null); setClResult(null);
+    await incrementUsage();
+    try {
+      const res = await fetch("/api/generate-tools", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ type:"cover_letter", data:{
+          name: pName || user?.email?.split("@")[0] || "",
+          candidate_title: user?.user_metadata?.title || "",
+          skills: user?.user_metadata?.skills || "",
+          experience: user?.user_metadata?.experience || "",
+          location: user?.user_metadata?.location || "Maroc",
+          job_title: clJobTitle, company: clCompany, job_description: clDesc,
+        }})
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setClResult(json.result);
+    } catch(e:any){ setClErr(e.message); }
+    finally{ setClLoading(false); }
+  };
+
+  const runLinkedin = async (paid = false) => {
+    if (!paid && !gateAiTool("linkedin")) return;
+    setLiLoading(true); setLiErr(null); setLiResult(null);
+    await incrementUsage();
+    try {
+      const res = await fetch("/api/generate-tools", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ type:"linkedin_bio", data:{
+          name: pName || user?.email?.split("@")[0] || "",
+          candidate_title: user?.user_metadata?.title || "",
+          industry: user?.user_metadata?.industry || "",
+          skills: user?.user_metadata?.skills || "",
+          experience: user?.user_metadata?.experience || "",
+          location: user?.user_metadata?.location || "Maroc",
+        }})
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setLiResult(json.result);
+    } catch(e:any){ setLiErr(e.message); }
+    finally{ setLiLoading(false); }
+  };
 
   // ── CV UPLOAD ──────────────────────────────────────────────────────────
   const handleCVUpload = async (file: File) => {
@@ -571,19 +672,6 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* AI Enhancement upsell */}
-              <div style={{ marginTop: 20, background: "linear-gradient(135deg,#0f172a,#1e3a5f)", borderRadius: 14, padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 14 }}>
-                <div>
-                  <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(167,139,250,.2)", border: "1px solid rgba(167,139,250,.3)", borderRadius: 100, padding: "3px 10px", marginBottom: 8 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: "#a78bfa" }}>✦ PRO</span>
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "white", marginBottom: 4 }}>Améliorez votre CV avec l'IA</div>
-                  <div style={{ fontSize: 12, color: "rgba(255,255,255,.6)", lineHeight: 1.5 }}>Notre IA analyse et réécrit votre CV pour maximiser vos chances. Adapté à chaque poste.</div>
-                </div>
-                <a href="/pricing" style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg,#7c3aed,#5b21b6)", color: "white", padding: "10px 20px", borderRadius: 9, fontSize: 13, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap", boxShadow: "0 4px 14px rgba(124,58,237,.35)" }}>
-                  Voir les offres Pro →
-                </a>
-              </div>
             </div>
           )}
 
@@ -619,34 +707,21 @@ export default function DashboardPage() {
                     placeholder="Copiez-collez la description du poste pour une lettre encore plus ciblée…"
                     style={{ ...IS2, resize:"vertical", lineHeight:1.6 }}/>
                 </div>
+                {/* Usage counter */}
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+                  {Array.from({length:FREE_USES_PER_MONTH}).map((_,i)=>(
+                    <div key={i} style={{ width:10, height:10, borderRadius:"50%", background:i<aiUses?"#7c3aed":"#e5e7eb" }}/>
+                  ))}
+                  <span style={{ fontSize:11, color:"#6b7280" }}>
+                    {aiUses < FREE_USES_PER_MONTH
+                      ? `${FREE_USES_PER_MONTH - aiUses} utilisation${FREE_USES_PER_MONTH-aiUses>1?"s":""} gratuite${FREE_USES_PER_MONTH-aiUses>1?"s":""} restante${FREE_USES_PER_MONTH-aiUses>1?"s":""}`
+                      : `Limite atteinte · ${PAY_PER_USE_PRICE} MAD par utilisation`}
+                  </span>
+                </div>
                 {clErr && <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:12, color:"#dc2626", marginBottom:12 }}>⚠ {clErr}</div>}
                 <button className="bg" disabled={clLoading || !clJobTitle.trim() || !clCompany.trim()}
-                  onClick={async ()=>{
-                    setClLoading(true); setClErr(null); setClResult(null);
-                    try {
-                      const res = await fetch("/api/generate-tools", {
-                        method:"POST", headers:{"Content-Type":"application/json"},
-                        body:JSON.stringify({
-                          type:"cover_letter",
-                          data:{
-                            name: pName || user?.email?.split("@")[0] || "",
-                            candidate_title: user?.user_metadata?.title || "",
-                            skills: user?.user_metadata?.skills || "",
-                            experience: user?.user_metadata?.experience || "",
-                            location: user?.user_metadata?.location || "Maroc",
-                            job_title: clJobTitle,
-                            company: clCompany,
-                            job_description: clDesc,
-                          }
-                        })
-                      });
-                      const json = await res.json();
-                      if (json.error) throw new Error(json.error);
-                      setClResult(json.result);
-                    } catch(e:any){ setClErr(e.message); }
-                    finally{ setClLoading(false); }
-                  }}>
-                  {clLoading ? "Génération…" : "✦ Générer ma lettre de motivation"}
+                  onClick={()=>runCoverLetter()}>
+                  {clLoading ? "Génération…" : aiUses < FREE_USES_PER_MONTH ? "✦ Générer ma lettre de motivation" : `✦ Générer · ${PAY_PER_USE_PRICE} MAD`}
                 </button>
 
                 {clResult && (
@@ -683,30 +758,8 @@ export default function DashboardPage() {
                 </p>
                 {liErr && <div style={{ background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"10px 14px", fontSize:12, color:"#dc2626", marginBottom:12 }}>⚠ {liErr}</div>}
                 <button className="bg" disabled={liLoading}
-                  onClick={async ()=>{
-                    setLiLoading(true); setLiErr(null); setLiResult(null);
-                    try {
-                      const res = await fetch("/api/generate-tools", {
-                        method:"POST", headers:{"Content-Type":"application/json"},
-                        body:JSON.stringify({
-                          type:"linkedin_bio",
-                          data:{
-                            name: pName || user?.email?.split("@")[0] || "",
-                            candidate_title: user?.user_metadata?.title || "",
-                            industry: user?.user_metadata?.industry || "",
-                            skills: user?.user_metadata?.skills || "",
-                            experience: user?.user_metadata?.experience || "",
-                            location: user?.user_metadata?.location || "Maroc",
-                          }
-                        })
-                      });
-                      const json = await res.json();
-                      if (json.error) throw new Error(json.error);
-                      setLiResult(json.result);
-                    } catch(e:any){ setLiErr(e.message); }
-                    finally{ setLiLoading(false); }
-                  }}>
-                  {liLoading ? "Génération…" : "✦ Générer mon résumé LinkedIn"}
+                  onClick={()=>runLinkedin()}>
+                  {liLoading ? "Génération…" : aiUses < FREE_USES_PER_MONTH ? "✦ Générer mon résumé LinkedIn" : `✦ Générer · ${PAY_PER_USE_PRICE} MAD`}
                 </button>
 
                 {!pName && !user?.user_metadata?.title && (
@@ -737,19 +790,6 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* ── UPGRADE BANNER ── */}
-              <div style={{ background:"linear-gradient(135deg,#0f172a,#1e3a5f)", borderRadius:14, padding:"22px 26px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:16, flexWrap:"wrap" }}>
-                <div>
-                  <div style={{ fontSize:11, fontWeight:800, color:"#a78bfa", textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:5 }}>✦ Candidat Pro · 49 MAD/mois</div>
-                  <div style={{ fontSize:14, fontWeight:800, color:"white", marginBottom:3 }}>Débloquez tous les outils IA</div>
-                  <div style={{ fontSize:12, color:"rgba(255,255,255,.5)", lineHeight:1.6 }}>
-                    CV amélioré · Lettre de motivation · Bio LinkedIn · Adaptation CV au poste
-                  </div>
-                </div>
-                <a href="/pricing" style={{ display:"inline-flex", alignItems:"center", gap:7, background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white", padding:"11px 20px", borderRadius:9, fontSize:13, fontWeight:700, textDecoration:"none", whiteSpace:"nowrap", flexShrink:0, boxShadow:"0 4px 14px rgba(124,58,237,.35)" }}>
-                  Voir les offres →
-                </a>
-              </div>
             </div>
           )}
 
@@ -839,6 +879,50 @@ export default function DashboardPage() {
 
         </div>
       </div>
+
+      {/* ── AI PAYWALL MODAL ── */}
+      {aiPaywall && (
+        <div className="modal-bg" onClick={()=>setAiPaywall(false)}>
+          <div className="modal" style={{ maxWidth:420, padding:0, overflow:"hidden" }} onClick={e=>e.stopPropagation()}>
+            <div style={{ background:"linear-gradient(135deg,#1e1147,#3b1fa3)", padding:"24px 26px" }}>
+              <div style={{ fontSize:13, fontWeight:800, color:"#a78bfa", textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:6 }}>✦ Outils IA</div>
+              <div style={{ fontSize:18, fontWeight:800, color:"white", marginBottom:4 }}>3 utilisations gratuites épuisées</div>
+              <div style={{ fontSize:13, color:"rgba(255,255,255,.6)", lineHeight:1.6 }}>
+                Continuez à utiliser les outils IA pour seulement <strong style={{ color:"white" }}>{PAY_PER_USE_PRICE} MAD</strong> par utilisation. Paiement unique, sans abonnement.
+              </div>
+            </div>
+            <div style={{ padding:"24px 26px", background:"white" }}>
+              <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:20 }}>
+                {[
+                  "Lettre de motivation personnalisée",
+                  "Résumé LinkedIn percutant",
+                  "Résultat instantané",
+                ].map((f,i)=>(
+                  <div key={i} style={{ display:"flex", alignItems:"center", gap:10, fontSize:13, color:"#374151" }}>
+                    <span style={{ color:"#7c3aed", fontWeight:700 }}>✓</span> {f}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={()=>{
+                  if (!paddle) { alert("Chargement Paddle…"); return; }
+                  paddle.Checkout.open({
+                    items:[{ priceId: PADDLE_AI_PRICE_ID, quantity:1 }],
+                    settings:{ displayMode:"overlay", theme:"light", locale:"fr",
+                      successUrl:`${window.location.origin}/dashboard?tab=outils` },
+                  });
+                }}
+                style={{ width:"100%", background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white", border:"none", borderRadius:10, padding:"13px", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 4px 14px rgba(124,58,237,.35)", marginBottom:10 }}>
+                Payer {PAY_PER_USE_PRICE} MAD et générer →
+              </button>
+              <button onClick={()=>setAiPaywall(false)}
+                style={{ width:"100%", background:"none", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"11px", fontSize:13, color:"#6b7280", cursor:"pointer", fontFamily:"inherit" }}>
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* EDIT MODAL */}
       {editApp && (

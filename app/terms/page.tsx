@@ -306,7 +306,7 @@ export default function TermsPage() {
 
         {/* ── FOOTER ── */}
         <footer style={{ background: "#0f1d36", color: "rgba(255,255,255,0.45)", textAlign: "center", padding: 24, fontSize: 13 }}>
-          © 2026 Talent Maroc — Propulsé par n8n &amp; Supabase &nbsp;·&nbsp;
+          © 2026 Talent Maroc &nbsp;·&nbsp;
           <a href="/terms"   style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontWeight: 600 }}>Conditions Générales</a> &nbsp;·&nbsp;
           <a href="/privacy" style={{ color: "rgba(255,255,255,0.55)", textDecoration: "none" }}>Politique de confidentialité</a> &nbsp;·&nbsp;
           <a href={`mailto:${CONTACT_EMAIL}`} style={{ color: "rgba(255,255,255,0.55)", textDecoration: "none" }}>Contact</a>
