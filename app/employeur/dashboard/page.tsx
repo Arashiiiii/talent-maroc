@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 import JSZip from "jszip";
+import * as XLSX from "xlsx";
 
 function getSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
@@ -57,16 +58,21 @@ const EIS: React.CSSProperties = {
   background:"white", outline:"none",
 };
 
-function dlCSV(filename: string, rows: Record<string,any>[]) {
+function dlExcel(filename: string, rows: Record<string,any>[]) {
   if (!rows.length) return;
-  const cols = Object.keys(rows[0]);
-  const esc  = (v: any) => `"${String(v??'').replace(/"/g,'""')}"`;
-  const csv  = [cols.join(","), ...rows.map(r=>cols.map(c=>esc(r[c])).join(","))].join("\n");
-  const blob = new Blob(["\ufeff"+csv], { type:"text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+  const ws = XLSX.utils.json_to_sheet(rows);
+  // Auto column widths
+  const colWidths = Object.keys(rows[0]).map(k => ({
+    wch: Math.max(k.length, ...rows.map(r => String(r[k]??'').length).slice(0,50))
+  }));
+  ws['!cols'] = colWidths;
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Candidats");
+  XLSX.writeFile(wb, filename);
 }
+
+interface AICandidate { rank:number; name:string; score:number; strengths:string[]; concerns:string[]; summary:string; }
+interface AIResult { candidates:AICandidate[]; recommendation:string; top3:string[]; }
 
 // ── MAIN ───────────────────────────────────────────────────────────────────
 export default function EmployeurDashboard() {
@@ -85,8 +91,9 @@ export default function EmployeurDashboard() {
   const [err,          setErr]          = useState<string|null>(null);
   // AI compare
   const [comparing,    setComparing]    = useState(false);
-  const [compareResult,setCompareResult]= useState<string|null>(null);
+  const [compareResult,setCompareResult]= useState<AIResult|null>(null);
   const [compareModal, setCompareModal] = useState(false);
+  const [aiScores,     setAiScores]     = useState<Record<string,number>>({}); // name→score
   // Profile form
   const [pName,     setPName]     = useState("");
   const [pCompany,  setPCompany]  = useState("");
@@ -361,16 +368,13 @@ export default function EmployeurDashboard() {
 
   // ── AI COMPARE ─────────────────────────────────────────────────────────
   const aiCompare = async () => {
-    const candidates = filteredApps.slice(0, 10); // max 10
+    const candidates = filteredApps.slice(0, 10);
     if (candidates.length < 2) { setErr("Sélectionnez au moins 2 candidats (utilisez les filtres)."); return; }
     setComparing(true); setCompareResult(null); setCompareModal(true);
-
     const job = jobs.find(j => j.id === jobFilter) || jobs[0];
-
     try {
       const res = await fetch("/api/ai-compare", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           candidates: candidates.map(a => ({
             name: a.candidate_name || `Candidat #${a.user_id.slice(0,8)}`,
@@ -388,12 +392,61 @@ export default function EmployeurDashboard() {
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setCompareResult(data.result);
+      const result: AIResult = data.result;
+      setCompareResult(result);
+      // Store scores by name for Excel export
+      const scores: Record<string,number> = {};
+      result.candidates.forEach(c => { scores[c.name] = c.score; });
+      setAiScores(prev => ({ ...prev, ...scores }));
     } catch (e: any) {
-      setCompareResult(`Erreur : ${e.message}`);
+      setErr(`Erreur comparaison IA : ${e.message}`);
+      setCompareModal(false);
     } finally {
       setComparing(false);
     }
+  };
+
+  // ── EXCEL EXPORT ──────────────────────────────────────────────────────────
+  const downloadExcel = (apps: Application[], filename: string) => {
+    const rows = apps.map(a => ({
+      "Nom":               a.candidate_name  || "—",
+      "Email":             a.candidate_email || "—",
+      "Poste":             a.job_title,
+      "Ville":             a.city            || "—",
+      "Date candidature":  a.applied_at ? new Date(a.applied_at).toLocaleDateString("fr-FR") : "—",
+      "Statut":            STATUS_CFG[a.status].label,
+      "Notes":             a.notes           || "",
+      "Lettre de motivation": a.cover_letter || "",
+      "CV (lien PDF)":     a.cv_url          || "",
+      "Note IA / 10":      a.candidate_name ? (aiScores[a.candidate_name] ?? "") : "",
+    }));
+    dlExcel(filename, rows);
+  };
+
+  // Download top 10 from AI result
+  const downloadTop10 = () => {
+    if (!compareResult) return;
+    const ranked = compareResult.candidates.slice(0, 10);
+    const rows = ranked.map((c, i) => {
+      const app = filteredApps.find(a => (a.candidate_name || "").includes(c.name) || c.name.includes(a.candidate_name || ""));
+      return {
+        "Rang":              i + 1,
+        "Nom":               c.name,
+        "Score IA / 10":     c.score,
+        "Résumé IA":         c.summary,
+        "Points forts":      c.strengths.join(" | "),
+        "Points d'attention":c.concerns.join(" | "),
+        "Email":             app?.candidate_email || "—",
+        "Poste":             app?.job_title       || "—",
+        "Ville":             app?.city            || "—",
+        "Date candidature":  app?.applied_at ? new Date(app.applied_at).toLocaleDateString("fr-FR") : "—",
+        "Statut":            app ? STATUS_CFG[app.status].label : "—",
+        "Notes recruteur":   app?.notes           || "",
+        "Lettre de motivation": app?.cover_letter || "",
+        "CV (lien PDF)":     app?.cv_url          || "",
+      };
+    });
+    dlExcel("top10_candidats_IA.xlsx", rows);
   };
 
   if (loading) return (
@@ -538,8 +591,8 @@ export default function EmployeurDashboard() {
                     style={{ border:"1.5px solid #e5e7eb", borderRadius:9, padding:"9px 14px 9px 32px", fontSize:13, fontFamily:"inherit", width:220, outline:"none" }}/>
                 </div>
                 <div style={{ display:"flex", gap:8 }}>
-                  <button className="btn btn-outline" onClick={()=>dlCSV("mes_offres.csv",jobs.map(j=>({ Titre:j.title, Entreprise:j.company, Ville:j.city, Contrat:j.contract_type||"", Secteur:j.sector||"", Salaire:j.salary||"", Candidatures:j.apps?.length||0 })))}>
-                    ⬇ Exporter CSV
+                  <button className="btn btn-outline" onClick={()=>dlExcel("mes_offres.xlsx",jobs.map(j=>({ Titre:j.title, Entreprise:j.company, Ville:j.city, Contrat:j.contract_type||"", Secteur:j.sector||"", Salaire:j.salary||"", Candidatures:j.apps?.length||0 })))}>
+                    ⬇ Excel offres
                   </button>
                   <a href="/employeur/new" className="btn btn-green" style={{ textDecoration:"none" }}>+ Nouvelle offre</a>
                 </div>
@@ -584,7 +637,7 @@ export default function EmployeurDashboard() {
                             <div style={{ fontSize:10, color:"#9ca3af" }}>candidat{(j.apps?.length||0)!==1?"s":""}</div>
                           </div>
                           <a href={`/jobs/${j.id}`} target="_blank" className="btn btn-outline" style={{ textDecoration:"none", fontSize:11 }}>👁 Voir</a>
-                          <button className="btn btn-outline" style={{ fontSize:11 }} onClick={()=>dlCSV(`candidats_${j.id}.csv`,(j.apps||[]).map(a=>({ "Nom":a.candidate_name||"—", "Email":a.candidate_email||"—", "Poste":a.job_title, "Statut":STATUS_CFG[a.status].label, "Date":a.applied_at||"", "Notes":a.notes||"", "CV":a.cv_url||"" })))}>⬇ CSV</button>
+                          <button className="btn btn-outline" style={{ fontSize:11 }} onClick={()=>downloadExcel(j.apps||[], `candidats_${j.title.slice(0,20)}.xlsx`)}>⬇ Excel</button>
                           <button className="btn-ghost btn" onClick={()=>openEdit(j)}>✏️</button>
                           <button className="btn-del" onClick={()=>setDelId(j.id)}>🗑</button>
                         </div>
@@ -705,8 +758,8 @@ export default function EmployeurDashboard() {
                   ))}
                 </div>
                 <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                  <button className="btn btn-outline" onClick={()=>dlCSV("candidatures.csv",filteredApps.map(a=>({ "Nom":a.candidate_name||"—", "Email":a.candidate_email||"—", "Poste":a.job_title, "Ville":a.city||"—", "Statut":STATUS_CFG[a.status].label, "Date":a.applied_at||"", "Notes":a.notes||"", "CV":a.cv_url||"" })))}>
-                    ⬇ CSV ({filteredApps.length})
+                  <button className="btn btn-outline" onClick={()=>downloadExcel(filteredApps, "candidatures.xlsx")}>
+                    ⬇ Excel ({filteredApps.length})
                   </button>
                   <button className="btn btn-pro" style={{ background:"#0f172a", color:"white", opacity: zipping ? 0.7 : 1 }}
                     disabled={zipping}
@@ -843,36 +896,118 @@ export default function EmployeurDashboard() {
         </div>
       )}
 
-      {/* ── AI COMPARE MODAL ── */}
+      {/* ── AI COMPARE DASHBOARD MODAL ── */}
       {compareModal&&(
         <div className="modal-bg" onClick={()=>{ if(!comparing){ setCompareModal(false); setCompareResult(null); } }}>
-          <div className="modal modal-lg" onClick={e=>e.stopPropagation()}>
-            <div style={{ padding:"20px 24px", borderBottom:"1.5px solid #f0f0f0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div className="modal" style={{ maxWidth:820, width:"95vw", maxHeight:"90vh", overflow:"hidden", display:"flex", flexDirection:"column" }} onClick={e=>e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ padding:"20px 24px", borderBottom:"1.5px solid #f0f0f0", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
               <div>
                 <div style={{ fontSize:15, fontWeight:800, display:"flex", alignItems:"center", gap:8 }}>
-                  🤖 Comparaison IA des candidats
+                  🤖 Tableau de scoring IA
                   <span style={{ fontSize:10, fontWeight:700, background:"linear-gradient(135deg,#7c3aed,#4f46e5)", color:"white", padding:"2px 8px", borderRadius:100 }}>PRO</span>
                 </div>
-                <div style={{ fontSize:12, color:"#6b7280", marginTop:2 }}>Analyse comparative de {Math.min(filteredApps.length,10)} candidats</div>
+                <div style={{ fontSize:12, color:"#6b7280", marginTop:2 }}>Analyse de {Math.min(filteredApps.length,10)} candidats · {jobs.find(j=>j.id===jobFilter)?.title || "Tous postes"}</div>
               </div>
               {!comparing&&<button onClick={()=>{ setCompareModal(false); setCompareResult(null); }} style={{ background:"none", border:"none", fontSize:20, color:"#9ca3af", cursor:"pointer" }}>×</button>}
             </div>
-            <div style={{ padding:"24px" }}>
+
+            {/* Body */}
+            <div style={{ flex:1, overflowY:"auto", padding:"24px" }}>
               {comparing ? (
-                <div style={{ textAlign:"center", padding:"40px" }}>
-                  <div style={{ width:40, height:40, border:"3px solid #e5e7eb", borderTopColor:"#7c3aed", borderRadius:"50%", animation:"spin .7s linear infinite", margin:"0 auto 16px" }}/>
-                  <div style={{ fontSize:14, color:"#6b7280" }}>Analyse en cours par l'IA…</div>
+                <div style={{ textAlign:"center", padding:"60px 40px" }}>
+                  <div style={{ width:48, height:48, border:"3px solid #e5e7eb", borderTopColor:"#7c3aed", borderRadius:"50%", animation:"spin .7s linear infinite", margin:"0 auto 20px" }}/>
+                  <div style={{ fontSize:15, fontWeight:700, color:"#1e1147", marginBottom:6 }}>Analyse IA en cours…</div>
+                  <div style={{ fontSize:13, color:"#6b7280" }}>L'IA évalue et classe les candidats</div>
                 </div>
-              ) : compareResult ? (
-                <div style={{ fontSize:13, lineHeight:1.8, color:"#0f172a", whiteSpace:"pre-wrap" }}>{compareResult}</div>
-              ) : null}
-              {!comparing&&compareResult&&(
-                <div style={{ marginTop:20, display:"flex", justifyContent:"flex-end", gap:10 }}>
-                  <button className="btn btn-outline" onClick={()=>{ const el=document.createElement("a"); el.href="data:text/plain;charset=utf-8,"+encodeURIComponent(compareResult||""); el.download="analyse_candidats.txt"; el.click(); }}>⬇ Exporter</button>
+              ) : compareResult ? (<>
+                {/* Recommendation banner */}
+                <div style={{ background:"linear-gradient(135deg,#f5f3ff,#ede9fe)", border:"1.5px solid #ddd6fe", borderRadius:12, padding:"16px 20px", marginBottom:24 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#7c3aed", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>Recommandation IA</div>
+                  <div style={{ fontSize:13, lineHeight:1.7, color:"#1e1147" }}>{compareResult.recommendation}</div>
+                  {compareResult.top3.length > 0 && (
+                    <div style={{ marginTop:10, display:"flex", gap:6, flexWrap:"wrap" }}>
+                      {compareResult.top3.map((n,i)=>(
+                        <span key={i} style={{ fontSize:12, fontWeight:700, background:["#7c3aed","#6d28d9","#5b21b6"][i], color:"white", padding:"4px 12px", borderRadius:100 }}>
+                          {["🥇","🥈","🥉"][i]} {n}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Scoring cards */}
+                <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:24 }}>
+                  {compareResult.candidates.map((c,i)=>{
+                    const pct = (c.score / 10) * 100;
+                    const color = c.score >= 8 ? "#059669" : c.score >= 6 ? "#d97706" : "#dc2626";
+                    const bg    = c.score >= 8 ? "#f0fdf4" : c.score >= 6 ? "#fffbeb" : "#fef2f2";
+                    const border= c.score >= 8 ? "#bbf7d0" : c.score >= 6 ? "#fde68a" : "#fecaca";
+                    return (
+                      <div key={i} style={{ background:bg, border:`1.5px solid ${border}`, borderRadius:12, padding:"14px 18px" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10 }}>
+                          {/* Rank badge */}
+                          <div style={{ width:32, height:32, borderRadius:"50%", background:i<3?"#7c3aed":"#e5e7eb", color:i<3?"white":"#6b7280", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, flexShrink:0 }}>
+                            {i+1}
+                          </div>
+                          <div style={{ flex:1 }}>
+                            <div style={{ fontSize:14, fontWeight:700, color:"#0f172a" }}>{c.name}</div>
+                            <div style={{ fontSize:12, color:"#6b7280" }}>{c.summary}</div>
+                          </div>
+                          {/* Score */}
+                          <div style={{ textAlign:"center", flexShrink:0 }}>
+                            <div style={{ fontSize:26, fontWeight:800, color, lineHeight:1 }}>{c.score}</div>
+                            <div style={{ fontSize:10, color:"#9ca3af" }}>/ 10</div>
+                          </div>
+                        </div>
+                        {/* Score bar */}
+                        <div style={{ height:6, background:"#e5e7eb", borderRadius:100, marginBottom:10 }}>
+                          <div style={{ height:6, borderRadius:100, background:color, width:`${pct}%`, transition:"width .6s" }}/>
+                        </div>
+                        <div style={{ display:"flex", gap:16, flexWrap:"wrap" }}>
+                          <div style={{ flex:1, minWidth:200 }}>
+                            <div style={{ fontSize:10, fontWeight:700, color:"#059669", textTransform:"uppercase", marginBottom:4 }}>Points forts</div>
+                            {c.strengths.map((s,j)=><div key={j} style={{ fontSize:11, color:"#374151" }}>✓ {s}</div>)}
+                          </div>
+                          {c.concerns.length > 0 && (
+                            <div style={{ flex:1, minWidth:200 }}>
+                              <div style={{ fontSize:10, fontWeight:700, color:"#dc2626", textTransform:"uppercase", marginBottom:4 }}>Points d'attention</div>
+                              {c.concerns.map((s,j)=><div key={j} style={{ fontSize:11, color:"#374151" }}>⚠ {s}</div>)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Score chart (horizontal bars) */}
+                <div style={{ background:"white", border:"1.5px solid #e5e7eb", borderRadius:12, padding:"18px 20px", marginBottom:20 }}>
+                  <div style={{ fontSize:13, fontWeight:700, marginBottom:14 }}>📊 Graphique des scores</div>
+                  {[...compareResult.candidates].sort((a,b)=>b.score-a.score).map((c,i)=>(
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+                      <div style={{ width:130, fontSize:11, color:"#374151", textAlign:"right", flexShrink:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.name}</div>
+                      <div style={{ flex:1, height:20, background:"#f1f5f9", borderRadius:100, overflow:"hidden" }}>
+                        <div style={{ height:20, borderRadius:100, background:`linear-gradient(90deg,#7c3aed,#a78bfa)`, width:`${(c.score/10)*100}%`, transition:"width .8s", display:"flex", alignItems:"center", paddingRight:6, justifyContent:"flex-end" }}>
+                          <span style={{ fontSize:10, fontWeight:700, color:"white" }}>{c.score}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>) : null}
+            </div>
+
+            {/* Footer */}
+            {!comparing && compareResult && (
+              <div style={{ padding:"16px 24px", borderTop:"1.5px solid #f0f0f0", display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0, gap:10, flexWrap:"wrap" }}>
+                <div style={{ fontSize:12, color:"#6b7280" }}>Top {Math.min(compareResult.candidates.length,10)} candidats analysés</div>
+                <div style={{ display:"flex", gap:10 }}>
+                  <button className="btn btn-outline" onClick={downloadTop10}>⬇ Top 10 Excel</button>
                   <button className="btn btn-green" onClick={()=>{ setCompareModal(false); setCompareResult(null); }}>Fermer</button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}
