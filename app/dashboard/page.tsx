@@ -42,6 +42,10 @@ const STATUS: Record<AppStatus, { label: string; color: string; bg: string; bord
   rejected:  { label: "Refusée",      color: "#991b1b", bg: "#fef2f2",  border: "#fecaca",  icon: "✗"  },
 };
 
+// Returns the Supabase metadata key for AI usage in the current month.
+// Called only inside effects/handlers — never during render — so new Date() is safe.
+function aiMonthKey() { return `ai_uses_${new Date().toISOString().slice(0, 7)}`; }
+
 // ── OUTSIDE COMPONENT (no remount) ─────────────────────────────────────────
 function Badge({ status }: { status: AppStatus }) {
   const s = STATUS[status];
@@ -93,8 +97,6 @@ export default function DashboardPage() {
   const [liResult,     setLiResult]     = useState<string|null>(null);
   const [liErr,        setLiErr]        = useState<string|null>(null);
   // Usage tracking (3 free / month, then 7 MAD per use)
-  // Computed inside the component render but after mount — safe from prerender
-  const [monthKey] = useState(() => `ai_uses_${new Date().toISOString().slice(0,7)}`);
   const [aiUses,       setAiUses]       = useState(0);   // uses this month
   const [aiPaywall,    setAiPaywall]    = useState(false); // show paywall modal
   const [paddle,       setPaddle]       = useState<Paddle|undefined>(undefined);
@@ -125,7 +127,7 @@ export default function DashboardPage() {
       setUser(user);
       setPName(user.user_metadata?.name || "");
       setStoredCvUrl(user.user_metadata?.cv_url || null);
-      setAiUses(user.user_metadata?.[`ai_uses_${new Date().toISOString().slice(0,7)}`] || 0);
+      setAiUses(user.user_metadata?.[aiMonthKey()] || 0);
       loadApps(user.id);
       loadCVs(user.id);
 
@@ -193,7 +195,7 @@ export default function DashboardPage() {
   const incrementUsage = async () => {
     const next = aiUses + 1;
     setAiUses(next);
-    await getSB().auth.updateUser({ data: { [monthKey]: next } });
+    await getSB().auth.updateUser({ data: { [aiMonthKey()]: next } });
   };
 
   // ── AI TOOL RUNNERS ────────────────────────────────────────────────────
