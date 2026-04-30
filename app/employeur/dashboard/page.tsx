@@ -58,14 +58,46 @@ const EIS: React.CSSProperties = {
   background:"white", outline:"none",
 };
 
+// Columns listed here will display a clean label in the cell but open the URL on click.
+// The raw link is never visible in the spreadsheet.
+const HYPERLINK_COLS: Record<string, string> = {
+  "CV (lien PDF)": "📄 Voir le CV",
+};
+
 function dlExcel(filename: string, rows: Record<string,any>[]) {
   if (!rows.length) return;
-  const ws = XLSX.utils.json_to_sheet(rows);
-  // Auto column widths
-  const colWidths = Object.keys(rows[0]).map(k => ({
-    wch: Math.max(k.length, ...rows.map(r => String(r[k]??'').length).slice(0,50))
+
+  const cols = Object.keys(rows[0]);
+
+  // Build display rows: replace URL values with clean labels
+  const displayRows = rows.map(row => {
+    const r: Record<string,any> = {};
+    cols.forEach(c => { r[c] = HYPERLINK_COLS[c] && row[c] ? HYPERLINK_COLS[c] : row[c]; });
+    return r;
+  });
+
+  const ws = XLSX.utils.json_to_sheet(displayRows);
+
+  // Inject Excel hyperlinks so clicking the label opens the real URL
+  Object.entries(HYPERLINK_COLS).forEach(([colName, label]) => {
+    const colIdx = cols.indexOf(colName);
+    if (colIdx === -1) return;
+    rows.forEach((row, rowIdx) => {
+      const url = row[colName];
+      if (!url) return;
+      const ref = XLSX.utils.encode_cell({ r: rowIdx + 1, c: colIdx }); // +1 = skip header
+      if (ws[ref]) ws[ref].l = { Target: url, Tooltip: "Cliquez pour télécharger le CV" };
+    });
+  });
+
+  const colWidths = cols.map(k => ({
+    wch: Math.max(k.length, 18, ...rows.map(r => {
+      const v = HYPERLINK_COLS[k] ? HYPERLINK_COLS[k] : String(r[k]??'');
+      return Math.min(v.length, 60);
+    }))
   }));
   ws['!cols'] = colWidths;
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Candidats");
   XLSX.writeFile(wb, filename);
