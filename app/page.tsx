@@ -366,7 +366,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
                   <input name="q" type="text" placeholder="Poste, entreprise, compétence…" className="si" style={{ padding:'17px 0' }}/>
                 </div>
                 <div className="sdiv"/>
-                <div style={{ display:'flex', alignItems:'center', gap:9, padding:'0 16px', flex:'0 0 185px' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:9, padding:'0 16px', flex:'0 0 55px' }}>
                   <MapPin size={15} style={{ color:'#9ca3af', flexShrink:0 }}/>
                   <input name="l" type="text" placeholder="Ville" className="si" style={{ padding:'17px 0' }}/>
                 </div>
