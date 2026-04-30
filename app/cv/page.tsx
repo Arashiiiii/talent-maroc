@@ -165,7 +165,7 @@ function TplModerne({ cv, scale=1, accent="#1e3a5f", font="'Inter',sans-serif", 
     // background gradient on parent ensures sidebar color fills full height regardless of content length
     <div style={{ width:794, fontFamily:font, display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600, background:`linear-gradient(to right, ${accent} 240px, white 240px)` }}>
       {/* Sidebar */}
-      <div style={{ width:240, padding:"40px 24px", flexShrink:0, boxSizing:"border-box" }}>
+      <div style={{ width:240, padding:"28px 20px", flexShrink:0, boxSizing:"border-box" }}>
         {/* Avatar — photo if available, else initial */}
         {cv.photo ? (
           <img src={cv.photo} alt={cv.name} style={{ width:80, height:80, borderRadius:"50%", objectFit:"cover", marginBottom:20, border:"3px solid rgba(255,255,255,0.2)" }}/>
@@ -197,8 +197,8 @@ function TplModerne({ cv, scale=1, accent="#1e3a5f", font="'Inter',sans-serif", 
         {cv.certifications && <SideSection title="Certifications" light>{cv.certifications.map((c,i)=><div key={i} style={{ fontSize:10, color:"rgba(255,255,255,0.7)", marginBottom:4, lineHeight:1.5 }}>• {c}</div>)}</SideSection>}
       </div>
       {/* Main */}
-      <div style={{ flex:1, padding:"40px 36px" }}>
-        <div style={{ fontSize:12, color:"#374151", lineHeight:1.8, marginBottom:24, paddingBottom:20, borderBottom:"2px solid #e5e7eb" }}>{cv.profile}</div>
+      <div style={{ flex:1, padding:"28px 28px" }}>
+        <div style={{ fontSize:12, color:"#374151", lineHeight:1.7, marginBottom:16, paddingBottom:14, borderBottom:"2px solid #e5e7eb" }}>{cv.profile}</div>
         {!hidden.includes('experience') && <MSection title="Expériences" accent={accent}>
           {cv.experiences.map((e,i)=>(
             <div key={i} style={{ marginBottom:16 }}>
@@ -718,8 +718,8 @@ function TplLeafish({ cv, scale=1, accent="#16a34a", font="'Inter',sans-serif", 
 // ── TEMPLATE-SPECIFIC SECTION HELPERS ─────────────────────────────────────
 function ASection({ title, accent, children }: { title:string; accent:string; children:React.ReactNode }) {
   return (
-    <div style={{ marginBottom:18 }}>
-      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+    <div style={{ marginBottom:12 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:7 }}>
         <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.12em", color:accent }}>{title}</div>
         <div style={{ flex:1, height:1, background:"#e2e8f0" }}/>
       </div>
@@ -729,16 +729,16 @@ function ASection({ title, accent, children }: { title:string; accent:string; ch
 }
 function BSection({ title, accent, children }: { title:string; accent:string; children:React.ReactNode }) {
   return (
-    <div style={{ marginBottom:20 }}>
-      <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.1em", color:accent, marginBottom:10, borderLeft:`3px solid ${accent}`, paddingLeft:8 }}>{title}</div>
+    <div style={{ marginBottom:14 }}>
+      <div style={{ fontSize:11, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.1em", color:accent, marginBottom:8, borderLeft:`3px solid ${accent}`, paddingLeft:8 }}>{title}</div>
       {children}
     </div>
   );
 }
 function DSection({ title, children, accent="#1e293b" }: { title:string; children:React.ReactNode; accent?:string }) {
   return (
-    <div style={{ marginBottom:18 }}>
-      <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", color:accent, borderBottom:`2px solid ${accent}`, paddingBottom:4, marginBottom:10, display:"inline-block" }}>{title}</div>
+    <div style={{ marginBottom:12 }}>
+      <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", color:accent, borderBottom:`2px solid ${accent}`, paddingBottom:3, marginBottom:8, display:"inline-block" }}>{title}</div>
       <div>{children}</div>
     </div>
   );
@@ -747,24 +747,24 @@ function DSection({ title, children, accent="#1e293b" }: { title:string; childre
 // ── HELPER SUB-COMPONENTS ─────────────────────────────────────────────────
 function Section({ title, children, accent="#1a1a1a" }: { title:string; children:React.ReactNode; accent?:string }) {
   return (
-    <div style={{ marginBottom:18 }}>
-      <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", borderBottom:`1px solid ${accent}`, paddingBottom:3, marginBottom:10, color:accent }}>{title}</div>
+    <div style={{ marginBottom:12 }}>
+      <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", borderBottom:`1px solid ${accent}`, paddingBottom:3, marginBottom:8, color:accent }}>{title}</div>
       {children}
     </div>
   );
 }
 function SideSection({ title, children, light }: { title:string; children:React.ReactNode; light?:boolean }) {
   return (
-    <div style={{ marginBottom:20 }}>
-      <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", color:light?"rgba(255,255,255,0.4)":"#666", marginBottom:8 }}>{title}</div>
+    <div style={{ marginBottom:14 }}>
+      <div style={{ fontSize:9, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.12em", color:light?"rgba(255,255,255,0.4)":"#666", marginBottom:6 }}>{title}</div>
       {children}
     </div>
   );
 }
 function MSection({ title, children, accent }: { title:string; children:React.ReactNode; accent:string }) {
   return (
-    <div style={{ marginBottom:20 }}>
-      <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", color:accent, borderBottom:`2px solid ${accent}`, paddingBottom:4, marginBottom:12, display:"inline-block" }}>{title}</div>
+    <div style={{ marginBottom:14 }}>
+      <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", color:accent, borderBottom:`2px solid ${accent}`, paddingBottom:3, marginBottom:8, display:"inline-block" }}>{title}</div>
       {children}
     </div>
   );
@@ -1287,21 +1287,25 @@ Retourne UNIQUEMENT le JSON.`}];
         x: 0, y: 0, scrollX: 0, scrollY: 0,
       });
 
-      // 2. Compose into an exactly A4-sized canvas
-      //    Scale proportionally to fit: if content taller than A4, shrink;
-      //    if shorter, draw at top with white space below — never distort.
-      const fitScale = Math.min(1, A4_PX_H / src.height);
-      const drawW    = src.width  * fitScale;   // may be < A4_PX_W when scaling down
-      const drawH    = src.height * fitScale;   // capped at A4_PX_H
-      const drawX    = (A4_PX_W - drawW) / 2;  // center horizontally if narrower
-
+      // 2. Compose into an exactly A4-sized canvas.
+      //    Always use full A4 width (never narrow the CV).
+      //    • Content shorter than A4 → drawn at natural size, white space at bottom.
+      //    • Content taller than A4  → squished vertically to fit (slight compression,
+      //      far better than a narrow/tiny CV from proportional scaling).
       const a4Canvas = document.createElement("canvas");
       a4Canvas.width  = A4_PX_W;
       a4Canvas.height = A4_PX_H;
       const ctx = a4Canvas.getContext("2d")!;
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, A4_PX_W, A4_PX_H);
-      ctx.drawImage(src, 0, 0, src.width, src.height, drawX, 0, drawW, drawH);
+
+      if (src.height <= A4_PX_H) {
+        // Fits naturally — draw at top, full width, white space below
+        ctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, A4_PX_W, src.height);
+      } else {
+        // Too tall — squish to fill full A4 (width stays 210mm, height compressed)
+        ctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, A4_PX_W, A4_PX_H);
+      }
 
       // 3. Embed into standard A4 PDF page (always 210×297mm)
       const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
