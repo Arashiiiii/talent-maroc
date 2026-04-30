@@ -404,10 +404,10 @@ export default function Index({ searchParams }: { searchParams: any }) {
           {/* ── SIDEBAR ──────────────────────────────────────────────── */}
           <aside className="sidebar" style={{ width:200, flexShrink:0 }}>
 
-            <details open style={{ marginBottom:28 }}>
+            <details style={{ marginBottom:28 }}>
               <summary style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.1em', padding:'0 12px', marginBottom:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', listStyle:'none', userSelect:'none' }}>
                 <span>Villes</span>
-                <span className="collapse-chevron">▾</span>
+                <span className="collapse-chevron" style={{ fontSize:16 }}>▾</span>
               </summary>
               {CITIES.map(city => (
                 <a key={city} href={`/?l=${city}`} className="sl">
@@ -417,10 +417,10 @@ export default function Index({ searchParams }: { searchParams: any }) {
               ))}
             </details>
 
-            <details open style={{ marginBottom:28 }}>
+            <details style={{ marginBottom:28 }}>
               <summary style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.1em', padding:'0 12px', marginBottom:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', listStyle:'none', userSelect:'none' }}>
                 <span>Secteurs</span>
-                <span className="collapse-chevron">▾</span>
+                <span className="collapse-chevron" style={{ fontSize:16 }}>▾</span>
               </summary>
               {SECTORS.map(s => (
                 <a key={s} href={`/?q=${s}`} className="sl">{s}<ChevronRight size={13} style={{ opacity:0.3 }}/></a>
