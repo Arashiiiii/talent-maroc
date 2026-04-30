@@ -7,7 +7,7 @@ import { initializePaddle, type Paddle } from "@paddle/paddle-js";
 const FREE_USES_PER_MONTH = 3;
 const PAY_PER_USE_PRICE   = "7";     // MAD displayed to user
 // 🔑 Create a 7 MAD one-time price in your Paddle dashboard and paste the ID here:
-const PADDLE_AI_PRICE_ID  = "pri_REPLACE_WITH_7MAD_PRICE_ID";
+const PADDLE_AI_PRICE_ID  = "pri_01kqfn4xxnxx9nzr0n0p3wqr4w";
 const PADDLE_TOKEN         = "test_f6beac788c5a1289b346269ad2a";
 const PADDLE_ENV           = "sandbox" as "sandbox" | "production";
 

@@ -129,14 +129,16 @@ export default function EmployeurDashboard() {
   const [compareModal, setCompareModal] = useState(false);
   const [aiScores,     setAiScores]     = useState<Record<string,number>>({}); // name→score
   // Profile form
-  const [pName,     setPName]     = useState("");
-  const [pCompany,  setPCompany]  = useState("");
-  const [pPhone,    setPPhone]    = useState("");
-  const [pWebsite,  setPWebsite]  = useState("");
-  const [pLogoUrl,  setPLogoUrl]  = useState("");
-  const [pSaving,   setPSaving]   = useState(false);
-  const [pMsg,      setPMsg]      = useState<{type:"ok"|"err";text:string}|null>(null);
-  const [token,     setToken]     = useState<string>("");
+  const [pName,        setPName]        = useState("");
+  const [pCompany,     setPCompany]     = useState("");
+  const [pPhone,       setPPhone]       = useState("");
+  const [pWebsite,     setPWebsite]     = useState("");
+  const [pLogoUrl,     setPLogoUrl]     = useState("");   // stored public URL
+  const [pLogoPreview, setPLogoPreview] = useState("");   // local preview (data URL)
+  const [pLogoUploading,setPLogoUploading] = useState(false);
+  const [pSaving,      setPSaving]      = useState(false);
+  const [pMsg,         setPMsg]         = useState<{type:"ok"|"err";text:string}|null>(null);
+  const [token,        setToken]        = useState<string>("");
 
   // ── LOAD ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -306,6 +308,28 @@ export default function EmployeurDashboard() {
   const signOut = async () => {
     await getSupabase().auth.signOut();
     window.location.href = "/employeur";
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setPMsg({ type:"err", text:"Veuillez sélectionner une image (PNG, JPG, SVG…)" }); return; }
+    if (file.size > 5 * 1024 * 1024) { setPMsg({ type:"err", text:"Logo trop volumineux (max 5 Mo)." }); return; }
+
+    // Show local preview immediately
+    const reader = new FileReader();
+    reader.onload = e => setPLogoPreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+
+    setPLogoUploading(true); setPMsg(null);
+    const sb = getSupabase();
+    const ext  = file.name.split(".").pop() || "png";
+    const path = `logos/${user.id}/logo.${ext}`;
+    const { error: upErr } = await sb.storage.from("cvs").upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) { setPMsg({ type:"err", text: upErr.message }); setPLogoUploading(false); return; }
+    const { data: { publicUrl } } = sb.storage.from("cvs").getPublicUrl(path);
+    setPLogoUrl(publicUrl);
+    setPLogoUploading(false);
+    setPMsg({ type:"ok", text:"Logo chargé — cliquez sur Sauvegarder pour confirmer." });
   };
 
   const saveProfile = async () => {
@@ -534,10 +558,20 @@ export default function EmployeurDashboard() {
             </a>
             <span style={{ fontSize:12, fontWeight:700, color:"#6d28d9", background:"#f5f3ff", padding:"4px 10px", borderRadius:7 }}>Dashboard Recruteur</span>
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <a href="/employeur/new" className="nl">+ Nouvelle offre</a>
-            <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#7c3aed,#5b21b6)", border:"1.5px solid #ddd6fe", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"white" }}>
-              {user?.email?.charAt(0).toUpperCase()}
+            {/* Company identity pill */}
+            <div style={{ display:"flex", alignItems:"center", gap:8, background:"#f8fafc", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"5px 12px 5px 6px" }}>
+              <div style={{ width:28, height:28, borderRadius:7, background:"linear-gradient(135deg,#f5f3ff,#ede9fe)", border:"1.5px solid #ddd6fe", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", flexShrink:0 }}>
+                {pLogoUrl ? (
+                  <img src={pLogoUrl} alt="logo" style={{ width:"100%", height:"100%", objectFit:"contain" }} onError={e=>(e.currentTarget.style.display="none")}/>
+                ) : (
+                  <span style={{ fontSize:12, fontWeight:800, color:"#6d28d9" }}>{(pCompany||user?.email||"?").charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              <span style={{ fontSize:13, fontWeight:700, color:"#0f172a", maxWidth:140, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                {pCompany || user?.email?.split("@")[0]}
+              </span>
             </div>
             <button onClick={signOut}
               style={{ background:"none", border:"1.5px solid #e5e7eb", borderRadius:7, padding:"6px 12px", fontSize:12, fontWeight:600, color:"#374151", cursor:"pointer", fontFamily:"inherit" }}>
@@ -549,12 +583,24 @@ export default function EmployeurDashboard() {
         {/* HEADER + TABS */}
         <div style={{ background:"white", borderBottom:"1.5px solid #f0f0f0", padding:"20px 24px 0" }}>
           <div style={{ maxWidth:1080, margin:"0 auto" }}>
-            <h1 style={{ fontSize:"clamp(17px,2.5vw,22px)", fontWeight:800, marginBottom:3 }}>
-              Bonjour {user?.user_metadata?.name || user?.email?.split("@")[0]} 👋
-            </h1>
-            <p style={{ fontSize:13, color:"#6b7280", marginBottom:16 }}>
-              {jobs.length} offre{jobs.length!==1?"s":""} publiée{jobs.length!==1?"s":""} · {totalApps} candidature{totalApps!==1?"s":""}
-            </p>
+            <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:12 }}>
+              {/* Company logo */}
+              <div style={{ width:52, height:52, borderRadius:12, background:"linear-gradient(135deg,#f5f3ff,#ede9fe)", border:"1.5px solid #ddd6fe", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", flexShrink:0 }}>
+                {pLogoUrl ? (
+                  <img src={pLogoUrl} alt="logo" style={{ width:"100%", height:"100%", objectFit:"contain" }} onError={e=>(e.currentTarget.style.display="none")}/>
+                ) : (
+                  <span style={{ fontSize:20, fontWeight:800, color:"#6d28d9" }}>{(pCompany||"?").charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              <div>
+                <h1 style={{ fontSize:"clamp(17px,2.5vw,22px)", fontWeight:800, marginBottom:2 }}>
+                  {pCompany || user?.user_metadata?.name || user?.email?.split("@")[0]}
+                </h1>
+                <p style={{ fontSize:13, color:"#6b7280" }}>
+                  {jobs.length} offre{jobs.length!==1?"s":""} publiée{jobs.length!==1?"s":""} · {totalApps} candidature{totalApps!==1?"s":""}
+                </p>
+              </div>
+            </div>
             <div className="tab-nav" style={{ overflowX:"auto", scrollbarWidth:"none" }}>
               {([["overview","📊 Vue d'ensemble"],["jobs","💼 Mes offres"],["candidates","👥 Candidatures"],["profile","👤 Mon profil"]] as const).map(([t,l])=>(
                 <button key={t} className={`tab-item${tab===t?" active":""}`} onClick={()=>setTab(t)} style={{ whiteSpace:"nowrap" }}>{l}</button>
@@ -720,16 +766,32 @@ export default function EmployeurDashboard() {
                     </EF>
                   </div>
 
-                  <EF label="URL du logo (optionnel)">
-                    <input style={EIS} type="url" placeholder="https://..." value={pLogoUrl} onChange={e=>setPLogoUrl(e.target.value)}/>
-                  </EF>
-
-                  {pLogoUrl && (
-                    <div style={{ display:"flex", alignItems:"center", gap:10, background:"#f8fafc", border:"1.5px solid #e5e7eb", borderRadius:9, padding:"10px 13px" }}>
-                      <img src={pLogoUrl} alt="logo preview" style={{ width:36, height:36, objectFit:"contain", borderRadius:6, background:"white", border:"1px solid #e5e7eb" }} onError={e=>(e.currentTarget.style.display="none")}/>
-                      <span style={{ fontSize:12, color:"#6b7280" }}>Aperçu du logo</span>
+                  <EF label="Logo de l'entreprise">
+                    <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                      {/* Preview */}
+                      <div style={{ width:64, height:64, borderRadius:12, border:"1.5px solid #e5e7eb", background:"#f8fafc", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, overflow:"hidden" }}>
+                        {(pLogoPreview || pLogoUrl) ? (
+                          <img src={pLogoPreview || pLogoUrl} alt="logo" style={{ width:"100%", height:"100%", objectFit:"contain" }} onError={e=>(e.currentTarget.style.display="none")}/>
+                        ) : (
+                          <span style={{ fontSize:24, color:"#d1d5db" }}>🏢</span>
+                        )}
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <label style={{ display:"inline-flex", alignItems:"center", gap:8, cursor:"pointer", background:pLogoUploading?"#e5e7eb":"#7c3aed", color:"white", fontSize:12, fontWeight:700, padding:"8px 16px", borderRadius:8, transition:"all .18s" }}>
+                          {pLogoUploading ? "⏳ Chargement…" : "📁 Choisir un fichier"}
+                          <input type="file" accept="image/*" style={{ display:"none" }} disabled={pLogoUploading}
+                            onChange={e=>{ const f=e.target.files?.[0]; if(f) handleLogoUpload(f); }}/>
+                        </label>
+                        <div style={{ fontSize:11, color:"#9ca3af", marginTop:5 }}>PNG, JPG, SVG — max 5 Mo</div>
+                        {pLogoUrl && !pLogoUploading && (
+                          <button onClick={()=>{ setPLogoUrl(""); setPLogoPreview(""); }}
+                            style={{ fontSize:11, color:"#ef4444", background:"none", border:"none", cursor:"pointer", padding:0, marginTop:4, fontFamily:"inherit" }}>
+                            ✕ Supprimer le logo
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  )}
+                  </EF>
 
                   <div style={{ height:1, background:"#f0f0f0" }}/>
 
