@@ -112,7 +112,12 @@ export default function EmployeurDashboard() {
   const [jobs,         setJobs]         = useState<Job[]>([]);
   const [allApps,      setAllApps]      = useState<Application[]>([]);
   const [loading,      setLoading]      = useState(true);
-  const [tab,          setTab]          = useState<DashTab>("overview");
+  const [tab,          setTab]          = useState<DashTab>(() => {
+    if (typeof window === "undefined") return "overview";
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (t === "profile" || t === "jobs" || t === "candidates" || t === "overview") return t as DashTab;
+    return "overview";
+  });
   const [search,       setSearch]       = useState("");
   const [jobFilter,    setJobFilter]    = useState("all");
   const [statusFilter, setStatusFilter] = useState<AppStatus|"all">("all");
@@ -310,26 +315,35 @@ export default function EmployeurDashboard() {
     window.location.href = "/employeur";
   };
 
-  const handleLogoUpload = async (file: File) => {
+  const handleLogoUpload = (file: File) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) { setPMsg({ type:"err", text:"Veuillez sélectionner une image (PNG, JPG, SVG…)" }); return; }
     if (file.size > 5 * 1024 * 1024) { setPMsg({ type:"err", text:"Logo trop volumineux (max 5 Mo)." }); return; }
 
-    // Show local preview immediately
-    const reader = new FileReader();
-    reader.onload = e => setPLogoPreview(e.target?.result as string);
-    reader.readAsDataURL(file);
-
     setPLogoUploading(true); setPMsg(null);
-    const sb = getSupabase();
-    const ext  = file.name.split(".").pop() || "png";
-    const path = `logos/${user.id}/logo.${ext}`;
-    const { error: upErr } = await sb.storage.from("cvs").upload(path, file, { upsert: true, contentType: file.type });
-    if (upErr) { setPMsg({ type:"err", text: upErr.message }); setPLogoUploading(false); return; }
-    const { data: { publicUrl } } = sb.storage.from("cvs").getPublicUrl(path);
-    setPLogoUrl(publicUrl);
-    setPLogoUploading(false);
-    setPMsg({ type:"ok", text:"Logo chargé — cliquez sur Sauvegarder pour confirmer." });
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 300;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL("image/png");
+        setPLogoPreview(compressed);
+        setPLogoUrl(compressed);
+        setPLogoUploading(false);
+        setPMsg({ type:"ok", text:"Logo chargé — cliquez sur Sauvegarder pour confirmer." });
+      };
+      img.onerror = () => { setPMsg({ type:"err", text:"Impossible de lire cette image." }); setPLogoUploading(false); };
+      img.src = dataUrl;
+    };
+    reader.onerror = () => { setPMsg({ type:"err", text:"Erreur de lecture du fichier." }); setPLogoUploading(false); };
+    reader.readAsDataURL(file);
   };
 
   const saveProfile = async () => {

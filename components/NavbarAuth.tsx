@@ -55,7 +55,7 @@ export default function NavbarAuth() {
   const photoUrl   = user.user_metadata?.photo_url || null;
   const isEmployer = user.user_metadata?.role === "employer";
   const dashHref   = isEmployer ? "/employeur/dashboard" : "/dashboard";
-  const profileHref = isEmployer ? "/employeur/dashboard" : "/dashboard?tab=profile";
+  const profileHref = isEmployer ? "/employeur/dashboard?tab=profile" : "/dashboard?tab=profile";
 
   return (
     <div ref={ref} style={{ position:"relative" }}>

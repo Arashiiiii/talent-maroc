@@ -332,7 +332,6 @@ export default function DashboardPage() {
     const reader = new FileReader();
     reader.onload = e => {
       const dataUrl = e.target?.result as string;
-      // Resize to max 256×256 via canvas to keep metadata small
       const img = new Image();
       img.onload = () => {
         const size = 256;
@@ -343,12 +342,14 @@ export default function DashboardPage() {
         canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
         const compressed = canvas.toDataURL("image/jpeg", 0.82);
         setPPhotoPreview(compressed);
-        setPPhotoUrl(compressed);   // base64 stored directly — no bucket RLS issue
+        setPPhotoUrl(compressed);
         setPPhotoUploading(false);
         setPMsg("Photo prête — cliquez sur Sauvegarder pour confirmer.");
       };
+      img.onerror = () => { setPMsg("Impossible de lire cette image."); setPPhotoUploading(false); };
       img.src = dataUrl;
     };
+    reader.onerror = () => { setPMsg("Erreur de lecture du fichier."); setPPhotoUploading(false); };
     reader.readAsDataURL(file);
   };
 
