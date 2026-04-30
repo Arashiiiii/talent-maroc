@@ -844,6 +844,8 @@ export default function CVPage() {
 
   // Bonus content generated for Pro/Cadre plans
   const [coverLetter,       setCoverLetter]       = useState<string|null>(null);
+  const [linkedinSummary,   setLinkedinSummary]   = useState<string|null>(null);
+  const [executiveBio,      setExecutiveBio]       = useState<string|null>(null);
   const [interviewQuestions,setInterviewQuestions] = useState<string[]|null>(null);
   const [bonusLoading,      setBonusLoading]       = useState(false);
   const [bonusError,        setBonusError]         = useState<string|null>(null);
@@ -1014,7 +1016,8 @@ export default function CVPage() {
     const plan     = purchasedPlanRef.current; // which plan was paid
 
     setGenerating(true); setGenError(null); setCvData(null); setGenStep(0);
-    setCoverLetter(null); setInterviewQuestions(null); setBonusLoading(false); setBonusError(null);
+    setCoverLetter(null); setLinkedinSummary(null); setExecutiveBio(null);
+    setInterviewQuestions(null); setBonusLoading(false); setBonusError(null);
 
     const tick = (i:number) => new Promise<void>(r=>setTimeout(()=>{setGenStep(i);r()},600));
 
@@ -1172,14 +1175,15 @@ Retourne UNIQUEMENT le JSON.`}];
         (async () => {
           try {
             const isCadre = plan.tier === "cadre";
+            const ctx = `Candidat: ${safe.name}, ${safe.title}.\nProfil: ${safe.profile}\nExpériences: ${safe.experiences.map(e=>`${e.role} chez ${e.company}`).join(", ")}\nCompétences: ${safe.skills.slice(0,8).join(", ")}`;
             const bonusSystem = `Tu es un expert RH senior. Réponds UNIQUEMENT avec un objet JSON valide, sans markdown, sans texte avant ou après.`;
             const bonusUser = isCadre
-              ? `Candidat: ${safe.name}, ${safe.title}.\nProfil: ${safe.profile}\nExpériences: ${safe.experiences.map(e=>`${e.role} chez ${e.company}`).join(", ")}\n\nGénère un objet JSON avec:\n- "cover_letter": une lettre de motivation percutante de 4 paragraphes\n- "questions": un tableau de 5 objets {"q": "question d'entretien", "a": "réponse suggérée courte"}`
-              : `Candidat: ${safe.name}, ${safe.title}.\nProfil: ${safe.profile}\nExpériences: ${safe.experiences.map(e=>`${e.role} chez ${e.company}`).join(", ")}\n\nGénère un objet JSON avec:\n- "cover_letter": une lettre de motivation percutante de 4 paragraphes`;
+              ? `${ctx}\n\nGénère un objet JSON avec exactement ces clés:\n- "cover_letter": lettre de motivation percutante de 4 paragraphes (ton exécutif)\n- "executive_bio": bio professionnelle de 2 paragraphes à la 3ème personne (style C-Suite)\n- "questions": tableau de 5 objets {"q":"question","a":"réponse suggérée courte"}`
+              : `${ctx}\n\nGénère un objet JSON avec exactement ces clés:\n- "cover_letter": lettre de motivation percutante de 4 paragraphes\n- "linkedin_summary": résumé LinkedIn optimisé de 3 phrases (accrocheur, 1ère personne, mots-clés secteur)`;
 
             const bonusRes = await fetch("/api/generate-cv", {
               method:"POST", headers:{"Content-Type":"application/json"},
-              body: JSON.stringify({ max_tokens:1800, system:bonusSystem, messages:[{role:"user",content:bonusUser}] }),
+              body: JSON.stringify({ max_tokens:2000, system:bonusSystem, messages:[{role:"user",content:bonusUser}] }),
             });
 
             if (!bonusRes.ok) throw new Error(`API ${bonusRes.status}`);
@@ -1191,8 +1195,10 @@ Retourne UNIQUEMENT le JSON.`}];
             const clean = raw.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/\s*```$/i,"").trim();
             const bonus = JSON.parse(clean);
 
-            if (bonus.cover_letter) setCoverLetter(bonus.cover_letter);
-            if (bonus.questions)    setInterviewQuestions((bonus.questions as any[]).map(q=>`${q.q}\n→ ${q.a}`));
+            if (bonus.cover_letter)    setCoverLetter(bonus.cover_letter);
+            if (bonus.linkedin_summary) setLinkedinSummary(bonus.linkedin_summary);
+            if (bonus.executive_bio)   setExecutiveBio(bonus.executive_bio);
+            if (bonus.questions)       setInterviewQuestions((bonus.questions as any[]).map(q=>`${q.q}\n→ ${q.a}`));
           } catch(e:any) {
             setBonusError("Les extras n'ont pas pu être générés : " + (e.message || "erreur inconnue"));
           } finally {
@@ -1358,6 +1364,13 @@ Retourne UNIQUEMENT le JSON.`}];
         .cv-editor-wrap { --cv-scale: 0.82; }
         @media(min-width:1400px){ .cv-editor-wrap { --cv-scale: 0.95; } }
         @media(max-width:1100px){ .cv-editor-wrap { --cv-scale: 0.68; } }
+        @media(max-width:768px){
+          .cv-editor-wrap { flex-direction:column!important; height:auto!important; min-height:auto!important; --cv-scale:0.44; }
+          .cv-editor-left { width:100%!important; max-height:360px; border-radius:14px 14px 0 0!important; }
+          .cv-editor-right { border-radius:0 0 14px 14px!important; min-height:420px; padding:14px 10px 28px!important; }
+          .cv-editor-toolbar { flex-direction:column; gap:6px!important; align-items:flex-start!important; }
+          .cv-editor-toolbar-btns { display:flex; gap:6px; flex-wrap:wrap; }
+        }
 
         .au{animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both}
         .spinner{width:40px;height:40px;border:3px solid #e5e7eb;border-top-color:#7c3aed;border-radius:50%;animation:spin .7s linear infinite}
@@ -1908,7 +1921,7 @@ Retourne UNIQUEMENT le JSON.`}];
               <div className="cv-editor-wrap" style={{ display:"flex", gap:0, height:"calc(100vh - 120px)", minHeight:700 }}>
 
                 {/* ── LEFT PANEL: editor ── */}
-                <div style={{ width:300, flexShrink:0, background:"white", border:"1.5px solid #ede9fe", borderRadius:"14px 0 0 14px", display:"flex", flexDirection:"column", overflow:"hidden" }}>
+                <div className="cv-editor-left" style={{ width:300, flexShrink:0, background:"white", border:"1.5px solid #ede9fe", borderRadius:"14px 0 0 14px", display:"flex", flexDirection:"column", overflow:"hidden" }}>
 
                   {/* Tab bar */}
                   <div style={{ display:"flex", background:"#f5f3ff", padding:4, gap:2, borderBottom:"1.5px solid #ede9fe" }}>
@@ -2082,14 +2095,14 @@ Retourne UNIQUEMENT le JSON.`}];
                 </div>
 
                 {/* ── RIGHT PANEL: live preview ── */}
-                <div style={{ flex:1, overflowY:"auto", overflowX:"hidden", background:"#e8e5f0", borderRadius:"0 14px 14px 0", padding:"20px 24px 40px", display:"flex", flexDirection:"column", alignItems:"center" }}>
+                <div className="cv-editor-right" style={{ flex:1, overflowY:"auto", overflowX:"hidden", background:"#e8e5f0", borderRadius:"0 14px 14px 0", padding:"20px 24px 40px", display:"flex", flexDirection:"column", alignItems:"center" }}>
                   {/* Toolbar */}
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", maxWidth:794, marginBottom:14 }}>
+                  <div className="cv-editor-toolbar" style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", maxWidth:794, marginBottom:14 }}>
                     <div style={{ fontSize:12, color:"#6b7280", display:"flex", alignItems:"center", gap:8 }}>
                       <span style={{ width:8, height:8, borderRadius:"50%", background:"#7c3aed", display:"inline-block", animation:"pulse 2s infinite" }}/>
-                      Aperçu en direct · <strong style={{ color:"#1e1147" }}>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong>
+                      Aperçu · <strong style={{ color:"#1e1147" }}>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong>
                     </div>
-                    <div style={{ display:"flex", gap:8 }}>
+                    <div className="cv-editor-toolbar-btns" style={{ display:"flex", gap:8 }}>
                       <button className="btn-outline" style={{ fontSize:11, padding:"5px 12px" }}
                         onClick={()=>{ const w=window.open("","_blank"); if(!w)return; w.document.write("<html><body style='margin:0'>"); w.document.write(printRef.current?.outerHTML||""); w.document.write("</body></html>"); w.document.close(); w.print(); }}>
                         🖨 Imprimer
@@ -2132,24 +2145,52 @@ Retourne UNIQUEMENT le JSON.`}];
                   )}
                   {coverLetter && (
                     <div style={{ marginTop:24, maxWidth:794, width:"100%", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #ede9fe", boxShadow:"0 2px 16px rgba(124,58,237,.07)" }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, flexWrap:"wrap" }}>
                         <span style={{ fontSize:18 }}>✉</span>
                         <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Lettre de motivation</div>
-                        <span style={{ marginLeft:"auto", fontSize:11, background:"#f5f3ff", color:"#7c3aed", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #ddd6fe" }}>Incluse dans votre formule</span>
+                        <span style={{ marginLeft:"auto", fontSize:11, background:"#f5f3ff", color:"#7c3aed", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #ddd6fe" }}>Incluse</span>
                       </div>
                       <pre style={{ fontSize:12, lineHeight:1.85, color:"#374151", whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0 }}>{coverLetter}</pre>
-                      <button onClick={()=>{const b=new Blob([coverLetter],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="lettre_motivation.txt";a.click();URL.revokeObjectURL(u);}}
+                      <button onClick={()=>{const b=new Blob([coverLetter],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="lettre_motivation.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
                         style={{ marginTop:14, background:"#7c3aed", color:"white", border:"none", borderRadius:8, padding:"8px 18px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
                         ⬇ Télécharger la lettre
                       </button>
                     </div>
                   )}
+                  {linkedinSummary && (
+                    <div style={{ marginTop:16, maxWidth:794, width:"100%", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #dbeafe", boxShadow:"0 2px 16px rgba(29,78,216,.05)" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, flexWrap:"wrap" }}>
+                        <span style={{ fontSize:18 }}>💼</span>
+                        <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Résumé LinkedIn</div>
+                        <span style={{ marginLeft:"auto", fontSize:11, background:"#eff6ff", color:"#1d4ed8", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #bfdbfe" }}>Professionnel</span>
+                      </div>
+                      <p style={{ fontSize:13, lineHeight:1.8, color:"#374151", margin:0 }}>{linkedinSummary}</p>
+                      <button onClick={()=>{const b=new Blob([linkedinSummary],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="linkedin_summary.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
+                        style={{ marginTop:12, background:"#1d4ed8", color:"white", border:"none", borderRadius:8, padding:"7px 16px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                        ⬇ Copier pour LinkedIn
+                      </button>
+                    </div>
+                  )}
+                  {executiveBio && (
+                    <div style={{ marginTop:16, maxWidth:794, width:"100%", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #fde68a", boxShadow:"0 2px 16px rgba(146,64,14,.05)" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, flexWrap:"wrap" }}>
+                        <span style={{ fontSize:18 }}>👔</span>
+                        <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Bio Exécutive</div>
+                        <span style={{ marginLeft:"auto", fontSize:11, background:"#fef3c7", color:"#92400e", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #fde68a" }}>Cadre</span>
+                      </div>
+                      <pre style={{ fontSize:12, lineHeight:1.85, color:"#374151", whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0 }}>{executiveBio}</pre>
+                      <button onClick={()=>{const b=new Blob([executiveBio],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="bio_executive.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
+                        style={{ marginTop:12, background:"#92400e", color:"white", border:"none", borderRadius:8, padding:"7px 16px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                        ⬇ Télécharger la bio
+                      </button>
+                    </div>
+                  )}
                   {interviewQuestions && (
                     <div style={{ marginTop:16, maxWidth:794, width:"100%", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #ede9fe", boxShadow:"0 2px 16px rgba(124,58,237,.07)" }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, flexWrap:"wrap" }}>
                         <span style={{ fontSize:18 }}>🎯</span>
                         <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Questions d'entretien IA</div>
-                        <span style={{ marginLeft:"auto", fontSize:11, background:"#f5f3ff", color:"#7c3aed", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #ddd6fe" }}>Cadre exclusif</span>
+                        <span style={{ marginLeft:"auto", fontSize:11, background:"#f5f3ff", color:"#7c3aed", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #ddd6fe" }}>Cadre</span>
                       </div>
                       {interviewQuestions.map((q,i) => (
                         <div key={i} style={{ marginBottom:14, paddingBottom:14, borderBottom:i<interviewQuestions.length-1?"1px solid #f3f4f6":"none" }}>
