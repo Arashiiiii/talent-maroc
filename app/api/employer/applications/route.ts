@@ -49,6 +49,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ applications: applications || [] });
   } catch (err: any) {
+    // Suppress prerender interruption noise — this route requires request headers
+    if (err?.digest === 'NEXT_PRERENDER_INTERRUPTED') throw err;
     console.error('employer/applications GET error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

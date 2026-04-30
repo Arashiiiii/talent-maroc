@@ -93,7 +93,8 @@ export default function DashboardPage() {
   const [liResult,     setLiResult]     = useState<string|null>(null);
   const [liErr,        setLiErr]        = useState<string|null>(null);
   // Usage tracking (3 free / month, then 7 MAD per use)
-  const monthKey = `ai_uses_${new Date().toISOString().slice(0,7)}`; // e.g. "ai_uses_2026-04"
+  // Computed inside the component render but after mount — safe from prerender
+  const [monthKey] = useState(() => `ai_uses_${new Date().toISOString().slice(0,7)}`);
   const [aiUses,       setAiUses]       = useState(0);   // uses this month
   const [aiPaywall,    setAiPaywall]    = useState(false); // show paywall modal
   const [paddle,       setPaddle]       = useState<Paddle|undefined>(undefined);
