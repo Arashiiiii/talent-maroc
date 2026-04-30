@@ -1,4 +1,5 @@
 import NavbarAuth from "@/components/NavbarAuth";
+import ProRecruteurButton from "@/components/ProRecruteurButton";
 
 export const metadata = {
   title: "Tarifs | Talent Maroc",
@@ -200,9 +201,7 @@ export default function PricingPage() {
                     </div>
                   ))}
                 </div>
-                <a href="/employeur" style={{ display:"block", background:"linear-gradient(135deg,#7c3aed,#4f46e5)", color:"white", padding:"12px", borderRadius:10, textAlign:"center", textDecoration:"none", fontWeight:700, fontSize:13 }}>
-                  Démarrer Pro Recruteur →
-                </a>
+                <ProRecruteurButton />
               </div>
 
               {/* ENTERPRISE */}
