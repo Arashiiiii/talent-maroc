@@ -110,6 +110,7 @@ export default function DashboardPage() {
   const pendingToolRef     = useRef<"cover_letter"|"linkedin"|null>(null);
   const runCoverLetterRef  = useRef<((paid?: boolean) => Promise<void>) | null>(null);
   const runLinkedinRef     = useRef<((paid?: boolean) => Promise<void>) | null>(null);
+  const [postPayBanner,    setPostPayBanner]    = useState(false);
 
   // CV upload state
   const [cvUploading,  setCvUploading]  = useState(false);
@@ -176,10 +177,10 @@ export default function DashboardPage() {
     initializePaddle({ environment: PADDLE_ENV, token: PADDLE_TOKEN,
       eventCallback(event) {
         if (event.name === "checkout.completed") {
-          // Payment succeeded — run the queued AI tool, increment usage
           const tool = pendingToolRef.current;
           pendingToolRef.current = null;
           setAiPaywall(false);
+          setPostPayBanner(true);
           if (tool === "cover_letter") runCoverLetterRef.current?.(true);
           if (tool === "linkedin")     runLinkedinRef.current?.(true);
         }
@@ -230,7 +231,7 @@ export default function DashboardPage() {
       if (json.error) throw new Error(json.error);
       setClResult(json.result);
     } catch(e:any){ setClErr(e.message); }
-    finally{ setClLoading(false); }
+    finally{ setClLoading(false); setPostPayBanner(false); }
   };
 
   const runLinkedin = async (paid = false) => {
@@ -253,7 +254,7 @@ export default function DashboardPage() {
       if (json.error) throw new Error(json.error);
       setLiResult(json.result);
     } catch(e:any){ setLiErr(e.message); }
-    finally{ setLiLoading(false); }
+    finally{ setLiLoading(false); setPostPayBanner(false); }
   };
 
   // Keep refs pointing to latest function versions (solves stale closure in Paddle eventCallback)
@@ -424,6 +425,14 @@ export default function DashboardPage() {
           input,textarea{font-size:16px!important}
         }
       `}</style>
+
+      {/* Post-payment generation toast */}
+      {postPayBanner && (
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", zIndex:2000, background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white", borderRadius:14, padding:"14px 24px", display:"flex", alignItems:"center", gap:12, boxShadow:"0 8px 32px rgba(124,58,237,.45)", fontSize:14, fontWeight:700, whiteSpace:"nowrap", animation:"fadeUp .35s cubic-bezier(.16,1,.3,1) both" }}>
+          <span style={{ width:18, height:18, border:"2.5px solid rgba(255,255,255,.4)", borderTopColor:"white", borderRadius:"50%", display:"inline-block", animation:"spin .7s linear infinite", flexShrink:0 }}/>
+          Paiement reçu — génération en cours…
+        </div>
+      )}
 
       <div style={{ background: "#f5f3ff", minHeight: "100vh" }}>
 
