@@ -107,7 +107,9 @@ export default function DashboardPage() {
   const [aiUses,       setAiUses]       = useState(0);   // uses this month
   const [aiPaywall,    setAiPaywall]    = useState(false); // show paywall modal
   const [paddle,       setPaddle]       = useState<Paddle|undefined>(undefined);
-  const pendingToolRef = useRef<"cover_letter"|"linkedin"|null>(null);
+  const pendingToolRef     = useRef<"cover_letter"|"linkedin"|null>(null);
+  const runCoverLetterRef  = useRef<((paid?: boolean) => Promise<void>) | null>(null);
+  const runLinkedinRef     = useRef<((paid?: boolean) => Promise<void>) | null>(null);
 
   // CV upload state
   const [cvUploading,  setCvUploading]  = useState(false);
@@ -178,8 +180,8 @@ export default function DashboardPage() {
           const tool = pendingToolRef.current;
           pendingToolRef.current = null;
           setAiPaywall(false);
-          if (tool === "cover_letter") runCoverLetter(true);
-          if (tool === "linkedin")     runLinkedin(true);
+          if (tool === "cover_letter") runCoverLetterRef.current?.(true);
+          if (tool === "linkedin")     runLinkedinRef.current?.(true);
         }
         if (event.name === "checkout.closed" || event.name === "checkout.error") {
           pendingToolRef.current = null;
@@ -253,6 +255,10 @@ export default function DashboardPage() {
     } catch(e:any){ setLiErr(e.message); }
     finally{ setLiLoading(false); }
   };
+
+  // Keep refs pointing to latest function versions (solves stale closure in Paddle eventCallback)
+  runCoverLetterRef.current = runCoverLetter;
+  runLinkedinRef.current    = runLinkedin;
 
   // ── CV UPLOAD ──────────────────────────────────────────────────────────
   const handleCVUpload = async (file: File) => {
