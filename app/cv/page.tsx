@@ -1057,6 +1057,27 @@ Le JSON doit suivre EXACTEMENT ce schéma (tous les champs requis) :
   "certifications": string[]
 }
 
+CONTRAINTE CRITIQUE — FORMAT PAGE A4 :
+Le CV doit respecter strictement le format A4. Applique les règles suivantes selon le profil :
+
+PROFIL JUNIOR / INTERMÉDIAIRE (moins de 8 ans d'expérience ou moins de 3 postes significatifs) → 1 PAGE MAXIMUM :
+- "profile" : 2 phrases max (40 mots max)
+- "experiences" : 3 postes max · 3 bullets max par poste · 12 mots max par bullet
+- "education" : 2 entrées max
+- "skills" : 8 mots-clés max (2-3 mots chacun)
+- "languages" : 3 entrées max
+- "certifications" : 2 entrées max
+
+PROFIL SENIOR / CADRE (8 ans+ d'expérience ou 4+ postes significatifs) → 2 PAGES MAXIMUM :
+- "profile" : 3 phrases max (60 mots max)
+- "experiences" : 5 postes max · 4 bullets max par poste · 15 mots max par bullet
+- "education" : 3 entrées max
+- "skills" : 12 mots-clés max
+- "languages" : 4 entrées max
+- "certifications" : 4 entrées max
+
+Dans tous les cas : chaque bullet commence par un verbe d'action fort. Sélectionne les informations les plus pertinentes si le CV source en contient davantage.
+
 RÈGLES ABSOLUES :
 1. Utilise UNIQUEMENT les informations du CV source. Ne génère RIEN de fictif.
 2. Conserve tous les faits : noms d'entreprises, dates, diplômes, compétences réelles.
@@ -1107,6 +1128,7 @@ Formation : ${f.education}
 Compétences : ${f.skills}
 Langues : ${f.langs}
 Notes : ${f.notes}${jobCtxStr}
+IMPORTANT : respecte la contrainte UNE PAGE A4 définie dans les instructions système.
 Retourne UNIQUEMENT le JSON.`}];
       }
 
@@ -1275,6 +1297,18 @@ Retourne UNIQUEMENT le JSON.`}];
       const DEV_W   = A4_W_PX * SCALE;
       const DEV_H   = A4_H_PX * SCALE;
 
+      // Default accent per template id (matches each Tpl component default)
+      const TPL_ACCENTS: Record<number, string> = {
+        1:"#1a1a1a", 2:"#1e3a5f", 3:"#0ea5e9", 4:"#d4af37",
+        5:"#7c3aed", 6:"#0d9488", 7:"#6366f1", 8:"#1e293b", 9:"#16a34a",
+      };
+      const accentHex = editorAccent || TPL_ACCENTS[selectedTpl] || "#1e1147";
+
+      // Parse hex → rgb for canvas
+      const hr = parseInt(accentHex.slice(1,3),16);
+      const hg = parseInt(accentHex.slice(3,5),16);
+      const hb = parseInt(accentHex.slice(5,7),16);
+
       // 1. Capture the full CV at natural height — no squishing
       const src = await html2canvas(node, {
         scale: SCALE,
@@ -1290,6 +1324,7 @@ Retourne UNIQUEMENT le JSON.`}];
       // 2. Slice into A4 pages — one slice per page, text stays readable
       const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
       const totalPages = Math.ceil(src.height / DEV_H);
+      const candidateName = (editingCv || cvData)?.name || "";
 
       for (let page = 0; page < totalPages; page++) {
         if (page > 0) pdf.addPage();
@@ -1303,6 +1338,23 @@ Retourne UNIQUEMENT le JSON.`}];
         pCtx.fillStyle = "#ffffff";
         pCtx.fillRect(0, 0, DEV_W, DEV_H);
         pCtx.drawImage(src, 0, srcY, DEV_W, sliceH, 0, 0, DEV_W, sliceH);
+
+        // Page 2+ — draw a thin accent bar at the top matching the template color
+        if (page > 0) {
+          const barH = 10 * SCALE; // 10px @2x
+          pCtx.fillStyle = accentHex;
+          pCtx.fillRect(0, 0, DEV_W, barH);
+          // Candidate name on the right in white, small
+          pCtx.fillStyle = `rgba(${hr},${hg},${hb},0.12)`;
+          pCtx.fillRect(0, 0, DEV_W, barH + 28 * SCALE);
+          pCtx.fillStyle = accentHex;
+          pCtx.fillRect(0, 0, DEV_W, barH);
+          pCtx.font = `${11 * SCALE}px sans-serif`;
+          pCtx.fillStyle = "#ffffff";
+          pCtx.textAlign = "right";
+          pCtx.fillText(candidateName, DEV_W - 16 * SCALE, barH - 5 * SCALE);
+          pCtx.textAlign = "left";
+        }
 
         pdf.addImage(pageCanvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 210, 297);
       }
