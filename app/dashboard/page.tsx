@@ -181,8 +181,11 @@ export default function DashboardPage() {
           pendingToolRef.current = null;
           setAiPaywall(false);
           setPostPayBanner(true);
-          if (tool === "cover_letter") runCoverLetterRef.current?.(true);
-          if (tool === "linkedin")     runLinkedinRef.current?.(true);
+          // Small delay so the Paddle overlay fully closes before generation starts
+          setTimeout(() => {
+            if (tool === "cover_letter") runCoverLetterRef.current?.(true);
+            if (tool === "linkedin")     runLinkedinRef.current?.(true);
+          }, 1200);
         }
         if (event.name === "checkout.closed" || event.name === "checkout.error") {
           pendingToolRef.current = null;
