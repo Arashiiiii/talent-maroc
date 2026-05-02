@@ -1269,13 +1269,13 @@ Retourne UNIQUEMENT le JSON.`}];
       const html2canvas = (window as any).html2canvas;
       const { jsPDF }   = (window as any).jspdf;
 
-      const SCALE     = 2;
-      const A4_W_PX   = 794;
-      const A4_H_PX   = 1123; // exact A4 height at 96dpi
-      const A4_PX_W   = A4_W_PX * SCALE; // 1588 device px
-      const A4_PX_H   = A4_H_PX * SCALE; // 2246 device px
+      const SCALE   = 2;
+      const A4_W_PX = 794;
+      const A4_H_PX = 1123; // A4 at 96 dpi
+      const DEV_W   = A4_W_PX * SCALE;
+      const DEV_H   = A4_H_PX * SCALE;
 
-      // 1. Capture the CV at full natural height
+      // 1. Capture the full CV at natural height — no squishing
       const src = await html2canvas(node, {
         scale: SCALE,
         useCORS: true,
@@ -1287,29 +1287,25 @@ Retourne UNIQUEMENT le JSON.`}];
         x: 0, y: 0, scrollX: 0, scrollY: 0,
       });
 
-      // 2. Compose into an exactly A4-sized canvas.
-      //    Always use full A4 width (never narrow the CV).
-      //    • Content shorter than A4 → drawn at natural size, white space at bottom.
-      //    • Content taller than A4  → squished vertically to fit (slight compression,
-      //      far better than a narrow/tiny CV from proportional scaling).
-      const a4Canvas = document.createElement("canvas");
-      a4Canvas.width  = A4_PX_W;
-      a4Canvas.height = A4_PX_H;
-      const ctx = a4Canvas.getContext("2d")!;
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, A4_PX_W, A4_PX_H);
-
-      if (src.height <= A4_PX_H) {
-        // Fits naturally — draw at top, full width, white space below
-        ctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, A4_PX_W, src.height);
-      } else {
-        // Too tall — squish to fill full A4 (width stays 210mm, height compressed)
-        ctx.drawImage(src, 0, 0, src.width, src.height, 0, 0, A4_PX_W, A4_PX_H);
-      }
-
-      // 3. Embed into standard A4 PDF page (always 210×297mm)
+      // 2. Slice into A4 pages — one slice per page, text stays readable
       const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
-      pdf.addImage(a4Canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 210, 297);
+      const totalPages = Math.ceil(src.height / DEV_H);
+
+      for (let page = 0; page < totalPages; page++) {
+        if (page > 0) pdf.addPage();
+        const srcY   = page * DEV_H;
+        const sliceH = Math.min(DEV_H, src.height - srcY);
+
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width  = DEV_W;
+        pageCanvas.height = DEV_H;
+        const pCtx = pageCanvas.getContext("2d")!;
+        pCtx.fillStyle = "#ffffff";
+        pCtx.fillRect(0, 0, DEV_W, DEV_H);
+        pCtx.drawImage(src, 0, srcY, DEV_W, sliceH, 0, 0, DEV_W, sliceH);
+
+        pdf.addImage(pageCanvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 210, 297);
+      }
 
       const filename = (cvData?.name || "CV")
         .replace(/[^a-zA-Z0-9À-ɏ\s-]/g, "")
