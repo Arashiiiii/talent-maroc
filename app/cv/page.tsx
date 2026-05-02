@@ -1314,7 +1314,12 @@ Retourne UNIQUEMENT le JSON.`}];
       const hg = parseInt(accentHex.slice(3,5),16);
       const hb = parseInt(accentHex.slice(5,7),16);
 
-      // 1. Capture the full CV at natural height — no squishing
+      // Wait for all web fonts to finish loading so pdf matches preview exactly
+      await document.fonts.ready;
+
+      // 1. Capture the visible preview element — WYSIWYG, fonts already rendered
+      //    onclone neutralises the CSS scale transform on the parent so html2canvas
+      //    sees the element at its natural 794px layout width.
       const src = await html2canvas(node, {
         scale: SCALE,
         useCORS: true,
@@ -1324,6 +1329,19 @@ Retourne UNIQUEMENT le JSON.`}];
         width: A4_W_PX,
         windowWidth: A4_W_PX,
         x: 0, y: 0, scrollX: 0, scrollY: 0,
+        onclone: (_doc: Document, el: HTMLElement) => {
+          // Strip CSS transform on every ancestor so the clone renders at true 794px
+          let p: HTMLElement | null = el.parentElement;
+          while (p) {
+            p.style.transform  = "none";
+            p.style.overflow   = "visible";
+            p.style.width      = "auto";
+            p = p.parentElement;
+          }
+          // Remove shadow/radius from the capture element itself
+          el.style.boxShadow   = "none";
+          el.style.borderRadius = "0";
+        },
       });
 
       // 2. Slice into A4 pages — capped to the user's chosen page count
@@ -2198,17 +2216,10 @@ Retourne UNIQUEMENT le JSON.`}];
                     </div>
                   </div>
 
-                  {/* Hidden full-scale CV for PDF capture — fixed off-screen, never interactive */}
-                  <div style={{ position:"fixed", left:"-9999px", top:0, width:794, pointerEvents:"none" }}>
-                    <div ref={printRef} id="cv-print" style={{ background:"white" }}>
-                      <CvMultiPage id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
-                    </div>
-                  </div>
-
-                  {/* Scaled visual preview */}
+                  {/* Scaled visual preview — also the PDF capture source (WYSIWYG) */}
                   <div style={{ width:"100%", display:"flex", justifyContent:"center" }}>
                     <div style={{ transformOrigin:"top center", transform:"scale(var(--cv-scale, 0.85))", width:794 }}>
-                      <div style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", borderRadius:2, overflow:"hidden" }}>
+                      <div ref={printRef} id="cv-print" style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", borderRadius:2, overflow:"hidden" }}>
                         <CvMultiPage id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
                       </div>
                     </div>
