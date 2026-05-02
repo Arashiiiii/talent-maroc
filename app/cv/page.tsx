@@ -804,6 +804,8 @@ export default function CVPage() {
   const [previewTpl,  setPreviewTpl]  = useState<number|null>(null);
 
   // ── EDITOR CUSTOMIZATION STATE ─────────────────────────────────────────
+  const [preferredPages, setPreferredPages] = useState<1|2>(1);
+  const preferredPagesRef = useRef<1|2>(1);
   const [editorAccent,  setEditorAccent]  = useState<string>("");  // "" = use template default
   const [editorFont,    setEditorFont]    = useState<string>("");  // "" = use template default
   const [hiddenSections,setHiddenSections]= useState<string[]>([]);
@@ -1039,6 +1041,28 @@ export default function CVPage() {
 - Maximise l'impact de chaque ligne`,
     };
 
+    const pagesTarget = preferredPagesRef.current;
+
+    const pageConstraints = pagesTarget === 1
+      ? `FORMAT CIBLE : 1 PAGE A4 — contenu dense qui remplit bien la page (environ 550-700 mots au total).
+Règles de contenu pour remplir la page sans déborder :
+- "profile" : 2-3 phrases percutantes (50-70 mots) — accroche, valeur ajoutée, ambition
+- "experiences" : 3-4 postes · 3-4 bullets chacun · 12-16 mots par bullet (verbe d'action + contexte + résultat)
+- "education" : 2-3 entrées pertinentes
+- "skills" : 10-14 mots-clés concis (2-4 mots chacun, pas de phrases)
+- "languages" : toutes les langues du candidat
+- "certifications" : 2-4 certifications pertinentes
+OBJECTIF : le CV doit remplir visuellement la page — ni trop vide, ni débordant.`
+      : `FORMAT CIBLE : 2 PAGES A4 — CV complet et développé qui remplit bien les deux pages (environ 1000-1300 mots au total).
+Règles de contenu pour remplir les deux pages :
+- "profile" : 3-4 phrases (70-100 mots) — expertise, impact, positionnement unique
+- "experiences" : 4-6 postes · 4-5 bullets chacun · 14-20 mots par bullet (contexte + action précise + résultat chiffré si disponible)
+- "education" : 2-4 entrées (toutes les formations pertinentes)
+- "skills" : 14-20 mots-clés (compétences techniques ET compétences transversales)
+- "languages" : toutes les langues avec niveau
+- "certifications" : toutes les certifications pertinentes (3-5)
+OBJECTIF : chaque section doit être substantielle et développée — les deux pages doivent être bien remplies.`;
+
     const systemPrompt = `Tu es un expert senior en rédaction de CV pour le marché marocain et international.
 Tu dois TOUJOURS répondre avec UNIQUEMENT un objet JSON valide, sans aucun texte avant ou après, sans markdown.
 
@@ -1057,26 +1081,7 @@ Le JSON doit suivre EXACTEMENT ce schéma (tous les champs requis) :
   "certifications": string[]
 }
 
-CONTRAINTE CRITIQUE — FORMAT PAGE A4 :
-Le CV doit respecter strictement le format A4. Applique les règles suivantes selon le profil :
-
-PROFIL JUNIOR / INTERMÉDIAIRE (moins de 8 ans d'expérience ou moins de 3 postes significatifs) → 1 PAGE MAXIMUM :
-- "profile" : 2 phrases max (40 mots max)
-- "experiences" : 3 postes max · 3 bullets max par poste · 12 mots max par bullet
-- "education" : 2 entrées max
-- "skills" : 8 mots-clés max (2-3 mots chacun)
-- "languages" : 3 entrées max
-- "certifications" : 2 entrées max
-
-PROFIL SENIOR / CADRE (8 ans+ d'expérience ou 4+ postes significatifs) → 2 PAGES MAXIMUM :
-- "profile" : 3 phrases max (60 mots max)
-- "experiences" : 5 postes max · 4 bullets max par poste · 15 mots max par bullet
-- "education" : 3 entrées max
-- "skills" : 12 mots-clés max
-- "languages" : 4 entrées max
-- "certifications" : 4 entrées max
-
-Dans tous les cas : chaque bullet commence par un verbe d'action fort. Sélectionne les informations les plus pertinentes si le CV source en contient davantage.
+${pageConstraints}
 
 RÈGLES ABSOLUES :
 1. Utilise UNIQUEMENT les informations du CV source. Ne génère RIEN de fictif.
@@ -1321,9 +1326,9 @@ Retourne UNIQUEMENT le JSON.`}];
         x: 0, y: 0, scrollX: 0, scrollY: 0,
       });
 
-      // 2. Slice into A4 pages — one slice per page, text stays readable
+      // 2. Slice into A4 pages — capped to the user's chosen page count
       const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
-      const totalPages = Math.ceil(src.height / DEV_H);
+      const totalPages = Math.min(Math.ceil(src.height / DEV_H), preferredPages);
       const candidateName = (editingCv || cvData)?.name || "";
 
       for (let page = 0; page < totalPages; page++) {
@@ -1995,6 +2000,28 @@ Retourne UNIQUEMENT le JSON.`}];
                     {/* TEMPLATE TAB */}
                     {editorTab==="template" && (
                       <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+
+                        {/* Page count selector */}
+                        <div style={{ background:"#f0fdf4", border:"1.5px solid #bbf7d0", borderRadius:10, padding:"12px 14px", marginBottom:4 }}>
+                          <div style={{ fontSize:11, fontWeight:700, color:"#15803d", marginBottom:8 }}>📄 Format du CV</div>
+                          <div style={{ display:"flex", gap:6, marginBottom:10 }}>
+                            {([1,2] as const).map(p => (
+                              <button key={p} onClick={()=>{ setPreferredPages(p); preferredPagesRef.current=p; }}
+                                style={{ flex:1, padding:"8px 4px", borderRadius:8, border:`1.5px solid ${preferredPages===p?"#16a34a":"#d1fae5"}`, background:preferredPages===p?"#16a34a":"white", color:preferredPages===p?"white":"#374151", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", transition:"all .15s" }}>
+                                {p} page{p>1?"s":""}
+                              </button>
+                            ))}
+                          </div>
+                          <div style={{ fontSize:10, color:"#6b7280", marginBottom:10, lineHeight:1.5 }}>
+                            {preferredPages===1 ? "Idéal pour profils juniors/intermédiaires. Contenu dense et concis." : "Recommandé pour cadres & profils seniors avec riche expérience."}
+                          </div>
+                          <button onClick={()=>runGeneration(mode)}
+                            disabled={generating}
+                            style={{ width:"100%", padding:"8px", borderRadius:8, border:"none", background:generating?"#d1d5db":"linear-gradient(135deg,#16a34a,#15803d)", color:"white", fontSize:12, fontWeight:700, cursor:generating?"not-allowed":"pointer", fontFamily:"inherit" }}>
+                            {generating ? "⏳ Génération…" : "↺ Régénérer en "+preferredPages+" page"+(preferredPages>1?"s":"")}
+                          </button>
+                        </div>
+
                         <div style={{ fontSize:11, fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:4 }}>Choisir un modèle</div>
                         {TEMPLATES.map(t => (
                           <button key={t.id} onClick={()=>setSelectedTpl(t.id)}
