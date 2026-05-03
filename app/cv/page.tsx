@@ -838,7 +838,8 @@ export default function CVPage() {
   const purchasedPlanRef  = useRef<Plan>(PLANS[0]); // ref so eventCallback sees latest
 
   // Generation
-  const [generating,  setGenerating]  = useState(false);
+  const [generating,  setGenerating]  = useState(false); // AI content generation
+  const [pdfBusy,     setPdfBusy]     = useState(false); // PDF export only
   const [genStep,     setGenStep]     = useState(0);
   const [cvData,      setCvData]      = useState<CVData|null>(null);
   const [genError,    setGenError]    = useState<string|null>(null);
@@ -1288,7 +1289,7 @@ Retourne UNIQUEMENT le JSON.`}];
     const node = printRef.current;
     if (!node) return;
     setGenError(null);
-    setGenerating(true);
+    setPdfBusy(true);
     try {
       // Load libs
       await Promise.all([
@@ -1298,6 +1299,10 @@ Retourne UNIQUEMENT le JSON.`}];
 
       const html2canvas = (window as any).html2canvas;
       const { jsPDF }   = (window as any).jspdf;
+
+      // Re-check after async lib load — printRef is only mounted when generating=false
+      const captureNode = printRef.current;
+      if (!captureNode) throw new Error("Aperçu introuvable. Veuillez réessayer.");
 
       const SCALE   = 2;
       const A4_W_PX = 794;
@@ -1332,7 +1337,7 @@ Retourne UNIQUEMENT le JSON.`}];
 
       let src: HTMLCanvasElement;
       try {
-        src = await html2canvas(node, {
+        src = await html2canvas(captureNode, {
           scale: SCALE,
           useCORS: true,
           allowTaint: true,
@@ -1395,7 +1400,7 @@ Retourne UNIQUEMENT le JSON.`}];
     } catch(err:any) {
       setGenError("Erreur PDF : " + err.message);
     } finally {
-      setGenerating(false);
+      setPdfBusy(false);
     }
   };
 
@@ -2040,8 +2045,8 @@ Retourne UNIQUEMENT le JSON.`}];
                             {preferredPages===1 ? "Idéal pour profils juniors/intermédiaires. Contenu dense et concis." : "Recommandé pour cadres & profils seniors avec riche expérience."}
                           </div>
                           <button onClick={()=>runGeneration(mode)}
-                            disabled={generating}
-                            style={{ width:"100%", padding:"8px", borderRadius:8, border:"none", background:generating?"#d1d5db":"linear-gradient(135deg,#16a34a,#15803d)", color:"white", fontSize:12, fontWeight:700, cursor:generating?"not-allowed":"pointer", fontFamily:"inherit" }}>
+                            disabled={generating || pdfBusy}
+                            style={{ width:"100%", padding:"8px", borderRadius:8, border:"none", background:(generating||pdfBusy)?"#d1d5db":"linear-gradient(135deg,#16a34a,#15803d)", color:"white", fontSize:12, fontWeight:700, cursor:(generating||pdfBusy)?"not-allowed":"pointer", fontFamily:"inherit" }}>
                             {generating ? "⏳ Génération…" : "↺ Régénérer en "+preferredPages+" page"+(preferredPages>1?"s":"")}
                           </button>
                         </div>
@@ -2196,9 +2201,9 @@ Retourne UNIQUEMENT le JSON.`}];
 
                   {/* Bottom actions */}
                   <div style={{ padding:"12px 14px", borderTop:"1.5px solid #ede9fe", display:"flex", gap:8 }}>
-                    <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");goStep(1);}} style={{ flex:1, fontSize:12, padding:"9px" }}>↺ Recommencer</button>
-                    <button className="btn-green" onClick={downloadPDF} disabled={generating} style={{ flex:1, fontSize:12, padding:"9px" }}>
-                      {generating ? "…" : "⬇ PDF"}
+                    <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");goStep(1);}} disabled={pdfBusy} style={{ flex:1, fontSize:12, padding:"9px", opacity:pdfBusy?0.5:1 }}>↺ Recommencer</button>
+                    <button className="btn-green" onClick={downloadPDF} disabled={pdfBusy || generating} style={{ flex:1, fontSize:12, padding:"9px" }}>
+                      {pdfBusy ? "⏳ PDF…" : "⬇ PDF"}
                     </button>
                   </div>
                 </div>
@@ -2216,8 +2221,8 @@ Retourne UNIQUEMENT le JSON.`}];
                         onClick={()=>{ const w=window.open("","_blank"); if(!w)return; w.document.write("<html><body style='margin:0'>"); w.document.write(printRef.current?.outerHTML||""); w.document.write("</body></html>"); w.document.close(); w.print(); }}>
                         🖨 Imprimer
                       </button>
-                      <button className="btn-green" onClick={downloadPDF} disabled={generating} style={{ fontSize:11, padding:"5px 14px" }}>
-                        {generating ? "…" : "⬇ Télécharger PDF"}
+                      <button className="btn-green" onClick={downloadPDF} disabled={pdfBusy || generating} style={{ fontSize:11, padding:"5px 14px" }}>
+                        {pdfBusy ? "⏳ Génération PDF…" : "⬇ Télécharger PDF"}
                       </button>
                     </div>
                   </div>
