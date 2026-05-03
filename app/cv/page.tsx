@@ -204,7 +204,7 @@ function TplModerne({ cv, scale=1, accent="#1e3a5f", font="'Inter',sans-serif", 
             <div key={i} style={{ marginBottom:16 }}>
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</div>
-                <div style={{ fontSize:10, color:"#6b7280", background:"#f3f4f6", padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8 }}>{e.period}</div>
+                <div style={{ fontSize:10, color:"#6b7280", background:"#f3f4f6", padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8, lineHeight:"1.4" }}>{e.period}</div>
               </div>
               <div style={{ fontSize:11, color:accent, fontWeight:600, marginBottom:4 }}>{e.company}</div>
               <ul style={{ paddingLeft:16, margin:0 }}>{e.bullets.map((b,j)=><li key={j} style={{ fontSize:11, lineHeight:1.7, color:"#374151" }}>{b}</li>)}</ul>
@@ -314,7 +314,7 @@ function TplExecutif({ cv, scale=1, accent="#d4af37", font="'Georgia',serif", hi
             {!hidden.includes('skills') && <>
               <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:accent, marginBottom:12 }}>Compétences Clés</div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 }}>
-                {cv.skills.map((s,i)=><span key={i} style={{ fontSize:10, color:accent, border:`1px solid ${accent}55`, padding:"3px 10px", borderRadius:2 }}>{s}</span>)}
+                {cv.skills.map((s,i)=><span key={i} style={{ fontSize:10, color:accent, border:`1px solid ${accent}55`, padding:"3px 10px", borderRadius:2, display:"inline-block", lineHeight:"1.4" }}>{s}</span>)}
               </div>
             </>}
             {!hidden.includes('languages') && <>
@@ -383,7 +383,7 @@ function TplCreatif({ cv, scale=1, accent="#7c3aed", font="'Inter',sans-serif", 
               <div style={{ fontSize:11, fontWeight:800, letterSpacing:"0.1em", textTransform:"uppercase", color:accent, marginBottom:12 }}>Compétences</div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:20 }}>
                 {cv.skills.map((s,i)=>(
-                  <span key={i} style={{ fontSize:10, background:`${accent}18`, color:accent, padding:"4px 10px", borderRadius:100, fontWeight:600 }}>{s}</span>
+                  <span key={i} style={{ fontSize:10, background:`${accent}18`, color:accent, padding:"4px 10px", borderRadius:100, fontWeight:600, display:"inline-block", lineHeight:"1.4" }}>{s}</span>
                 ))}
               </div>
             </>}
@@ -449,7 +449,7 @@ function TplAzurill({ cv, scale=1, accent="#0d9488", font="'Calibri','Segoe UI',
                 <span style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</span>
                 <span style={{ fontSize:12, color:accent, fontWeight:600 }}> · {e.company}</span>
               </div>
-              <span style={{ fontSize:11, color:"#94a3b8", flexShrink:0, marginLeft:12, background:"#f1f5f9", padding:"2px 8px", borderRadius:100 }}>{e.period}</span>
+              <span style={{ fontSize:11, color:"#94a3b8", flexShrink:0, marginLeft:12, background:"#f1f5f9", padding:"2px 8px", borderRadius:100, display:"inline-block", lineHeight:"1.4" }}>{e.period}</span>
             </div>
             <ul style={{ paddingLeft:16, margin:0 }}>
               {e.bullets.map((b,j)=><li key={j} style={{ fontSize:12, lineHeight:1.75, color:"#334155", marginBottom:2 }}>{b}</li>)}
@@ -476,7 +476,7 @@ function TplAzurill({ cv, scale=1, accent="#0d9488", font="'Calibri','Segoe UI',
         {!hidden.includes('skills') && <ASection title="Compétences" accent={accent}>
           <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
             {cv.skills.map((s,i)=>(
-              <span key={i} style={{ fontSize:10, background:`${accent}18`, color:accent, border:`1px solid ${accent}44`, padding:"3px 10px", borderRadius:100, fontWeight:600 }}>{s}</span>
+              <span key={i} style={{ fontSize:10, background:`${accent}18`, color:accent, border:`1px solid ${accent}44`, padding:"3px 10px", borderRadius:100, fontWeight:600, display:"inline-block", lineHeight:"1.4" }}>{s}</span>
             ))}
           </div>
         </ASection>}
@@ -484,7 +484,7 @@ function TplAzurill({ cv, scale=1, accent="#0d9488", font="'Calibri','Segoe UI',
           {cv.languages.map((l,i)=>(
             <div key={i} style={{ display:"flex", justifyContent:"space-between", fontSize:12, marginBottom:6, alignItems:"center" }}>
               <span style={{ fontWeight:600, color:"#0f172a" }}>{l.lang}</span>
-              <span style={{ fontSize:10, color:accent, background:`${accent}18`, padding:"2px 8px", borderRadius:100, border:`1px solid ${accent}44` }}>{l.level}</span>
+              <span style={{ fontSize:10, color:accent, background:`${accent}18`, padding:"2px 8px", borderRadius:100, border:`1px solid ${accent}44`, display:"inline-block", lineHeight:"1.4" }}>{l.level}</span>
             </div>
           ))}
           {!hidden.includes('certifications') && cv.certifications?.map((c,i)=>(
@@ -517,7 +517,7 @@ function TplBronzor({ cv, scale=1, accent="#6366f1", font="'Inter',sans-serif", 
             <div key={i} style={{ marginBottom:18, paddingLeft:12, borderLeft:`3px solid ${accent}33` }}>
               <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</div>
-                <div style={{ fontSize:10, color:accent, background:`${accent}18`, padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8, fontWeight:600 }}>{e.period}</div>
+                <div style={{ fontSize:10, color:accent, background:`${accent}18`, padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8, fontWeight:600, lineHeight:"1.4" }}>{e.period}</div>
               </div>
               <div style={{ fontSize:11, color:accent, fontWeight:600, marginBottom:5 }}>{e.company}</div>
               {e.bullets.map((b,j)=><div key={j} style={{ fontSize:11, color:"#475569", lineHeight:1.7, marginBottom:3, paddingLeft:8 }}>· {b}</div>)}
@@ -658,7 +658,7 @@ function TplLeafish({ cv, scale=1, accent="#16a34a", font="'Inter',sans-serif", 
                   <div style={{ position:"absolute", left:-24, top:4, width:12, height:12, borderRadius:"50%", background:accent, border:"2px solid white", boxShadow:`0 0 0 2px ${accent}` }}/>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:3 }}>
                     <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{e.role}</div>
-                    <div style={{ fontSize:10, color:"#6b7280", background:`${accent}18`, border:`1px solid ${accent}44`, padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8 }}>{e.period}</div>
+                    <div style={{ fontSize:10, color:"#6b7280", background:`${accent}18`, border:`1px solid ${accent}44`, padding:"2px 8px", borderRadius:100, flexShrink:0, marginLeft:8, lineHeight:"1.4" }}>{e.period}</div>
                   </div>
                   <div style={{ fontSize:11, color:accent, fontWeight:600, marginBottom:5 }}>{e.company}</div>
                   {e.bullets.map((b,j)=><div key={j} style={{ fontSize:11, color:"#374151", lineHeight:1.7, marginBottom:2 }}>→ {b}</div>)}
@@ -681,7 +681,7 @@ function TplLeafish({ cv, scale=1, accent="#16a34a", font="'Inter',sans-serif", 
             <div style={{ fontSize:9, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:accent, marginBottom:12 }}>Compétences</div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
               {cv.skills.map((s,i)=>(
-                <span key={i} style={{ fontSize:10, background:`${accent}18`, color:accent, border:`1px solid ${accent}44`, padding:"3px 9px", borderRadius:100, fontWeight:600 }}>{s}</span>
+                <span key={i} style={{ fontSize:10, background:`${accent}18`, color:accent, border:`1px solid ${accent}44`, padding:"3px 9px", borderRadius:100, fontWeight:600, display:"inline-block", lineHeight:"1.4" }}>{s}</span>
               ))}
             </div>
           </div>}
