@@ -1044,24 +1044,22 @@ export default function CVPage() {
     const pagesTarget = preferredPagesRef.current;
 
     const pageConstraints = pagesTarget === 1
-      ? `FORMAT CIBLE : 1 PAGE A4 — contenu dense qui remplit bien la page (environ 550-700 mots au total).
-Règles de contenu pour remplir la page sans déborder :
-- "profile" : 2-3 phrases percutantes (50-70 mots) — accroche, valeur ajoutée, ambition
-- "experiences" : 3-4 postes · 3-4 bullets chacun · 12-16 mots par bullet (verbe d'action + contexte + résultat)
-- "education" : 2-3 entrées pertinentes
-- "skills" : 10-14 mots-clés concis (2-4 mots chacun, pas de phrases)
-- "languages" : toutes les langues du candidat
-- "certifications" : 2-4 certifications pertinentes
-OBJECTIF : le CV doit remplir visuellement la page — ni trop vide, ni débordant.`
-      : `FORMAT CIBLE : 2 PAGES A4 — CV complet et développé qui remplit bien les deux pages (environ 1000-1300 mots au total).
-Règles de contenu pour remplir les deux pages :
-- "profile" : 3-4 phrases (70-100 mots) — expertise, impact, positionnement unique
-- "experiences" : 4-6 postes · 4-5 bullets chacun · 14-20 mots par bullet (contexte + action précise + résultat chiffré si disponible)
-- "education" : 2-4 entrées (toutes les formations pertinentes)
-- "skills" : 14-20 mots-clés (compétences techniques ET compétences transversales)
-- "languages" : toutes les langues avec niveau
-- "certifications" : toutes les certifications pertinentes (3-5)
-OBJECTIF : chaque section doit être substantielle et développée — les deux pages doivent être bien remplies.`;
+      ? `FORMAT : 1 PAGE A4 — respecte EXACTEMENT ces limites de nombre d'éléments :
+- "profile" : exactement 2 phrases (pas plus, pas moins)
+- "experiences" : exactement 3 entrées · exactement 3 bullets par entrée · chaque bullet = 1 phrase courte de 8-12 mots commençant par un verbe d'action
+- "education" : exactement 2 entrées
+- "skills" : exactement 10 éléments (mots-clés courts, 2-3 mots chacun)
+- "languages" : toutes les langues du candidat (3 max)
+- "certifications" : exactement 2 éléments (les plus pertinents)
+RÈGLE ABSOLUE : ne dépasse JAMAIS ces quantités. Si le CV source en contient davantage, sélectionne les plus importants.`
+      : `FORMAT : 2 PAGES A4 — respecte EXACTEMENT ces limites de nombre d'éléments :
+- "profile" : exactement 3 phrases
+- "experiences" : exactement 5 entrées · exactement 4 bullets par entrée · chaque bullet = 1 phrase de 12-16 mots avec verbe d'action + résultat concret
+- "education" : exactement 3 entrées
+- "skills" : exactement 16 éléments (mots-clés concis)
+- "languages" : toutes les langues du candidat (4 max)
+- "certifications" : exactement 4 éléments
+RÈGLE ABSOLUE : ne dépasse JAMAIS ces quantités. Développe le contenu de chaque bullet pour remplir les deux pages.`;
 
     const systemPrompt = `Tu es un expert senior en rédaction de CV pour le marché marocain et international.
 Tu dois TOUJOURS répondre avec UNIQUEMENT un objet JSON valide, sans aucun texte avant ou après, sans markdown.
@@ -1314,12 +1312,10 @@ Retourne UNIQUEMENT le JSON.`}];
       const hg = parseInt(accentHex.slice(3,5),16);
       const hb = parseInt(accentHex.slice(5,7),16);
 
-      // Wait for all web fonts to finish loading so pdf matches preview exactly
+      // Ensure all web fonts are loaded before capture so text renders identically to preview
       await document.fonts.ready;
 
-      // 1. Capture the visible preview element — WYSIWYG, fonts already rendered
-      //    onclone neutralises the CSS scale transform on the parent so html2canvas
-      //    sees the element at its natural 794px layout width.
+      // 1. Capture the hidden 794px div — no transforms, exact layout match
       const src = await html2canvas(node, {
         scale: SCALE,
         useCORS: true,
@@ -1329,19 +1325,6 @@ Retourne UNIQUEMENT le JSON.`}];
         width: A4_W_PX,
         windowWidth: A4_W_PX,
         x: 0, y: 0, scrollX: 0, scrollY: 0,
-        onclone: (_doc: Document, el: HTMLElement) => {
-          // Strip CSS transform on every ancestor so the clone renders at true 794px
-          let p: HTMLElement | null = el.parentElement;
-          while (p) {
-            p.style.transform  = "none";
-            p.style.overflow   = "visible";
-            p.style.width      = "auto";
-            p = p.parentElement;
-          }
-          // Remove shadow/radius from the capture element itself
-          el.style.boxShadow   = "none";
-          el.style.borderRadius = "0";
-        },
       });
 
       // 2. Slice into A4 pages — capped to the user's chosen page count
@@ -2216,10 +2199,17 @@ Retourne UNIQUEMENT le JSON.`}];
                     </div>
                   </div>
 
-                  {/* Scaled visual preview — also the PDF capture source (WYSIWYG) */}
+                  {/* Hidden full-res CV for PDF capture — no transforms, exact 794px layout */}
+                  <div style={{ position:"absolute", left:"-9999px", top:0, width:794, pointerEvents:"none", visibility:"hidden" }}>
+                    <div ref={printRef} id="cv-print" style={{ background:"white", width:794 }}>
+                      <CvMultiPage id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
+                    </div>
+                  </div>
+
+                  {/* Scaled visual preview */}
                   <div style={{ width:"100%", display:"flex", justifyContent:"center" }}>
                     <div style={{ transformOrigin:"top center", transform:"scale(var(--cv-scale, 0.85))", width:794 }}>
-                      <div ref={printRef} id="cv-print" style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", borderRadius:2, overflow:"hidden" }}>
+                      <div style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", borderRadius:2, overflow:"hidden" }}>
                         <CvMultiPage id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
                       </div>
                     </div>
