@@ -163,7 +163,7 @@ function TplClassique({ cv, scale=1, accent="#1a1a1a", font="'Georgia',serif", h
 function TplModerne({ cv, scale=1, accent="#1e3a5f", font="'Inter',sans-serif", hidden=[] }: TplProps) {
   return (
     // background gradient on parent ensures sidebar color fills full height regardless of content length
-    <div style={{ width:794, fontFamily:font, display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600, background:`linear-gradient(to right, ${accent} 240px, white 240px)` }}>
+    <div style={{ width:794, fontFamily:font, display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:1123, background:`linear-gradient(to right, ${accent} 240px, white 240px)` }}>
       {/* Sidebar */}
       <div style={{ width:240, padding:"28px 20px", flexShrink:0, boxSizing:"border-box" }}>
         {/* Avatar — photo if available, else initial */}
@@ -275,7 +275,7 @@ function TplMinimal({ cv, scale=1, accent="#0ea5e9", font="'Helvetica Neue',Helv
 // ── 4. EXÉCUTIF ───────────────────────────────────────────────────────────
 function TplExecutif({ cv, scale=1, accent="#d4af37", font="'Georgia',serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"#0c0a09", fontFamily:font, transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600 }}>
+    <div style={{ width:794, background:"#0c0a09", fontFamily:font, transform:`scale(${scale})`, transformOrigin:"top left", minHeight:1123 }}>
       {/* Gold header */}
       <div style={{ background:"linear-gradient(135deg,#1c1410,#2d1f0e)", padding:"44px 56px 32px", borderBottom:`2px solid ${accent}` }}>
         <div style={{ fontSize:30, fontWeight:700, color:"#f5f0e8", letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:6 }}>{cv.name}</div>
@@ -499,7 +499,7 @@ function TplAzurill({ cv, scale=1, accent="#0d9488", font="'Calibri','Segoe UI',
 // ── 7. BRONZOR — right sidebar layout ─────────────────────────────────────
 function TplBronzor({ cv, scale=1, accent="#6366f1", font="'Inter',sans-serif", hidden=[] }: TplProps) {
   return (
-    <div style={{ width:794, background:"white", fontFamily:font, display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:600 }}>
+    <div style={{ width:794, background:"white", fontFamily:font, display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", minHeight:1123 }}>
       {/* Main content — left */}
       <div style={{ flex:1, padding:"40px 36px 40px 44px", borderRight:"1px solid #e2e8f0" }}>
         {/* Name block */}
@@ -1044,22 +1044,26 @@ export default function CVPage() {
     const pagesTarget = preferredPagesRef.current;
 
     const pageConstraints = pagesTarget === 1
-      ? `FORMAT : 1 PAGE A4 — respecte EXACTEMENT ces limites de nombre d'éléments :
-- "profile" : exactement 2 phrases (pas plus, pas moins)
-- "experiences" : exactement 3 entrées · exactement 3 bullets par entrée · chaque bullet = 1 phrase courte de 8-12 mots commençant par un verbe d'action
-- "education" : exactement 2 entrées
-- "skills" : exactement 10 éléments (mots-clés courts, 2-3 mots chacun)
-- "languages" : toutes les langues du candidat (3 max)
-- "certifications" : exactement 2 éléments (les plus pertinents)
-RÈGLE ABSOLUE : ne dépasse JAMAIS ces quantités. Si le CV source en contient davantage, sélectionne les plus importants.`
-      : `FORMAT : 2 PAGES A4 — respecte EXACTEMENT ces limites de nombre d'éléments :
-- "profile" : exactement 3 phrases
-- "experiences" : exactement 5 entrées · exactement 4 bullets par entrée · chaque bullet = 1 phrase de 12-16 mots avec verbe d'action + résultat concret
-- "education" : exactement 3 entrées
-- "skills" : exactement 16 éléments (mots-clés concis)
-- "languages" : toutes les langues du candidat (4 max)
-- "certifications" : exactement 4 éléments
-RÈGLE ABSOLUE : ne dépasse JAMAIS ces quantités. Développe le contenu de chaque bullet pour remplir les deux pages.`;
+      ? `FORMAT CIBLE : 1 PAGE A4
+Génère un CV bien rempli qui occupe la totalité d'une page A4 standard.
+Respecte ces fourchettes pour équilibrer toutes les sections :
+- "profile" : 2-3 phrases percutantes (valeur ajoutée + expertise clé)
+- "experiences" : 3-4 postes · 3-4 bullets par poste · chaque bullet : verbe d'action + résultat concret en 10-14 mots
+- "education" : 2-3 entrées (formations les plus pertinentes)
+- "skills" : 12-14 mots-clés courts (compétences techniques ET outils, 2-3 mots chacun)
+- "languages" : toutes les langues du candidat (max 4)
+- "certifications" : 2-3 éléments pertinents
+IMPORTANT : utilise la fourchette HAUTE si le profil est riche. Le CV ne doit pas laisser de blanc.`
+      : `FORMAT CIBLE : 2 PAGES A4
+Génère un CV complet et développé qui remplit bien les deux pages A4.
+Respecte ces fourchettes :
+- "profile" : 3-4 phrases (expertise + impact + positionnement)
+- "experiences" : 4-6 postes · 4-5 bullets par poste · chaque bullet : contexte + action + résultat chiffré en 14-18 mots
+- "education" : 3-4 entrées
+- "skills" : 18-22 mots-clés (techniques + transversaux + outils)
+- "languages" : toutes les langues (max 5)
+- "certifications" : 4-5 éléments
+IMPORTANT : développe chaque bullet avec contexte et impact mesurable. Les deux pages doivent être pleines.`;
 
     const systemPrompt = `Tu es un expert senior en rédaction de CV pour le marché marocain et international.
 Tu dois TOUJOURS répondre avec UNIQUEMENT un objet JSON valide, sans aucun texte avant ou après, sans markdown.
@@ -2199,8 +2203,8 @@ Retourne UNIQUEMENT le JSON.`}];
                     </div>
                   </div>
 
-                  {/* Hidden full-res CV for PDF capture — no transforms, exact 794px layout */}
-                  <div style={{ position:"absolute", left:"-9999px", top:0, width:794, pointerEvents:"none", visibility:"hidden" }}>
+                  {/* Hidden full-res CV for PDF capture — fixed off-screen, no transforms */}
+                  <div style={{ position:"fixed", left:"-9999px", top:0, width:794, pointerEvents:"none", zIndex:-1 }}>
                     <div ref={printRef} id="cv-print" style={{ background:"white", width:794 }}>
                       <CvMultiPage id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
                     </div>
