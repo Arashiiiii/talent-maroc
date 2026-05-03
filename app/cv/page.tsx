@@ -842,7 +842,8 @@ export default function CVPage() {
   const [genStep,     setGenStep]     = useState(0);
   const [cvData,      setCvData]      = useState<CVData|null>(null);
   const [genError,    setGenError]    = useState<string|null>(null);
-  const printRef = useRef<HTMLDivElement>(null);
+  const printRef      = useRef<HTMLDivElement>(null); // inner CV content
+  const scaleWrapRef  = useRef<HTMLDivElement>(null); // parent with CSS scale transform
 
   // Bonus content generated for Pro/Cadre plans
   const [coverLetter,       setCoverLetter]       = useState<string|null>(null);
@@ -1316,20 +1317,37 @@ Retourne UNIQUEMENT le JSON.`}];
       const hg = parseInt(accentHex.slice(3,5),16);
       const hb = parseInt(accentHex.slice(5,7),16);
 
-      // Ensure all web fonts are loaded before capture so text renders identically to preview
+      // Ensure all web fonts are loaded before capture
       await document.fonts.ready;
 
-      // 1. Capture the hidden 794px div — no transforms, exact layout match
-      const src = await html2canvas(node, {
-        scale: SCALE,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-        width: A4_W_PX,
-        windowWidth: A4_W_PX,
-        x: 0, y: 0, scrollX: 0, scrollY: 0,
-      });
+      // 1. Temporarily remove the CSS scale transform so html2canvas sees the
+      //    element at its true 794px layout size, then restore immediately after.
+      const wrapper = scaleWrapRef.current;
+      const prevTransform = wrapper?.style.transform ?? "";
+      const prevOrigin    = wrapper?.style.transformOrigin ?? "";
+      if (wrapper) {
+        wrapper.style.transform       = "none";
+        wrapper.style.transformOrigin = "top left";
+      }
+
+      let src: HTMLCanvasElement;
+      try {
+        src = await html2canvas(node, {
+          scale: SCALE,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+          width: A4_W_PX,
+          windowWidth: A4_W_PX,
+        });
+      } finally {
+        // Always restore the transform, even if html2canvas throws
+        if (wrapper) {
+          wrapper.style.transform       = prevTransform;
+          wrapper.style.transformOrigin = prevOrigin;
+        }
+      }
 
       // 2. Slice into A4 pages — capped to the user's chosen page count
       const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
@@ -1427,6 +1445,7 @@ Retourne UNIQUEMENT le JSON.`}];
         @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
         /* Live editor layout */
         .cv-editor-wrap { --cv-scale: 0.82; }
@@ -2203,19 +2222,37 @@ Retourne UNIQUEMENT le JSON.`}];
                     </div>
                   </div>
 
-                  {/* Hidden full-res CV for PDF capture — fixed off-screen, no transforms */}
-                  <div style={{ position:"fixed", left:"-9999px", top:0, width:794, pointerEvents:"none", zIndex:-1 }}>
-                    <div ref={printRef} id="cv-print" style={{ background:"white", width:794 }}>
-                      <CvMultiPage id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
-                    </div>
-                  </div>
-
-                  {/* Scaled visual preview */}
+                  {/* Preview — scaleWrapRef on the transform wrapper, printRef on the inner content */}
                   <div style={{ width:"100%", display:"flex", justifyContent:"center" }}>
-                    <div style={{ transformOrigin:"top center", transform:"scale(var(--cv-scale, 0.85))", width:794 }}>
-                      <div style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", borderRadius:2, overflow:"hidden" }}>
-                        <CvMultiPage id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
-                      </div>
+                    <div ref={scaleWrapRef} style={{ transformOrigin:"top center", transform:"scale(var(--cv-scale, 0.85))", width:794 }}>
+                      {generating ? (
+                        /* Regeneration skeleton */
+                        <div style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", borderRadius:2, width:794, minHeight:1000, padding:"48px 52px", boxSizing:"border-box", display:"flex", flexDirection:"column", gap:20, position:"relative" }}>
+                          <div style={{ textAlign:"center", paddingBottom:24, borderBottom:"2px solid #f0f0f0", display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
+                            <div style={{ width:200, height:22, borderRadius:6, background:"linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%)", backgroundSize:"400% 100%", animation:"shimmer 1.4s infinite" }}/>
+                            <div style={{ width:140, height:14, borderRadius:4, background:"linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%)", backgroundSize:"400% 100%", animation:"shimmer 1.4s infinite .1s" }}/>
+                            <div style={{ width:260, height:11, borderRadius:4, background:"linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%)", backgroundSize:"400% 100%", animation:"shimmer 1.4s infinite .2s" }}/>
+                          </div>
+                          {[72, 55, 80, 55, 65].map((w, i) => (
+                            <div key={i} style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                              <div style={{ width:100, height:12, borderRadius:3, background:"linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%)", backgroundSize:"400% 100%", animation:`shimmer 1.4s infinite ${i*0.1}s` }}/>
+                              {[w, w-15, w-8].map((bw, j) => (
+                                <div key={j} style={{ width:`${bw}%`, height:10, borderRadius:3, background:"linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%)", backgroundSize:"400% 100%", animation:`shimmer 1.4s infinite ${(i+j)*0.08}s` }}/>
+                              ))}
+                            </div>
+                          ))}
+                          <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", display:"flex", flexDirection:"column", alignItems:"center", gap:12, pointerEvents:"none" }}>
+                            <div style={{ width:44, height:44, border:"3px solid #ede9fe", borderTopColor:"#7c3aed", borderRadius:"50%", animation:"spin .8s linear infinite" }}/>
+                            <div style={{ fontSize:13, fontWeight:700, color:"#7c3aed", background:"white", padding:"6px 16px", borderRadius:100, boxShadow:"0 2px 12px rgba(124,58,237,.15)", whiteSpace:"nowrap" }}>
+                              Génération en cours…
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div ref={printRef} id="cv-print" style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", borderRadius:2, overflow:"hidden" }}>
+                          <CvMultiPage id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
+                        </div>
+                      )}
                     </div>
                   </div>
 
