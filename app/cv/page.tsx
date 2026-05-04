@@ -6,12 +6,12 @@ import { initializePaddle, type Paddle } from "@paddle/paddle-js";
 // 🔑 REPLACE these with your real values from paddle.com
 // While testing:  PADDLE_ENV = "sandbox"  +  use your sandbox token + sandbox price IDs
 // When live:      PADDLE_ENV = "production" + use your live token + live price IDs
-const PADDLE_CLIENT_TOKEN = "test_f6beac788c5a1289b346269ad2a";  // from Paddle → Developer Tools → Authentication
-const PADDLE_ENV = "sandbox" as "sandbox" | "production";       // change to "production" when going live
+const PADDLE_CLIENT_TOKEN = "live_f3115e62ade60f191a87a80c6a4";
+const PADDLE_ENV = "production" as "sandbox" | "production";
 const PADDLE_PRICE_IDS    = {
-  starter:       "pri_01kmgxck2ancmk83gjky609g1r",
-  professionnel: "pri_01kmgx9tx3xhdn8gadp5sqqdzt",
-  cadre:         "pri_01kmgx4gba4kvpn78wr2ds9qwb",
+  starter:       "pri_01kqrd6abmbwq2y9ywdyvwdkgz",
+  professionnel: "pri_01kqrd3s88eswmr2aawmp4zq92",
+  cadre:         "pri_01kqrd14q4ms58e9qcjf9xtkhr",
 };
 
 // ── TYPES ──────────────────────────────────────────────────────────────────

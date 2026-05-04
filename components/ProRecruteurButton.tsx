@@ -2,9 +2,9 @@
 import { useEffect, useState } from "react";
 import { initializePaddle, type Paddle } from "@paddle/paddle-js";
 
-const PADDLE_CLIENT_TOKEN = "test_f6beac788c5a1289b346269ad2a";
-const PADDLE_ENV          = "sandbox" as "sandbox" | "production";
-const PRO_RECRUTEUR_PRICE = "pri_01kqf9f7gxfhyt04a1prvaq0af";
+const PADDLE_CLIENT_TOKEN = "live_f3115e62ade60f191a87a80c6a4";
+const PADDLE_ENV          = "production" as "sandbox" | "production";
+const PRO_RECRUTEUR_PRICE = "pri_01kqrcy19j3ykdrky4n84jpdqh";
 
 export default function ProRecruteurButton() {
   const [paddle,  setPaddle]  = useState<Paddle | undefined>(undefined);
