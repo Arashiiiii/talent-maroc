@@ -191,7 +191,8 @@ export default function DashboardPage() {
           pendingToolRef.current = null;
         }
       }
-    }).then(p => { if (p) setPaddle(p); });
+    }).then(p => { if (p) setPaddle(p); })
+      .catch(err => { console.warn("Paddle init failed:", err); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

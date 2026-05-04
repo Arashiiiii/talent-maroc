@@ -881,6 +881,8 @@ export default function CVPage() {
       },
     }).then((p) => {
       if (p) setPaddle(p);
+    }).catch((err) => {
+      console.warn("Paddle init failed — vérifiez que le domaine est autorisé dans le dashboard Paddle :", err);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
