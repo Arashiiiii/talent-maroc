@@ -1306,12 +1306,14 @@ Retourne UNIQUEMENT le JSON.`}];
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=794, initial-scale=1">
   ${fontLinks}
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: white; width: 210mm; }
+    html { width: 794px; background: white; }
     body {
+      width: 794px;
+      background: white;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
       color-adjust: exact !important;
@@ -1320,11 +1322,15 @@ Retourne UNIQUEMENT le JSON.`}];
       size: 210mm 297mm;
       margin: 0;
     }
+    @media screen {
+      /* On mobile screen: scale the 794px CV down to fit the viewport */
+      html { width: 100vw; overflow-x: hidden; }
+      body { width: 794px; transform-origin: top left; transform: scale(min(1, calc(100vw / 794px))); }
+    }
     @media print {
-      html, body { width: 210mm; }
+      html, body { width: 794px; transform: none !important; }
       .cv-root { page-break-inside: auto; }
     }
-    /* Reset any editor-only styles */
     .cv-root { width: 794px; }
   </style>
 </head>
@@ -1333,6 +1339,18 @@ Retourne UNIQUEMENT le JSON.`}];
     ${node.outerHTML}
   </div>
   <script>
+    // Scale body to fit narrow screens while keeping print at full 794px
+    function applyScale() {
+      var vw = window.innerWidth;
+      if (vw < 794) {
+        document.body.style.transform = 'scale(' + (vw / 794) + ')';
+        document.body.style.transformOrigin = 'top left';
+        document.documentElement.style.height = (document.body.scrollHeight * vw / 794) + 'px';
+      }
+    }
+    applyScale();
+    window.addEventListener('resize', applyScale);
+
     document.fonts.ready.then(function () {
       setTimeout(function () { window.print(); }, 400);
     });
