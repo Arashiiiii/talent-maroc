@@ -1284,128 +1284,60 @@ Retourne UNIQUEMENT le JSON.`}];
     if (triggerMode === "upload") setUploadPaywall(false);
   };
 
-  // ── DOWNLOAD PDF — multi-page aware, no print dialog ─────────────────────
-  const downloadPDF = async () => {
+  // ── PRINT TO PDF — opens a clean print window, browser renders natively ──
+  const downloadPDF = () => {
     const node = printRef.current;
     if (!node) return;
     setGenError(null);
-    setPdfBusy(true);
-    try {
-      // Load libs
-      await Promise.all([
-        new Promise<void>((res,rej)=>{ if((window as any).html2canvas){res();return;} const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";s.onload=()=>res();s.onerror=()=>rej(new Error("html2canvas CDN failed"));document.head.appendChild(s); }),
-        new Promise<void>((res,rej)=>{ if((window as any).jspdf){res();return;} const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";s.onload=()=>res();s.onerror=()=>rej(new Error("jsPDF CDN failed"));document.head.appendChild(s); }),
-      ]);
 
-      const html2canvas = (window as any).html2canvas;
-      const { jsPDF }   = (window as any).jspdf;
-
-      // Re-check after async lib load — printRef is only mounted when generating=false
-      const captureNode = printRef.current;
-      if (!captureNode) throw new Error("Aperçu introuvable. Veuillez réessayer.");
-
-      const SCALE   = 2;
-      const A4_W_PX = 794;
-      const A4_H_PX = 1123; // A4 at 96 dpi
-      const DEV_W   = A4_W_PX * SCALE;
-      const DEV_H   = A4_H_PX * SCALE;
-
-      // Default accent per template id (matches each Tpl component default)
-      const TPL_ACCENTS: Record<number, string> = {
-        1:"#1a1a1a", 2:"#1e3a5f", 3:"#0ea5e9", 4:"#d4af37",
-        5:"#7c3aed", 6:"#0d9488", 7:"#6366f1", 8:"#1e293b", 9:"#16a34a",
-      };
-      const accentHex = editorAccent || TPL_ACCENTS[selectedTpl] || "#1e1147";
-
-      // Parse hex → rgb for canvas
-      const hr = parseInt(accentHex.slice(1,3),16);
-      const hg = parseInt(accentHex.slice(3,5),16);
-      const hb = parseInt(accentHex.slice(5,7),16);
-
-      // Ensure all web fonts are loaded before capture
-      await document.fonts.ready;
-
-      // 1. Temporarily remove the CSS scale transform so html2canvas sees the
-      //    element at its true 794px layout size, then restore immediately after.
-      const wrapper = scaleWrapRef.current;
-      const prevTransform = wrapper?.style.transform ?? "";
-      const prevOrigin    = wrapper?.style.transformOrigin ?? "";
-      if (wrapper) {
-        wrapper.style.transform       = "none";
-        wrapper.style.transformOrigin = "top left";
-      }
-
-      // Wait two animation frames so the browser fully repaints at the new (unscaled)
-      // layout before html2canvas reads element positions and text metrics.
-      await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-      let src: HTMLCanvasElement;
-      try {
-        src = await html2canvas(captureNode, {
-          scale: SCALE,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: "#ffffff",
-          logging: false,
-          width: A4_W_PX,
-          windowWidth: A4_W_PX,
-        });
-      } finally {
-        // Always restore the transform, even if html2canvas throws
-        if (wrapper) {
-          wrapper.style.transform       = prevTransform;
-          wrapper.style.transformOrigin = prevOrigin;
-        }
-      }
-
-      // 2. Slice into A4 pages — capped to the user's chosen page count
-      const pdf = new jsPDF({ orientation:"portrait", unit:"mm", format:"a4" });
-      const totalPages = Math.min(Math.ceil(src.height / DEV_H), preferredPages);
-      const candidateName = (editingCv || cvData)?.name || "";
-
-      for (let page = 0; page < totalPages; page++) {
-        if (page > 0) pdf.addPage();
-        const srcY   = page * DEV_H;
-        const sliceH = Math.min(DEV_H, src.height - srcY);
-
-        const pageCanvas = document.createElement("canvas");
-        pageCanvas.width  = DEV_W;
-        pageCanvas.height = DEV_H;
-        const pCtx = pageCanvas.getContext("2d")!;
-        pCtx.fillStyle = "#ffffff";
-        pCtx.fillRect(0, 0, DEV_W, DEV_H);
-        pCtx.drawImage(src, 0, srcY, DEV_W, sliceH, 0, 0, DEV_W, sliceH);
-
-        // Page 2+ — draw a thin accent bar at the top matching the template color
-        if (page > 0) {
-          const barH = 10 * SCALE; // 10px @2x
-          pCtx.fillStyle = accentHex;
-          pCtx.fillRect(0, 0, DEV_W, barH);
-          // Candidate name on the right in white, small
-          pCtx.fillStyle = `rgba(${hr},${hg},${hb},0.12)`;
-          pCtx.fillRect(0, 0, DEV_W, barH + 28 * SCALE);
-          pCtx.fillStyle = accentHex;
-          pCtx.fillRect(0, 0, DEV_W, barH);
-          pCtx.font = `${11 * SCALE}px sans-serif`;
-          pCtx.fillStyle = "#ffffff";
-          pCtx.textAlign = "right";
-          pCtx.fillText(candidateName, DEV_W - 16 * SCALE, barH - 5 * SCALE);
-          pCtx.textAlign = "left";
-        }
-
-        pdf.addImage(pageCanvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, 210, 297);
-      }
-
-      const filename = (cvData?.name || "CV")
-        .replace(/[^a-zA-Z0-9À-ɏ\s-]/g, "")
-        .trim().replace(/\s+/g, "_");
-      pdf.save(`${filename}_TalentMaroc.pdf`);
-
-    } catch(err:any) {
-      setGenError("Erreur PDF : " + err.message);
-    } finally {
-      setPdfBusy(false);
+    const w = window.open("", "_blank", "width=900,height=700");
+    if (!w) {
+      setGenError("Autorisez les popups dans votre navigateur pour télécharger le PDF.");
+      return;
     }
+
+    // Collect all Google Fonts link tags from the current page
+    const fontLinks = Array.from(document.querySelectorAll('link[href*="fonts.googleapis"]'))
+      .map(l => l.outerHTML).join("\n");
+
+    w.document.write(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  ${fontLinks}
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: white; width: 210mm; }
+    body {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    @page {
+      size: 210mm 297mm;
+      margin: 0;
+    }
+    @media print {
+      html, body { width: 210mm; }
+      .cv-root { page-break-inside: auto; }
+    }
+    /* Reset any editor-only styles */
+    .cv-root { width: 794px; }
+  </style>
+</head>
+<body>
+  <div class="cv-root">
+    ${node.outerHTML}
+  </div>
+  <script>
+    document.fonts.ready.then(function () {
+      setTimeout(function () { window.print(); }, 400);
+    });
+  </script>
+</body>
+</html>`);
+    w.document.close();
   };
 
   const goStep = (n: Step) => { setStep(n); window.scrollTo({top:0,behavior:"smooth"}); };
@@ -2206,8 +2138,8 @@ Retourne UNIQUEMENT le JSON.`}];
                   {/* Bottom actions */}
                   <div style={{ padding:"12px 14px", borderTop:"1.5px solid #ede9fe", display:"flex", gap:8 }}>
                     <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");goStep(1);}} disabled={pdfBusy} style={{ flex:1, fontSize:12, padding:"9px", opacity:pdfBusy?0.5:1 }}>↺ Recommencer</button>
-                    <button className="btn-green" onClick={downloadPDF} disabled={pdfBusy || generating} style={{ flex:1, fontSize:12, padding:"9px" }}>
-                      {pdfBusy ? "⏳ PDF…" : "⬇ PDF"}
+                    <button className="btn-green" onClick={downloadPDF} disabled={generating} style={{ flex:1, fontSize:12, padding:"9px" }}>
+                      🖨 PDF
                     </button>
                   </div>
                 </div>
@@ -2225,8 +2157,8 @@ Retourne UNIQUEMENT le JSON.`}];
                         onClick={()=>{ const w=window.open("","_blank"); if(!w)return; w.document.write("<html><body style='margin:0'>"); w.document.write(printRef.current?.outerHTML||""); w.document.write("</body></html>"); w.document.close(); w.print(); }}>
                         🖨 Imprimer
                       </button>
-                      <button className="btn-green" onClick={downloadPDF} disabled={pdfBusy || generating} style={{ fontSize:11, padding:"5px 14px" }}>
-                        {pdfBusy ? "⏳ Génération PDF…" : "⬇ Télécharger PDF"}
+                      <button className="btn-green" onClick={downloadPDF} disabled={generating} style={{ fontSize:11, padding:"5px 14px" }}>
+                        🖨 Télécharger PDF
                       </button>
                     </div>
                   </div>
