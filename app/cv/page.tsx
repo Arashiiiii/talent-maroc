@@ -834,6 +834,7 @@ export default function CVPage() {
   const [purchasedPlan,  setPurchasedPlan]  = useState<Plan>(PLANS[0]);
   const purchasedPlanRef  = useRef<Plan>(PLANS[0]);
   const dodoPaymentIdRef  = useRef<string|null>(null);
+  const dodoPaymentLinkRef = useRef<string|null>(null);
   const dodoIntervalRef   = useRef<ReturnType<typeof setInterval>|null>(null);
 
   // Generation
@@ -884,6 +885,15 @@ export default function CVPage() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Open Dodo inline checkout AFTER the modal div is actually in the DOM
+  useEffect(() => {
+    if (dodoModal && dodoPaymentLinkRef.current) {
+      const url = dodoPaymentLinkRef.current;
+      dodoPaymentLinkRef.current = null; // clear so it doesn't re-trigger
+      DodoPayments.Checkout.open({ checkoutUrl: url, elementId: "dodo-cv-checkout" });
+    }
+  }, [dodoModal]);
 
   // Handle ?match= params from job detail page — pre-fill form with job context
   useEffect(()=>{
@@ -1254,12 +1264,9 @@ Retourne UNIQUEMENT le JSON.`}];
       });
       if (!res.ok) throw new Error("Impossible de créer la session de paiement.");
       const { paymentLink, paymentId } = await res.json();
-      dodoPaymentIdRef.current = paymentId;
+      dodoPaymentIdRef.current  = paymentId;
+      dodoPaymentLinkRef.current = paymentLink; // useEffect will open checkout after div mounts
       setDodoModal(true);
-      // Open checkout inside the div once it's mounted
-      setTimeout(() => {
-        DodoPayments.Checkout.open({ checkoutUrl: paymentLink, elementId: "dodo-cv-checkout" });
-      }, 150);
     } catch (err: any) {
       setDodoError(err.message);
     } finally {
@@ -2305,14 +2312,14 @@ Retourne UNIQUEMENT le JSON.`}];
                     <button onClick={()=>{ setDodoModal(false); DodoPayments.Checkout.close(); }} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#9ca3af", lineHeight:1 }}>×</button>
                   )}
                 </div>
-                {dodoPolling ? (
+                {/* Always in DOM — DodoPayments needs a stable container */}
+                <div id="dodo-cv-checkout" style={{ flex:1, display: dodoPolling ? "none" : "block", minHeight: dodoPolling ? 0 : 420 }}/>
+                {dodoPolling && (
                   <div style={{ padding:48, textAlign:"center" }}>
                     <div style={{ width:44, height:44, border:"3px solid #ede9fe", borderTopColor:"#7c3aed", borderRadius:"50%", animation:"spin .8s linear infinite", margin:"0 auto 18px" }}/>
                     <div style={{ fontSize:14, fontWeight:700, color:"#7c3aed" }}>Confirmation du paiement…</div>
                     <div style={{ fontSize:12, color:"#9ca3af", marginTop:8 }}>Nous confirmons votre paiement, veuillez patienter.</div>
                   </div>
-                ) : (
-                  <div id="dodo-cv-checkout" style={{ minHeight:420, flex:1 }}/>
                 )}
                 {dodoError && <div style={{ padding:"12px 20px", background:"#fef2f2", color:"#dc2626", fontSize:13, borderTop:"1px solid #fecaca" }}>⚠ {dodoError}</div>}
               </div>

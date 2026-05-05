@@ -106,8 +106,9 @@ export default function DashboardPage() {
   const [dodoLoading,  setDodoLoading]  = useState(false);
   const [dodoPolling,  setDodoPolling]  = useState(false);
   const [dodoError,    setDodoError]    = useState<string|null>(null);
-  const dodoPaymentIdRef  = useRef<string|null>(null);
-  const dodoIntervalRef   = useRef<ReturnType<typeof setInterval>|null>(null);
+  const dodoPaymentIdRef   = useRef<string|null>(null);
+  const dodoPaymentLinkRef = useRef<string|null>(null);
+  const dodoIntervalRef    = useRef<ReturnType<typeof setInterval>|null>(null);
   const pendingToolRef     = useRef<"cover_letter"|"linkedin"|null>(null);
   const runCoverLetterRef  = useRef<((paid?: boolean) => Promise<void>) | null>(null);
   const runLinkedinRef     = useRef<((paid?: boolean) => Promise<void>) | null>(null);
@@ -193,6 +194,16 @@ export default function DashboardPage() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Open Dodo checkout after loading spinner disappears and div is in the DOM
+  useEffect(() => {
+    if (!dodoLoading && dodoPaymentLinkRef.current && !dodoPolling) {
+      const url = dodoPaymentLinkRef.current;
+      dodoPaymentLinkRef.current = null;
+      DodoPayments.Checkout.open({ checkoutUrl: url, elementId: "dodo-ai-checkout" });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dodoLoading]);
 
   // ── AI TOOL GATE ───────────────────────────────────────────────────────
   // Returns true if the user can run the tool (free or already paid).
@@ -300,10 +311,8 @@ export default function DashboardPage() {
       });
       if (!res.ok) throw new Error("Session de paiement impossible.");
       const { paymentLink, paymentId } = await res.json();
-      dodoPaymentIdRef.current = paymentId;
-      setTimeout(() => {
-        DodoPayments.Checkout.open({ checkoutUrl: paymentLink, elementId: "dodo-ai-checkout" });
-      }, 150);
+      dodoPaymentIdRef.current   = paymentId;
+      dodoPaymentLinkRef.current = paymentLink; // useEffect opens after loading spinner disappears
     } catch (err: any) {
       setDodoError(err.message);
     } finally {
@@ -1020,8 +1029,8 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
-              {/* Dodo inline checkout container */}
-              {!dodoPolling && <div id="dodo-ai-checkout" style={{ minHeight:dodoLoading?0:380, marginBottom:10 }}/>}
+              {/* Always in DOM — DodoPayments needs a stable container */}
+              <div id="dodo-ai-checkout" style={{ minHeight: (dodoLoading || dodoPolling) ? 0 : 380, marginBottom:10, display: (dodoLoading || dodoPolling) ? "none" : "block" }}/>
               {dodoPolling && (
                 <div style={{ textAlign:"center", padding:"32px 0", marginBottom:10 }}>
                   <div style={{ width:36, height:36, border:"3px solid #ede9fe", borderTopColor:"#7c3aed", borderRadius:"50%", animation:"spin .8s linear infinite", margin:"0 auto 12px" }}/>
