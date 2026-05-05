@@ -3,6 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 const DODO_BASE = "https://live.dodopayments.com";
 
 export async function POST(req: NextRequest) {
+  if (!process.env.DODO_API_KEY) {
+    console.error("DODO_API_KEY is not set in environment variables");
+    return NextResponse.json(
+      { error: "Configuration paiement manquante (DODO_API_KEY)" },
+      { status: 500 }
+    );
+  }
+
   try {
     const { productId, customerEmail, customerName } = await req.json();
 
@@ -29,13 +37,26 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(body),
     });
 
+    const responseText = await res.text();
+
     if (!res.ok) {
-      const err = await res.text();
-      console.error("DodoPayments create error:", err);
-      return NextResponse.json({ error: "Échec de la création de session" }, { status: 502 });
+      console.error("DodoPayments API error:", res.status, responseText);
+      return NextResponse.json(
+        { error: `DodoPayments error ${res.status}: ${responseText}` },
+        { status: 502 }
+      );
     }
 
-    const data = await res.json();
+    const data = JSON.parse(responseText);
+
+    if (!data.payment_link) {
+      console.error("DodoPayments response missing payment_link:", data);
+      return NextResponse.json(
+        { error: "Lien de paiement absent dans la réponse" },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json({
       paymentLink: data.payment_link,
       paymentId:   data.payment_id,
