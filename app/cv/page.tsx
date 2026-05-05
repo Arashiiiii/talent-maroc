@@ -945,42 +945,6 @@ export default function CVPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-    useEffect(()=>{
-    const p=new URLSearchParams(window.location.search);
-    if(p.get("payment")==="success"){
-      window.history.replaceState({},"","/cv");
-
-      // Restore all state from sessionStorage (page was reloaded by Paddle)
-      const savedForm    = sessionStorage.getItem("cv_form");
-      const savedMode    = sessionStorage.getItem("cv_mode") as Mode || "ai";
-      const savedPlan    = sessionStorage.getItem("cv_plan");
-      const savedTpl     = sessionStorage.getItem("cv_template");
-      const savedEnhance = sessionStorage.getItem("cv_enhance") || "Optimisation ATS";
-      const savedPhoto   = sessionStorage.getItem("cv_photo");
-      const savedB64     = sessionStorage.getItem("cv_upload_b64");
-      const savedMime    = sessionStorage.getItem("cv_upload_mime");
-      const savedText    = sessionStorage.getItem("cv_upload_text");
-
-      // Restore state
-      if (savedForm)    { const f=JSON.parse(savedForm); setForm(f); formRef.current=f; }
-      if (savedMode)    setMode(savedMode);
-      if (savedTpl)     setSelectedTpl(Number(savedTpl));
-      if (savedEnhance) { setEnhanceType(savedEnhance); enhanceTypeRef.current=savedEnhance; }
-      if (savedPhoto)   { setPhotoBase64(savedPhoto); photoBase64Ref.current=savedPhoto; }
-      if (savedB64)     { setUploadedBase64(savedB64); uploadedBase64Ref.current=savedB64; }
-      if (savedMime)    { setUploadedMime(savedMime); uploadedMimeRef.current=savedMime; }
-      if (savedText)    { setUploadedContent(savedText); uploadedContentRef.current=savedText; }
-      if (savedPlan)    { const pl=JSON.parse(savedPlan); purchasedPlanRef.current=pl; setPurchasedPlan(pl); }
-
-      // Clear sessionStorage
-      ["cv_form","cv_mode","cv_plan","cv_template","cv_enhance","cv_photo",
-       "cv_upload_b64","cv_upload_mime","cv_upload_text"].forEach(k=>sessionStorage.removeItem(k));
-
-      // Small delay to let React flush state updates before generating
-      setTimeout(()=>runGeneration(savedMode), 100);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[]);
 
   // Check if free generation has already been used
   useEffect(()=>{
@@ -1922,7 +1886,7 @@ Retourne UNIQUEMENT le JSON.`}];
               <StepBack label="← Changer de modèle" onClick={()=>goStep(3)}/>
               <div style={{marginBottom:20}}>
                 <h2 style={{fontSize:18,fontWeight:800}}>3. Choisissez votre formule</h2>
-                <p style={{fontSize:13,color:"#6b7280",marginTop:4}}>Paiement sécurisé via Paddle · Visa, Mastercard, PayPal</p>
+                <p style={{fontSize:13,color:"#6b7280",marginTop:4}}>Paiement sécurisé via Dodo Payments · Visa, Mastercard, PayPal</p>
               </div>
 
               {/* Free generation offer — shown only if not used yet */}
@@ -1967,7 +1931,7 @@ Retourne UNIQUEMENT le JSON.`}];
                 })}
               </div>
               <div style={{background:"#f9fafb",border:"1.5px solid #e5e7eb",borderRadius:10,padding:"14px 18px",display:"flex",alignItems:"center",gap:10,fontSize:13,color:"#6b7280"}}>
-                <span style={{fontSize:18}}>🔒</span> Paiement 100% sécurisé via <strong style={{color:"#0f172a"}}>Paddle</strong>. Vos données bancaires ne transitent jamais par nos serveurs.
+                <span style={{fontSize:18}}>🔒</span> Paiement 100% sécurisé via <strong style={{color:"#0f172a"}}>Dodo Payments</strong>. Vos données bancaires ne transitent jamais par nos serveurs.
               </div>
             </div>
           )}
@@ -2379,7 +2343,7 @@ Retourne UNIQUEMENT le JSON.`}];
                   </div>
                   {dodoError && <p style={{fontSize:12,color:"#dc2626",textAlign:"center",marginTop:8,marginBottom:0}}>⚠ {dodoError}</p>}
                   {genError && <p style={{fontSize:12,color:"#dc2626",textAlign:"center",marginTop:8,marginBottom:0}}>⚠ {genError}</p>}
-                  <p style={{fontSize:11,color:"#9ca3af",textAlign:"center",marginTop:8}}>🔒 Paiement sécurisé via Paddle · Aucune donnée bancaire stockée</p>
+                  <p style={{fontSize:11,color:"#9ca3af",textAlign:"center",marginTop:8}}>🔒 Paiement sécurisé via Dodo Payments · Aucune donnée bancaire stockée</p>
                 </div>
               </div>
             </div>
