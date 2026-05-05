@@ -826,12 +826,12 @@ export default function CVPage() {
 
   // Dodo Payments state
   const [dodoModal,      setDodoModal]      = useState(false);
-  const [dodoLoading,    setDodoLoading]    = useState(false); // creating session
-  const [dodoPolling,    setDodoPolling]    = useState(false); // awaiting confirmation
+  const [dodoLoading,    setDodoLoading]    = useState(false);
+  const [dodoPolling,    setDodoPolling]    = useState(false);
   const [dodoError,      setDodoError]      = useState<string|null>(null);
+  const [hasPaid,        setHasPaid]        = useState(false); // payment confirmed for download
   const [currentPlan,    setCurrentPlan]    = useState<Plan>(PLANS[1]);
   const [purchasedPlan,  setPurchasedPlan]  = useState<Plan>(PLANS[0]);
-  const pendingModeRef    = useRef<Mode>("ai");
   const purchasedPlanRef  = useRef<Plan>(PLANS[0]);
   const dodoPaymentIdRef  = useRef<string|null>(null);
   const dodoIntervalRef   = useRef<ReturnType<typeof setInterval>|null>(null);
@@ -1228,22 +1228,19 @@ Retourne UNIQUEMENT le JSON.`}];
           stopDodoPolling();
           setDodoModal(false);
           setDodoPolling(false);
-          setPurchasedPlan(purchasedPlanRef.current);
-          setTimeout(() => runGeneration(pendingModeRef.current), 300);
+          setHasPaid(true);
+          // Trigger PDF download now that payment is confirmed
+          setTimeout(() => downloadPDF(), 300);
         }
       } catch { /* continue polling */ }
     }, 2000);
-    // Stop after 10 minutes
     setTimeout(() => { stopDodoPolling(); setDodoPolling(false); }, 600_000);
   };
 
-  const openDodoCheckout = async (plan: Plan, triggerMode: Mode = "ai") => {
-    pendingModeRef.current   = triggerMode;
+  const openDodoCheckout = async (plan: Plan) => {
     purchasedPlanRef.current = plan;
-    setCurrentPlan(plan);
     setDodoError(null);
     setDodoLoading(true);
-    if (triggerMode === "upload") setUploadPaywall(false);
 
     try {
       const res = await fetch("/api/dodo/create-session", {
@@ -1270,7 +1267,25 @@ Retourne UNIQUEMENT le JSON.`}];
     }
   };
 
-  // ── PRINT TO PDF — opens a clean print window, browser renders natively ──
+  // ── SELECT PLAN + GENERATE (no payment yet) ──────────────────────────────
+  const selectPlanAndGenerate = (plan: Plan, triggerMode: Mode = "ai") => {
+    setCurrentPlan(plan);
+    purchasedPlanRef.current = plan;
+    setPurchasedPlan(plan);
+    setHasPaid(false); // reset payment for new generation
+    setUploadPaywall(false);
+    setTimeout(() => runGeneration(triggerMode), 100);
+  };
+
+  // ── PRINT TO PDF — gated: open Dodo checkout if not yet paid ─────────────
+  const handleDownload = () => {
+    if (hasPaid) {
+      downloadPDF();
+    } else {
+      openDodoCheckout(currentPlan);
+    }
+  };
+
   const downloadPDF = () => {
     const node = printRef.current;
     if (!node) return;
@@ -1923,8 +1938,8 @@ Retourne UNIQUEMENT le JSON.`}];
                       <ul style={{listStyle:"none",marginBottom:20}}>
                         {PLAN_FEATURES[plan.name].map(f=><li key={f} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,marginBottom:8,color:"#374151"}}><span style={{color:"#16a34a",fontWeight:700,fontSize:14}}>✓</span>{f}</li>)}
                       </ul>
-                      <button className="btn-green" disabled={dodoLoading&&currentPlan.name===plan.name} onClick={()=>openDodoCheckout(plan,"ai")} style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a"}}>
-                        {dodoLoading&&currentPlan.name===plan.name?"Chargement…":`Payer ${plan.price} MAD →`}
+                      <button className="btn-green" onClick={()=>selectPlanAndGenerate(plan,"ai")} style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a"}}>
+                        Générer mon CV →
                       </button>
                     </div>
                   );
@@ -2142,8 +2157,8 @@ Retourne UNIQUEMENT le JSON.`}];
                   {/* Bottom actions */}
                   <div style={{ padding:"12px 14px", borderTop:"1.5px solid #ede9fe", display:"flex", gap:8 }}>
                     <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");goStep(1);}} disabled={pdfBusy} style={{ flex:1, fontSize:12, padding:"9px", opacity:pdfBusy?0.5:1 }}>↺ Recommencer</button>
-                    <button className="btn-green" onClick={downloadPDF} disabled={generating} style={{ flex:1, fontSize:12, padding:"9px" }}>
-                      🖨 PDF
+                    <button className="btn-green" onClick={handleDownload} disabled={generating || dodoLoading} style={{ flex:1, fontSize:12, padding:"9px" }}>
+                      {dodoLoading ? "⏳…" : hasPaid ? "🖨 PDF" : `🔒 Télécharger · ${currentPlan.price} MAD`}
                     </button>
                   </div>
                 </div>
@@ -2161,8 +2176,8 @@ Retourne UNIQUEMENT le JSON.`}];
                         onClick={()=>{ const w=window.open("","_blank"); if(!w)return; w.document.write("<html><body style='margin:0'>"); w.document.write(printRef.current?.outerHTML||""); w.document.write("</body></html>"); w.document.close(); w.print(); }}>
                         🖨 Imprimer
                       </button>
-                      <button className="btn-green" onClick={downloadPDF} disabled={generating} style={{ fontSize:11, padding:"5px 14px" }}>
-                        🖨 Télécharger PDF
+                      <button className="btn-green" onClick={handleDownload} disabled={generating || dodoLoading} style={{ fontSize:11, padding:"5px 14px" }}>
+                        {dodoLoading ? "⏳…" : hasPaid ? "🖨 Télécharger PDF" : `🔒 ${currentPlan.price} MAD · Télécharger`}
                       </button>
                     </div>
                   </div>
@@ -2333,9 +2348,9 @@ Retourne UNIQUEMENT le JSON.`}];
                           <ul style={{listStyle:"none",marginBottom:16}}>
                             {PLAN_FEATURES[plan.name].map(f=><li key={f} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,marginBottom:6,color:"#374151"}}><span style={{color:"#16a34a",fontWeight:700}}>✓</span>{f}</li>)}
                           </ul>
-                          <button className="btn-green" disabled={dodoLoading&&currentPlan.name===plan.name} onClick={()=>openDodoCheckout(plan,"upload")}
+                          <button className="btn-green" onClick={()=>selectPlanAndGenerate(plan,"upload")}
                             style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a",fontSize:13,padding:"10px"}}>
-                            {dodoLoading&&currentPlan.name===plan.name?"Chargement…":`Payer ${plan.price} MAD`}
+                            Générer mon CV
                           </button>
                         </div>
                       );
