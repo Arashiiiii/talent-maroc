@@ -6,7 +6,7 @@ import { DodoPayments } from "dodopayments-checkout";
 // ── AI TOOL PRICING ────────────────────────────────────────────────────────
 const FREE_USES_PER_MONTH  = 3;
 const PAY_PER_USE_PRICE    = "7";
-const DODO_AI_PRODUCT_ID   = "pdt_0NeBnDyrIzFj0jqE4UN0j";
+const DODO_AI_PRODUCT_ID   = "pdt_0NeCdE1BAX3bYDy0Ck7eg";
 
 function getSB() {
   return createClient(
@@ -177,7 +177,7 @@ export default function DashboardPage() {
   // ── DODO PAYMENTS INIT ─────────────────────────────────────────────────
   useEffect(() => {
     DodoPayments.Initialize({
-      mode: "live",
+      mode: "test",
       displayType: "inline",
       onEvent: (event: any) => {
         if (event.name === "checkout.pay_button_clicked") {

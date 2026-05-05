@@ -4,9 +4,9 @@ import { DodoPayments } from "dodopayments-checkout";
 
 // ── DODO PAYMENTS CONFIG ───────────────────────────────────────────────────
 const DODO_PRODUCT_IDS = {
-  starter:       "pdt_0NeBlIwH1gWfs7cWwb3jM",
-  professionnel: "pdt_0NeBldAD1BMPN5on3lnzB",
-  cadre:         "pdt_0NeBly3aODnRdJwmqah8u",
+  starter:       "pdt_0NeCdmQE5gOZo2WER3XE2",
+  professionnel: "pdt_0NeCdv6Pkc5C3Z4Pnno5Q",
+  cadre:         "pdt_0NeCe2Pfl1hs6WDESYmgB",
 };
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
@@ -867,7 +867,7 @@ export default function CVPage() {
   // Initialize DodoPayments inline checkout
   useEffect(() => {
     DodoPayments.Initialize({
-      mode: "live",
+      mode: "test",
       displayType: "inline",
       onEvent: (event: any) => {
         if (event.name === "checkout.pay_button_clicked") {
@@ -1262,8 +1262,9 @@ Retourne UNIQUEMENT le JSON.`}];
           customerName:  formRef.current.name  || undefined,
         }),
       });
-      if (!res.ok) throw new Error("Impossible de créer la session de paiement.");
-      const { paymentLink, paymentId } = await res.json();
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error || "Impossible de créer la session de paiement.");
+      const { paymentLink, paymentId } = resData;
       dodoPaymentIdRef.current  = paymentId;
       dodoPaymentLinkRef.current = paymentLink; // useEffect will open checkout after div mounts
       setDodoModal(true);

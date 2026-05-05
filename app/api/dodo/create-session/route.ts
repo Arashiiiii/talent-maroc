@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const DODO_BASE = "https://live.dodopayments.com";
+// Switch between test and live based on env
+const DODO_MODE = process.env.DODO_MODE || "live"; // set DODO_MODE=test in Vercel to use sandbox
+const DODO_BASE = DODO_MODE === "test"
+  ? "https://test.dodopayments.com"
+  : "https://live.dodopayments.com";
 
 export async function POST(req: NextRequest) {
-  if (!process.env.DODO_API_KEY) {
-    console.error("DODO_API_KEY is not set in environment variables");
+  const apiKey = process.env.DODO_API_KEY;
+
+  if (!apiKey) {
     return NextResponse.json(
-      { error: "Configuration paiement manquante (DODO_API_KEY)" },
+      { error: "DODO_API_KEY manquant dans les variables d'environnement Vercel" },
       { status: 500 }
     );
   }
@@ -18,7 +23,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "productId requis" }, { status: 400 });
     }
 
-    const body: Record<string, any> = {
+    const body = {
       product_cart: [{ product_id: productId, quantity: 1 }],
       customer: {
         email: customerEmail || "client@talentmaroc.shop",
@@ -31,7 +36,7 @@ export async function POST(req: NextRequest) {
     const res = await fetch(`${DODO_BASE}/payments`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.DODO_API_KEY}`,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
@@ -40,9 +45,10 @@ export async function POST(req: NextRequest) {
     const responseText = await res.text();
 
     if (!res.ok) {
-      console.error("DodoPayments API error:", res.status, responseText);
+      // Return the exact DodoPayments error so it's visible in browser console
+      console.error(`DodoPayments ${DODO_MODE} error ${res.status}:`, responseText);
       return NextResponse.json(
-        { error: `DodoPayments error ${res.status}: ${responseText}` },
+        { error: `[DodoPayments ${res.status}] ${responseText}` },
         { status: 502 }
       );
     }
@@ -52,7 +58,7 @@ export async function POST(req: NextRequest) {
     if (!data.payment_link) {
       console.error("DodoPayments response missing payment_link:", data);
       return NextResponse.json(
-        { error: "Lien de paiement absent dans la réponse" },
+        { error: "Lien de paiement absent dans la réponse Dodo" },
         { status: 502 }
       );
     }
@@ -61,6 +67,7 @@ export async function POST(req: NextRequest) {
       paymentLink: data.payment_link,
       paymentId:   data.payment_id,
     });
+
   } catch (err: any) {
     console.error("create-session error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });

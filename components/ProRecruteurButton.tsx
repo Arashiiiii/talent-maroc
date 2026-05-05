@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { DodoPayments } from "dodopayments-checkout";
 
-const DODO_PRO_RECRUTEUR_PRODUCT = "pdt_0NeBmVpbY3AAGtIoxc5Pg";
+const DODO_PRO_RECRUTEUR_PRODUCT = "pdt_0NeCdQ3yRgmRCI1tfsHJj";
 
 export default function ProRecruteurButton() {
   const [loading,  setLoading]  = useState(false);
@@ -13,7 +13,7 @@ export default function ProRecruteurButton() {
 
   useEffect(() => {
     DodoPayments.Initialize({
-      mode: "live",
+      mode: "test",
       displayType: "inline",
       onEvent: (event: any) => {
         if (event.name === "checkout.pay_button_clicked") {
