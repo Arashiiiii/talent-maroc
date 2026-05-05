@@ -4,7 +4,8 @@
       "WebFetch(domain:www.super-resume.com)",
       "Bash(npx tsc *)",
       "PowerShell(cd \"C:\\\\Users\\\\HP\\\\talent-maroc\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -match \"error TS\" } | Select-Object -First 10)",
-      "PowerShell(cd \"C:\\\\Users\\\\HP\\\\talent-maroc\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -match \"error TS\" } | Select-Object -First 5)"
+      "PowerShell(cd \"C:\\\\Users\\\\HP\\\\talent-maroc\"; npx tsc --noEmit 2>&1 | Where-Object { $_ -match \"error TS\" } | Select-Object -First 5)",
+      "WebFetch(domain:docs.dodopayments.com)"
     ]
   }
 }

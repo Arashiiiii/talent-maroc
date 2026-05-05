@@ -1,17 +1,12 @@
 "use client";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { initializePaddle, type Paddle } from "@paddle/paddle-js";
+import { DodoPayments } from "dodopayments-checkout";
 
-// ── PADDLE CONFIG ──────────────────────────────────────────────────────────
-// 🔑 REPLACE these with your real values from paddle.com
-// While testing:  PADDLE_ENV = "sandbox"  +  use your sandbox token + sandbox price IDs
-// When live:      PADDLE_ENV = "production" + use your live token + live price IDs
-const PADDLE_CLIENT_TOKEN = "live_f3115e62ade60f191a87a80c6a4";
-const PADDLE_ENV = "production" as "sandbox" | "production";
-const PADDLE_PRICE_IDS    = {
-  starter:       "pri_01kqrd6abmbwq2y9ywdyvwdkgz",
-  professionnel: "pri_01kqrd3s88eswmr2aawmp4zq92",
-  cadre:         "pri_01kqrd14q4ms58e9qcjf9xtkhr",
+// ── DODO PAYMENTS CONFIG ───────────────────────────────────────────────────
+const DODO_PRODUCT_IDS = {
+  starter:       "pdt_0NeBlIwH1gWfs7cWwb3jM",
+  professionnel: "pdt_0NeBldAD1BMPN5on3lnzB",
+  cadre:         "pdt_0NeBly3aODnRdJwmqah8u",
 };
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
@@ -39,7 +34,7 @@ interface Template {
 }
 
 type PlanTier = "starter" | "pro" | "cadre";
-interface Plan { name: string; price: string; paddlePriceId: string; tier: PlanTier; }
+interface Plan { name: string; price: string; productId: string; tier: PlanTier; }
 type Step = 1|2|3|4|5;
 type Mode = "upload"|"ai";
 
@@ -118,9 +113,9 @@ const CV_SECTIONS = [
 ];
 
 const PLANS: Plan[] = [
-  { name:"Starter",       price:"19",  paddlePriceId: PADDLE_PRICE_IDS.starter,       tier:"starter" },
-  { name:"Professionnel", price:"35",  paddlePriceId: PADDLE_PRICE_IDS.professionnel, tier:"pro"     },
-  { name:"Cadre",         price:"55",  paddlePriceId: PADDLE_PRICE_IDS.cadre,         tier:"cadre"   },
+  { name:"Starter",       price:"19",  productId: DODO_PRODUCT_IDS.starter,       tier:"starter" },
+  { name:"Professionnel", price:"35",  productId: DODO_PRODUCT_IDS.professionnel, tier:"pro"     },
+  { name:"Cadre",         price:"55",  productId: DODO_PRODUCT_IDS.cadre,         tier:"cadre"   },
 ];
 
 const PLAN_FEATURES: Record<string,string[]> = {
@@ -829,13 +824,17 @@ export default function CVPage() {
     industry:"", level:"", experience:"", education:"", skills:"", langs:"", notes:"",
   });
 
-  // Paddle
-  const [paddle,         setPaddle]         = useState<Paddle | undefined>(undefined);
-  const [payPending,     setPayPending]      = useState(false);
-  const [currentPlan,    setCurrentPlan]     = useState<Plan>(PLANS[1]);
-  const [purchasedPlan,  setPurchasedPlan]   = useState<Plan>(PLANS[0]); // plan that was actually paid
+  // Dodo Payments state
+  const [dodoModal,      setDodoModal]      = useState(false);
+  const [dodoLoading,    setDodoLoading]    = useState(false); // creating session
+  const [dodoPolling,    setDodoPolling]    = useState(false); // awaiting confirmation
+  const [dodoError,      setDodoError]      = useState<string|null>(null);
+  const [currentPlan,    setCurrentPlan]    = useState<Plan>(PLANS[1]);
+  const [purchasedPlan,  setPurchasedPlan]  = useState<Plan>(PLANS[0]);
   const pendingModeRef    = useRef<Mode>("ai");
-  const purchasedPlanRef  = useRef<Plan>(PLANS[0]); // ref so eventCallback sees latest
+  const purchasedPlanRef  = useRef<Plan>(PLANS[0]);
+  const dodoPaymentIdRef  = useRef<string|null>(null);
+  const dodoIntervalRef   = useRef<ReturnType<typeof setInterval>|null>(null);
 
   // Generation
   const [generating,  setGenerating]  = useState(false); // AI content generation
@@ -864,25 +863,24 @@ export default function CVPage() {
 
   const GEN_STEPS = ["Lecture du CV","Extraction des données","Application du modèle","Optimisation ATS","Finalisation"];
 
-  // Initialize Paddle via npm package
+  // Initialize DodoPayments inline checkout
   useEffect(() => {
-    initializePaddle({
-      environment: PADDLE_ENV,
-      token: PADDLE_CLIENT_TOKEN,
-      eventCallback(event) {
-        if (event.name === "checkout.completed") {
-          setPayPending(false);
-          setPurchasedPlan(purchasedPlanRef.current);
-          setTimeout(() => runGeneration(pendingModeRef.current), 300);
+    DodoPayments.Initialize({
+      mode: "live",
+      displayType: "inline",
+      onEvent: (event: any) => {
+        if (event.name === "checkout.pay_button_clicked") {
+          if (dodoPaymentIdRef.current) {
+            setDodoPolling(true);
+            startDodoPolling(dodoPaymentIdRef.current);
+          }
         }
-        if (event.name === "checkout.closed" || event.name === "checkout.error") {
-          setPayPending(false);
+        if (event.name === "checkout.error") {
+          setDodoError("Erreur de paiement. Veuillez réessayer.");
+          setDodoPolling(false);
+          stopDodoPolling();
         }
       },
-    }).then((p) => {
-      if (p) setPaddle(p);
-    }).catch((err) => {
-      console.warn("Paddle init failed — vérifiez que le domaine est autorisé dans le dashboard Paddle :", err);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1248,42 +1246,64 @@ Retourne UNIQUEMENT le JSON.`}];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-  // ── PADDLE CHECKOUT ───────────────────────────────────────────────────────
-  const openPaddle = (plan: Plan, triggerMode: Mode = "ai") => {
-    if (!paddle) {
-      setGenError("Le système de paiement n'est pas encore chargé. Actualisez la page et réessayez.");
-      return;
+  // ── DODO PAYMENTS CHECKOUT ────────────────────────────────────────────────
+  const stopDodoPolling = () => {
+    if (dodoIntervalRef.current) {
+      clearInterval(dodoIntervalRef.current);
+      dodoIntervalRef.current = null;
     }
+  };
+
+  const startDodoPolling = (paymentId: string) => {
+    stopDodoPolling();
+    dodoIntervalRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/dodo/check-payment?payment_id=${paymentId}`);
+        const { status } = await res.json();
+        if (status === "succeeded") {
+          stopDodoPolling();
+          setDodoModal(false);
+          setDodoPolling(false);
+          setPurchasedPlan(purchasedPlanRef.current);
+          setTimeout(() => runGeneration(pendingModeRef.current), 300);
+        }
+      } catch { /* continue polling */ }
+    }, 2000);
+    // Stop after 10 minutes
+    setTimeout(() => { stopDodoPolling(); setDodoPolling(false); }, 600_000);
+  };
+
+  const openDodoCheckout = async (plan: Plan, triggerMode: Mode = "ai") => {
     pendingModeRef.current   = triggerMode;
     purchasedPlanRef.current = plan;
     setCurrentPlan(plan);
-    setPayPending(true);
-
-    // Persist form data before Paddle redirects on success
-    sessionStorage.setItem("cv_form",        JSON.stringify(formRef.current));
-    sessionStorage.setItem("cv_mode",        triggerMode);
-    sessionStorage.setItem("cv_plan",        JSON.stringify(plan));
-    sessionStorage.setItem("cv_template",    String(selectedTpl));
-    sessionStorage.setItem("cv_enhance",     enhanceTypeRef.current);
-    sessionStorage.setItem("cv_photo",       photoBase64Ref.current || "");
-    sessionStorage.setItem("cv_upload_b64",  uploadedBase64Ref.current || "");
-    sessionStorage.setItem("cv_upload_mime", uploadedMimeRef.current || "");
-    sessionStorage.setItem("cv_upload_text", uploadedContentRef.current || "");
-
-    // Open Paddle overlay — close upload modal AFTER (keeps user gesture intact)
-    paddle.Checkout.open({
-      items: [{ priceId: plan.paddlePriceId, quantity: 1 }],
-      ...(formRef.current.email ? { customer: { email: formRef.current.email } } : {}),
-      settings: {
-        displayMode: "overlay",
-        theme: "light",
-        locale: "fr",
-        successUrl: `${window.location.origin}/cv?payment=success`,
-      },
-    });
-
-    // Close the upload paywall modal now that Paddle overlay is open
+    setDodoError(null);
+    setDodoLoading(true);
     if (triggerMode === "upload") setUploadPaywall(false);
+
+    try {
+      const res = await fetch("/api/dodo/create-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId:     plan.productId,
+          customerEmail: formRef.current.email || undefined,
+          customerName:  formRef.current.name  || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error("Impossible de créer la session de paiement.");
+      const { paymentLink, paymentId } = await res.json();
+      dodoPaymentIdRef.current = paymentId;
+      setDodoModal(true);
+      // Open checkout inside the div once it's mounted
+      setTimeout(() => {
+        DodoPayments.Checkout.open({ checkoutUrl: paymentLink, elementId: "dodo-cv-checkout" });
+      }, 150);
+    } catch (err: any) {
+      setDodoError(err.message);
+    } finally {
+      setDodoLoading(false);
+    }
   };
 
   // ── PRINT TO PDF — opens a clean print window, browser renders natively ──
@@ -1939,8 +1959,8 @@ Retourne UNIQUEMENT le JSON.`}];
                       <ul style={{listStyle:"none",marginBottom:20}}>
                         {PLAN_FEATURES[plan.name].map(f=><li key={f} style={{display:"flex",alignItems:"center",gap:7,fontSize:13,marginBottom:8,color:"#374151"}}><span style={{color:"#16a34a",fontWeight:700,fontSize:14}}>✓</span>{f}</li>)}
                       </ul>
-                      <button className="btn-green" disabled={payPending&&currentPlan.name===plan.name} onClick={()=>openPaddle(plan,"ai")} style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a"}}>
-                        {payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer ${plan.price} MAD →`}
+                      <button className="btn-green" disabled={dodoLoading&&currentPlan.name===plan.name} onClick={()=>openDodoCheckout(plan,"ai")} style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a"}}>
+                        {dodoLoading&&currentPlan.name===plan.name?"Chargement…":`Payer ${plan.price} MAD →`}
                       </button>
                     </div>
                   );
@@ -2293,6 +2313,33 @@ Retourne UNIQUEMENT le JSON.`}];
             );
           })()}
 
+          {/* ─────── DODO CHECKOUT MODAL ─────── */}
+          {dodoModal && (
+            <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.6)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+              <div style={{ background:"white", borderRadius:16, width:"min(520px,96vw)", maxHeight:"92vh", overflow:"auto", display:"flex", flexDirection:"column" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"16px 20px", borderBottom:"1px solid #f0f0f0", flexShrink:0 }}>
+                  <div>
+                    <div style={{ fontSize:15, fontWeight:700, color:"#0f172a" }}>Paiement sécurisé</div>
+                    <div style={{ fontSize:12, color:"#6b7280" }}>Plan {currentPlan.name} · {currentPlan.price} MAD</div>
+                  </div>
+                  {!dodoPolling && (
+                    <button onClick={()=>{ setDodoModal(false); DodoPayments.Checkout.close(); }} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#9ca3af", lineHeight:1 }}>×</button>
+                  )}
+                </div>
+                {dodoPolling ? (
+                  <div style={{ padding:48, textAlign:"center" }}>
+                    <div style={{ width:44, height:44, border:"3px solid #ede9fe", borderTopColor:"#7c3aed", borderRadius:"50%", animation:"spin .8s linear infinite", margin:"0 auto 18px" }}/>
+                    <div style={{ fontSize:14, fontWeight:700, color:"#7c3aed" }}>Confirmation du paiement…</div>
+                    <div style={{ fontSize:12, color:"#9ca3af", marginTop:8 }}>Nous confirmons votre paiement, veuillez patienter.</div>
+                  </div>
+                ) : (
+                  <div id="dodo-cv-checkout" style={{ minHeight:420, flex:1 }}/>
+                )}
+                {dodoError && <div style={{ padding:"12px 20px", background:"#fef2f2", color:"#dc2626", fontSize:13, borderTop:"1px solid #fecaca" }}>⚠ {dodoError}</div>}
+              </div>
+            </div>
+          )}
+
           {/* ─────── UPLOAD PAYWALL MODAL ─────── */}
           {uploadPaywall && (
             <div className="modal-bg" onClick={()=>setUploadPaywall(false)}>
@@ -2322,15 +2369,15 @@ Retourne UNIQUEMENT le JSON.`}];
                           <ul style={{listStyle:"none",marginBottom:16}}>
                             {PLAN_FEATURES[plan.name].map(f=><li key={f} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,marginBottom:6,color:"#374151"}}><span style={{color:"#16a34a",fontWeight:700}}>✓</span>{f}</li>)}
                           </ul>
-                          <button className="btn-green" disabled={payPending&&currentPlan.name===plan.name} onClick={()=>openPaddle(plan,"upload")}
+                          <button className="btn-green" disabled={dodoLoading&&currentPlan.name===plan.name} onClick={()=>openDodoCheckout(plan,"upload")}
                             style={{width:"100%",background:featured?"#16a34a":"white",color:featured?"white":"#16a34a",border:featured?"none":"1.5px solid #16a34a",fontSize:13,padding:"10px"}}>
-                            {payPending&&currentPlan.name===plan.name?"Ouverture…":`Payer ${plan.price} MAD`}
+                            {dodoLoading&&currentPlan.name===plan.name?"Chargement…":`Payer ${plan.price} MAD`}
                           </button>
                         </div>
                       );
                     })}
                   </div>
-                  {!paddle && <p style={{fontSize:12,color:"#dc2626",textAlign:"center",marginTop:8,marginBottom:0}}>⚠ Système de paiement en cours de chargement…</p>}
+                  {dodoError && <p style={{fontSize:12,color:"#dc2626",textAlign:"center",marginTop:8,marginBottom:0}}>⚠ {dodoError}</p>}
                   {genError && <p style={{fontSize:12,color:"#dc2626",textAlign:"center",marginTop:8,marginBottom:0}}>⚠ {genError}</p>}
                   <p style={{fontSize:11,color:"#9ca3af",textAlign:"center",marginTop:8}}>🔒 Paiement sécurisé via Paddle · Aucune donnée bancaire stockée</p>
                 </div>

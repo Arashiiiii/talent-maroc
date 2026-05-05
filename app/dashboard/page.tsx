@@ -1,15 +1,12 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { initializePaddle, type Paddle } from "@paddle/paddle-js";
+import { DodoPayments } from "dodopayments-checkout";
 
 // ── AI TOOL PRICING ────────────────────────────────────────────────────────
-const FREE_USES_PER_MONTH = 3;
-const PAY_PER_USE_PRICE   = "7";     // MAD displayed to user
-// 🔑 Create a 7 MAD one-time price in your Paddle dashboard and paste the ID here:
-const PADDLE_AI_PRICE_ID  = "pri_01kqrcsc5243qrcftqkxgehhav";
-const PADDLE_TOKEN         = "live_f3115e62ade60f191a87a80c6a4";
-const PADDLE_ENV           = "production" as "sandbox" | "production";
+const FREE_USES_PER_MONTH  = 3;
+const PAY_PER_USE_PRICE    = "7";
+const DODO_AI_PRODUCT_ID   = "pdt_0NeBnDyrIzFj0jqE4UN0j";
 
 function getSB() {
   return createClient(
@@ -105,8 +102,12 @@ export default function DashboardPage() {
   const [liErr,        setLiErr]        = useState<string|null>(null);
   // Usage tracking (3 free / month, then 7 MAD per use)
   const [aiUses,       setAiUses]       = useState(0);   // uses this month
-  const [aiPaywall,    setAiPaywall]    = useState(false); // show paywall modal
-  const [paddle,       setPaddle]       = useState<Paddle|undefined>(undefined);
+  const [aiPaywall,    setAiPaywall]    = useState(false);
+  const [dodoLoading,  setDodoLoading]  = useState(false);
+  const [dodoPolling,  setDodoPolling]  = useState(false);
+  const [dodoError,    setDodoError]    = useState<string|null>(null);
+  const dodoPaymentIdRef  = useRef<string|null>(null);
+  const dodoIntervalRef   = useRef<ReturnType<typeof setInterval>|null>(null);
   const pendingToolRef     = useRef<"cover_letter"|"linkedin"|null>(null);
   const runCoverLetterRef  = useRef<((paid?: boolean) => Promise<void>) | null>(null);
   const runLinkedinRef     = useRef<((paid?: boolean) => Promise<void>) | null>(null);
@@ -172,27 +173,24 @@ export default function DashboardPage() {
     } catch { /* ignore */ }
   }, []);
 
-  // ── PADDLE INIT ────────────────────────────────────────────────────────
+  // ── DODO PAYMENTS INIT ─────────────────────────────────────────────────
   useEffect(() => {
-    initializePaddle({ environment: PADDLE_ENV, token: PADDLE_TOKEN,
-      eventCallback(event) {
-        if (event.name === "checkout.completed") {
-          const tool = pendingToolRef.current;
-          pendingToolRef.current = null;
-          setAiPaywall(false);
-          setPostPayBanner(true);
-          // Small delay so the Paddle overlay fully closes before generation starts
-          setTimeout(() => {
-            if (tool === "cover_letter") runCoverLetterRef.current?.(true);
-            if (tool === "linkedin")     runLinkedinRef.current?.(true);
-          }, 1200);
+    DodoPayments.Initialize({
+      mode: "live",
+      displayType: "inline",
+      onEvent: (event: any) => {
+        if (event.name === "checkout.pay_button_clicked") {
+          if (dodoPaymentIdRef.current) {
+            setDodoPolling(true);
+            startAiPolling(dodoPaymentIdRef.current);
+          }
         }
-        if (event.name === "checkout.closed" || event.name === "checkout.error") {
-          pendingToolRef.current = null;
+        if (event.name === "checkout.error") {
+          setDodoError("Erreur de paiement. Veuillez réessayer.");
+          setDodoPolling(false);
         }
-      }
-    }).then(p => { if (p) setPaddle(p); })
-      .catch(err => { console.warn("Paddle init failed:", err); });
+      },
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -261,9 +259,57 @@ export default function DashboardPage() {
     finally{ setLiLoading(false); setPostPayBanner(false); }
   };
 
-  // Keep refs pointing to latest function versions (solves stale closure in Paddle eventCallback)
+  // Keep refs pointing to latest function versions
   runCoverLetterRef.current = runCoverLetter;
   runLinkedinRef.current    = runLinkedin;
+
+  // ── DODO AI TOOL CHECKOUT ──────────────────────────────────────────────
+  const startAiPolling = (paymentId: string) => {
+    if (dodoIntervalRef.current) clearInterval(dodoIntervalRef.current);
+    dodoIntervalRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/dodo/check-payment?payment_id=${paymentId}`);
+        const { status } = await res.json();
+        if (status === "succeeded") {
+          clearInterval(dodoIntervalRef.current!);
+          dodoIntervalRef.current = null;
+          setAiPaywall(false);
+          setDodoPolling(false);
+          setPostPayBanner(true);
+          const tool = pendingToolRef.current;
+          pendingToolRef.current = null;
+          setTimeout(() => {
+            if (tool === "cover_letter") runCoverLetterRef.current?.(true);
+            if (tool === "linkedin")     runLinkedinRef.current?.(true);
+          }, 1200);
+        }
+      } catch { /* continue */ }
+    }, 2000);
+    setTimeout(() => { clearInterval(dodoIntervalRef.current!); setDodoPolling(false); }, 600_000);
+  };
+
+  const openAiDodoCheckout = async (tool: "cover_letter"|"linkedin") => {
+    pendingToolRef.current = tool;
+    setDodoError(null);
+    setDodoLoading(true);
+    try {
+      const res = await fetch("/api/dodo/create-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: DODO_AI_PRODUCT_ID }),
+      });
+      if (!res.ok) throw new Error("Session de paiement impossible.");
+      const { paymentLink, paymentId } = await res.json();
+      dodoPaymentIdRef.current = paymentId;
+      setTimeout(() => {
+        DodoPayments.Checkout.open({ checkoutUrl: paymentLink, elementId: "dodo-ai-checkout" });
+      }, 150);
+    } catch (err: any) {
+      setDodoError(err.message);
+    } finally {
+      setDodoLoading(false);
+    }
+  };
 
   // ── CV UPLOAD ──────────────────────────────────────────────────────────
   const handleCVUpload = async (file: File) => {
@@ -974,17 +1020,23 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
-              <button
-                onClick={()=>{
-                  if (!paddle) { alert("Chargement Paddle…"); return; }
-                  paddle.Checkout.open({
-                    items:[{ priceId: PADDLE_AI_PRICE_ID, quantity:1 }],
-                    settings:{ displayMode:"overlay", theme:"light", locale:"fr" },
-                  });
-                }}
-                style={{ width:"100%", background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white", border:"none", borderRadius:10, padding:"13px", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"inherit", boxShadow:"0 4px 14px rgba(124,58,237,.35)", marginBottom:10 }}>
-                Payer {PAY_PER_USE_PRICE} MAD et générer →
-              </button>
+              {/* Dodo inline checkout container */}
+              {!dodoPolling && <div id="dodo-ai-checkout" style={{ minHeight:dodoLoading?0:380, marginBottom:10 }}/>}
+              {dodoPolling && (
+                <div style={{ textAlign:"center", padding:"32px 0", marginBottom:10 }}>
+                  <div style={{ width:36, height:36, border:"3px solid #ede9fe", borderTopColor:"#7c3aed", borderRadius:"50%", animation:"spin .8s linear infinite", margin:"0 auto 12px" }}/>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#7c3aed" }}>Confirmation du paiement…</div>
+                </div>
+              )}
+              {dodoError && <div style={{ fontSize:12, color:"#dc2626", marginBottom:8, textAlign:"center" }}>⚠ {dodoError}</div>}
+              {!dodoPolling && (
+                <button
+                  onClick={()=>openAiDodoCheckout(pendingToolRef.current ?? "cover_letter")}
+                  disabled={dodoLoading}
+                  style={{ width:"100%", background:"linear-gradient(135deg,#7c3aed,#5b21b6)", color:"white", border:"none", borderRadius:10, padding:"13px", fontSize:14, fontWeight:800, cursor:dodoLoading?"not-allowed":"pointer", fontFamily:"inherit", boxShadow:"0 4px 14px rgba(124,58,237,.35)", marginBottom:10 }}>
+                  {dodoLoading ? "Chargement…" : `Payer ${PAY_PER_USE_PRICE} MAD et générer →`}
+                </button>
+              )}
               <button onClick={()=>setAiPaywall(false)}
                 style={{ width:"100%", background:"none", border:"1.5px solid #e5e7eb", borderRadius:10, padding:"11px", fontSize:13, color:"#6b7280", cursor:"pointer", fontFamily:"inherit" }}>
                 Annuler
