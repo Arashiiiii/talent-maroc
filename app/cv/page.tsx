@@ -836,7 +836,7 @@ export default function CVPage() {
   const [genError,    setGenError]    = useState<string|null>(null);
   const printRef        = useRef<HTMLDivElement>(null);
   const scaleWrapRef    = useRef<HTMLDivElement>(null);
-  const [pendingDownload, setPendingDownload] = useState(false);
+  const [justPaid, setJustPaid] = useState(false); // show "click to download" banner after payment
 
   // Bonus content generated for Pro/Cadre plans
   const [coverLetter,       setCoverLetter]       = useState<string|null>(null);
@@ -882,18 +882,20 @@ export default function CVPage() {
       setCurrentPlan(plan); setPurchasedPlan(plan); purchasedPlanRef.current = plan;
     }
     setHasPaid(true);
-    setPendingDownload(true); // triggers download once printRef is mounted
+    setJustPaid(true);
+
+    // Also restore bonus content from cv_session (saved before payment redirect)
+    try {
+      const sessionRaw = sessionStorage.getItem("cv_session");
+      if (sessionRaw) {
+        const s = JSON.parse(sessionRaw);
+        if (s.coverLetter)     setCoverLetter(s.coverLetter);
+        if (s.linkedinSummary) setLinkedinSummary(s.linkedinSummary);
+        if (s.executiveBio)    setExecutiveBio(s.executiveBio);
+      }
+    } catch { /* ignore */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Trigger download once the CV is rendered in the DOM after payment redirect
-  useEffect(() => {
-    if (pendingDownload && printRef.current) {
-      setPendingDownload(false);
-      downloadPDF();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingDownload, cvData]);
 
   // ── SESSION PERSISTENCE ───────────────────────────────────────────────────
   // Save editor state whenever key values change so returning to /cv restores progress
@@ -2206,6 +2208,24 @@ Retourne UNIQUEMENT le JSON.`}];
                       </button>
                     </div>
                   </div>
+
+                  {/* ── PAYMENT SUCCESS BANNER ── */}
+                  {justPaid && (
+                    <div style={{ width:"100%", maxWidth:794, marginBottom:14, background:"linear-gradient(135deg,#059669,#047857)", borderRadius:12, padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap", boxShadow:"0 4px 16px rgba(5,150,105,.3)" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        <span style={{ fontSize:22 }}>✓</span>
+                        <div>
+                          <div style={{ color:"white", fontWeight:700, fontSize:13 }}>Paiement confirmé — votre CV est prêt !</div>
+                          <div style={{ color:"rgba(255,255,255,.75)", fontSize:11, marginTop:2 }}>Cliquez sur le bouton pour télécharger votre PDF</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => { setJustPaid(false); downloadPDF(); }}
+                        style={{ background:"white", color:"#047857", border:"none", borderRadius:8, padding:"9px 18px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap", boxShadow:"0 2px 8px rgba(0,0,0,.15)" }}>
+                        🖨 Télécharger mon CV →
+                      </button>
+                    </div>
+                  )}
 
                   {/* Preview — scaleWrapRef on the transform wrapper, printRef on the inner content */}
                   <div style={{ width:"100%", display:"flex", justifyContent:"center" }}>
