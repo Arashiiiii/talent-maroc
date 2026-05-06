@@ -128,6 +128,14 @@ const PLAN_FEATURES: Record<string,string[]> = {
 
 type TplProps = { cv: CVData; scale?: number; accent?: string; font?: string; hidden?: string[] };
 
+// Clamp profile to 3 lines in every template (prevents overflow across all layouts)
+const PROFILE_CLAMP: React.CSSProperties = {
+  display: "-webkit-box",
+  WebkitLineClamp: 3,
+  WebkitBoxOrient: "vertical" as const,
+  overflow: "hidden",
+};
+
 // ── 1. CLASSIQUE ──────────────────────────────────────────────────────────
 function TplClassique({ cv, scale=1, accent="#1a1a1a", font="'Georgia',serif", hidden=[] }: TplProps) {
   return (
@@ -140,7 +148,7 @@ function TplClassique({ cv, scale=1, accent="#1a1a1a", font="'Georgia',serif", h
           <span>{cv.email}</span><span>·</span><span>{cv.phone}</span><span>·</span><span>{cv.location}</span>
         </div>
       </div>
-      {!hidden.includes('profile') && <Section title="Profil Professionnel" accent={accent}><p style={{ fontSize:12, lineHeight:1.8, color:"#333" }}>{cv.profile}</p></Section>}
+      {!hidden.includes('profile') && <Section title="Profil Professionnel" accent={accent}><p style={{ fontSize:12, lineHeight:1.8, color:"#333", ...PROFILE_CLAMP }}>{cv.profile}</p></Section>}
       {!hidden.includes('experience') && <Section title="Expériences Professionnelles" accent={accent}>{cv.experiences.map((e,i) => (<div key={i} style={{ marginBottom:14 }}><div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}><div style={{ fontSize:13, fontWeight:700 }}>{e.role} — {e.company}</div><div style={{ fontSize:11, color:"#666", flexShrink:0, marginLeft:12 }}>{e.period}</div></div><ul style={{ paddingLeft:18, margin:0 }}>{e.bullets.map((b,j)=><li key={j} style={{ fontSize:12, lineHeight:1.7, color:"#333" }}>{b}</li>)}</ul></div>))}</Section>}
       {!hidden.includes('education') && <Section title="Formation" accent={accent}>{cv.education.map((e,i) => (<div key={i} style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}><div><span style={{ fontSize:12, fontWeight:700 }}>{e.degree}</span> <span style={{ fontSize:12, color:"#444" }}>— {e.school}</span></div><div style={{ fontSize:11, color:"#666" }}>{e.year}</div></div>))}</Section>}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:32 }}>
@@ -191,7 +199,7 @@ function TplModerne({ cv, scale=1, accent="#1e3a5f", font="'Inter',sans-serif", 
       </div>
       {/* Main */}
       <div style={{ flex:1, padding:"28px 28px" }}>
-        <div style={{ fontSize:12, color:"#374151", lineHeight:1.7, marginBottom:16, paddingBottom:14, borderBottom:"2px solid #e5e7eb" }}>{cv.profile}</div>
+        <div style={{ fontSize:12, color:"#374151", lineHeight:1.7, marginBottom:16, paddingBottom:14, borderBottom:"2px solid #e5e7eb", ...PROFILE_CLAMP }}>{cv.profile}</div>
         {!hidden.includes('experience') && <MSection title="Expériences" accent={accent}>
           {cv.experiences.map((e,i)=>(
             <div key={i} style={{ marginBottom:16 }}>
@@ -227,7 +235,7 @@ function TplMinimal({ cv, scale=1, accent="#0ea5e9", font="'Helvetica Neue',Helv
       {/* Profile */}
       {!hidden.includes('profile') && <div style={{ marginBottom:28 }}>
         <div style={{ fontSize:10, fontWeight:600, letterSpacing:"0.15em", textTransform:"uppercase", color:accent, marginBottom:10 }}>À Propos</div>
-        <p style={{ fontSize:12, lineHeight:1.9, color:"#475569", maxWidth:580 }}>{cv.profile}</p>
+        <p style={{ fontSize:12, lineHeight:1.9, color:"#475569", maxWidth:580, ...PROFILE_CLAMP }}>{cv.profile}</p>
       </div>}
       {/* Experience */}
       {!hidden.includes('experience') && <div style={{ marginBottom:28 }}>
@@ -281,7 +289,7 @@ function TplExecutif({ cv, scale=1, accent="#d4af37", font="'Georgia',serif", hi
         {/* Profile */}
         {!hidden.includes('profile') && <div style={{ marginBottom:24, paddingBottom:20, borderBottom:`1px solid ${accent}33` }}>
           <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:accent, marginBottom:10 }}>Profil Exécutif</div>
-          <p style={{ fontSize:12, lineHeight:1.9, color:"rgba(255,255,255,0.75)", fontStyle:"italic" }}>{cv.profile}</p>
+          <p style={{ fontSize:12, lineHeight:1.9, color:"rgba(255,255,255,0.75)", fontStyle:"italic", ...PROFILE_CLAMP }}>{cv.profile}</p>
         </div>}
         {/* Experience */}
         {!hidden.includes('experience') && <div style={{ marginBottom:24 }}>
@@ -343,7 +351,7 @@ function TplCreatif({ cv, scale=1, accent="#7c3aed", font="'Inter',sans-serif", 
         </div>
         {/* Profile with left border */}
         {!hidden.includes('profile') && <div style={{ borderLeft:`4px solid ${accent}`, paddingLeft:16, marginBottom:28 }}>
-          <p style={{ fontSize:12, lineHeight:1.8, color:"#374151" }}>{cv.profile}</p>
+          <p style={{ fontSize:12, lineHeight:1.8, color:"#374151", ...PROFILE_CLAMP }}>{cv.profile}</p>
         </div>}
         {/* Two col layout */}
         <div style={{ display:"grid", gridTemplateColumns:"1fr 280px", gap:36 }}>
@@ -431,7 +439,7 @@ function TplAzurill({ cv, scale=1, accent="#0d9488", font="'Calibri','Segoe UI',
       <div style={{ height:3, background:`linear-gradient(90deg,${accent},${accent}99,${accent})`, borderRadius:2, marginBottom:22 }}/>
 
       {/* Profile */}
-      {!hidden.includes('profile') && <ASection title="Résumé" accent={accent}><p style={{ fontSize:12, lineHeight:1.85, color:"#334155" }}>{cv.profile}</p></ASection>}
+      {!hidden.includes('profile') && <ASection title="Résumé" accent={accent}><p style={{ fontSize:12, lineHeight:1.85, color:"#334155", ...PROFILE_CLAMP }}>{cv.profile}</p></ASection>}
 
       {/* Experience */}
       {!hidden.includes('experience') && <ASection title="Expérience Professionnelle" accent={accent}>
@@ -502,7 +510,7 @@ function TplBronzor({ cv, scale=1, accent="#6366f1", font="'Inter',sans-serif", 
         </div>
 
         {/* Profile */}
-        {!hidden.includes('profile') && <BSection title="Profil" accent={accent}><p style={{ fontSize:12, lineHeight:1.85, color:"#475569" }}>{cv.profile}</p></BSection>}
+        {!hidden.includes('profile') && <BSection title="Profil" accent={accent}><p style={{ fontSize:12, lineHeight:1.85, color:"#475569", ...PROFILE_CLAMP }}>{cv.profile}</p></BSection>}
 
         {/* Experience */}
         {!hidden.includes('experience') && <BSection title="Expériences" accent={accent}>
@@ -597,7 +605,7 @@ function TplDitto({ cv, scale=1, accent="#1e293b", font="'Georgia',serif", hidde
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0 }}>
         {/* Left column */}
         <div style={{ padding:"28px 28px 28px 44px", borderRight:"1px solid #e2e8f0" }}>
-          {!hidden.includes('profile') && <DSection title="Profil" accent={accent}><p style={{ fontSize:12, lineHeight:1.85, color:"#334155" }}>{cv.profile}</p></DSection>}
+          {!hidden.includes('profile') && <DSection title="Profil" accent={accent}><p style={{ fontSize:12, lineHeight:1.85, color:"#334155", ...PROFILE_CLAMP }}>{cv.profile}</p></DSection>}
           {!hidden.includes('education') && <DSection title="Formation" accent={accent}>{cv.education.map((e,i)=>(<div key={i} style={{ marginBottom:12 }}><div style={{ fontSize:12, fontWeight:700, color:"#0f172a" }}>{e.degree}</div><div style={{ fontSize:11, color:"#64748b" }}>{e.school}</div><div style={{ fontSize:10, color:"#94a3b8" }}>{e.year}</div></div>))}</DSection>}
           {!hidden.includes('skills') && <DSection title="Compétences" accent={accent}><div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"4px 8px" }}>{cv.skills.map((s,i)=>(<div key={i} style={{ fontSize:11, color:"#334155", display:"flex", alignItems:"center", gap:5 }}><div style={{ width:4, height:4, borderRadius:"50%", background:accent, flexShrink:0 }}/>{s}</div>))}</div></DSection>}
           {!hidden.includes('languages') && <DSection title="Langues" accent={accent}>{cv.languages.map((l,i)=>(<div key={i} style={{ fontSize:12, marginBottom:5 }}><strong style={{ color:"#0f172a" }}>{l.lang}</strong><span style={{ color:"#64748b" }}> — {l.level}</span></div>))}</DSection>}
@@ -639,7 +647,7 @@ function TplLeafish({ cv, scale=1, accent="#16a34a", font="'Inter',sans-serif", 
         <div>
           {!hidden.includes('profile') && <div style={{ marginBottom:24 }}>
             <div style={{ fontSize:10, fontWeight:800, letterSpacing:"0.14em", textTransform:"uppercase", color:accent, marginBottom:10 }}>À Propos</div>
-            <p style={{ fontSize:12, lineHeight:1.85, color:"#374151" }}>{cv.profile}</p>
+            <p style={{ fontSize:12, lineHeight:1.85, color:"#374151", ...PROFILE_CLAMP }}>{cv.profile}</p>
           </div>}
 
           <div style={{ marginBottom:24 }}>
@@ -822,6 +830,14 @@ export default function CVPage() {
     industry:"", level:"", experience:"", education:"", skills:"", langs:"", notes:"",
   });
 
+  // Captured before any effects run — used to prevent session restore from
+  // overwriting state that the payment effect sets (race: replaceState clears ?paid
+  // synchronously, so session restore effect sees no "paid" param)
+  const wasRedirectedFromPayment = useRef(
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("paid") === "true"
+  );
+
   // Payment state
   const [hasPaid,        setHasPaid]        = useState(false);
   const [currentPlan,    setCurrentPlan]    = useState<Plan>(PLANS[1]);
@@ -836,7 +852,12 @@ export default function CVPage() {
   const [genError,    setGenError]    = useState<string|null>(null);
   const printRef        = useRef<HTMLDivElement>(null);
   const scaleWrapRef    = useRef<HTMLDivElement>(null);
-  const [justPaid, setJustPaid] = useState(false); // show "click to download" banner after payment
+  const [justPaid,     setJustPaid]     = useState(false);
+  const [tplSwitching, setTplSwitching] = useState(false);
+  const [saveToast,    setSaveToast]    = useState(false);
+  const [copied,       setCopied]       = useState<string|null>(null);
+  const saveToastTimer = useRef<ReturnType<typeof setTimeout>|null>(null);
+  const copiedTimer    = useRef<ReturnType<typeof setTimeout>|null>(null);
 
   // Bonus content generated for Pro/Cadre plans
   const [coverLetter,       setCoverLetter]       = useState<string|null>(null);
@@ -872,12 +893,15 @@ export default function CVPage() {
     const savedLinkedin  = sessionStorage.getItem("dodo_cv_linkedin");
     const savedBio       = sessionStorage.getItem("dodo_cv_bio");
     const savedQuestions = sessionStorage.getItem("dodo_cv_questions");
+    const savedPhoto     = sessionStorage.getItem("dodo_cv_photo");
     ["dodo_cv_data","dodo_cv_tpl","dodo_cv_accent","dodo_cv_font","dodo_cv_hidden","dodo_cv_plan",
-     "dodo_cv_cover","dodo_cv_linkedin","dodo_cv_bio","dodo_cv_questions"]
+     "dodo_cv_cover","dodo_cv_linkedin","dodo_cv_bio","dodo_cv_questions","dodo_cv_photo"]
       .forEach(k => sessionStorage.removeItem(k));
 
     if (savedCv) {
       const cv = JSON.parse(savedCv) as CVData;
+      // Attach photo if it was saved separately (large base64)
+      if (savedPhoto) cv.photo = savedPhoto;
       setCvData(cv); setEditingCv(cv); setStep(5);
       if (savedTpl)    setSelectedTpl(Number(savedTpl));
       if (savedAccent) setEditorAccent(savedAccent);
@@ -901,7 +925,7 @@ export default function CVPage() {
     if (step !== 5 || !cvData) return;
     try {
       sessionStorage.setItem("cv_session", JSON.stringify({
-        cvData:         editingCv || cvData,
+        cvData:         editingCv || cvData, // includes photo if set
         step:           5,
         selectedTpl,
         editorAccent,
@@ -913,12 +937,16 @@ export default function CVPage() {
         linkedinSummary,
         executiveBio,
       }));
+      // Brief "saved" toast
+      setSaveToast(true);
+      if (saveToastTimer.current) clearTimeout(saveToastTimer.current);
+      saveToastTimer.current = setTimeout(() => setSaveToast(false), 1800);
     } catch { /* quota exceeded — ignore */ }
   }, [step, cvData, editingCv, selectedTpl, editorAccent, editorFont, hiddenSections, hasPaid, coverLetter, linkedinSummary, executiveBio, currentPlan]);
 
   // Restore session on mount if user navigates away and back
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has("paid")) return; // handled separately
+    if (wasRedirectedFromPayment.current) return; // payment effect handles this case
     try {
       const raw = sessionStorage.getItem("cv_session");
       if (!raw) return;
@@ -1280,6 +1308,9 @@ Retourne UNIQUEMENT le JSON.`}];
     if (linkedinSummary)    sessionStorage.setItem("dodo_cv_linkedin",  linkedinSummary);
     if (executiveBio)       sessionStorage.setItem("dodo_cv_bio",       executiveBio);
     if (interviewQuestions) sessionStorage.setItem("dodo_cv_questions", JSON.stringify(interviewQuestions));
+    // Save photo (base64 can be large — skip if quota would exceed)
+    const photo = (editingCv || cvData)?.photo;
+    if (photo) { try { sessionStorage.setItem("dodo_cv_photo", photo); } catch { /* quota */ } }
     window.location.href = DODO_CHECKOUT[plan.tier] || DODO_CHECKOUT.starter;
   };
 
@@ -1362,6 +1393,18 @@ Retourne UNIQUEMENT le JSON.`}];
 
   const goStep = (n: Step) => { setStep(n); window.scrollTo({top:0,behavior:"smooth"}); };
 
+  // Stable update function for the inline editor — defined outside the render IIFE
+  // so inputs don't lose focus on every keystroke (closure inside IIFE recreates on render)
+  const upd = useCallback((patch: Partial<CVData>) => {
+    setEditingCv(prev => ({ ...(prev || cvData || {} as CVData), ...patch }));
+  }, [cvData]);
+
+  const switchTemplate = useCallback((id: number) => {
+    setTplSwitching(true);
+    setSelectedTpl(id);
+    setTimeout(() => setTplSwitching(false), 250);
+  }, []);
+
   // ── JSX ───────────────────────────────────────────────────────────────────
   // Templates that support a photo section
   const PHOTO_TEMPLATES = [2,5,6,9];
@@ -1415,9 +1458,13 @@ Retourne UNIQUEMENT le JSON.`}];
         @media(max-width:768px){
           .cv-editor-wrap { flex-direction:column!important; height:auto!important; min-height:auto!important; --cv-scale:0.44; }
           .cv-editor-left { width:100%!important; max-height:360px; border-radius:14px 14px 0 0!important; }
-          .cv-editor-right { border-radius:0 0 14px 14px!important; min-height:420px; padding:14px 10px 28px!important; }
+          .cv-editor-right { border-radius:0 0 14px 14px!important; padding:14px 10px 28px!important; }
           .cv-editor-toolbar { flex-direction:column; gap:6px!important; align-items:flex-start!important; }
           .cv-editor-toolbar-btns { display:flex; gap:6px; flex-wrap:wrap; }
+          /* Prevent 794px template from causing horizontal scroll */
+          .cv-preview-outer { overflow:hidden; width:100%; display:flex!important; justify-content:center!important; }
+          /* Compensate for CSS transform not affecting layout — pull up the blank space below */
+          .cv-scale-wrap { margin-bottom:calc((var(--cv-scale) - 1) * 1130px)!important; transform-origin:top center!important; }
         }
 
         .au{animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both}
@@ -1855,7 +1902,7 @@ Retourne UNIQUEMENT le JSON.`}];
                     return (
                       <div key={t.id} className={`tpl-thumb${sel?" selected":""}`}
                         style={{position:"relative"}}
-                        onClick={()=>setSelectedTpl(t.id)}>
+                        onClick={()=>switchTemplate(t.id)}>
                         <div style={{height:220,overflow:"hidden",position:"relative",background:"#f8fafc"}}>
                           {/* Scaled preview — pointerEvents none so clicks reach parent */}
                           <div style={{position:"absolute",top:0,left:0,width:794,transformOrigin:"top left",transform:"scale(0.24)",pointerEvents:"none",userSelect:"none"}}>
@@ -1957,7 +2004,6 @@ Retourne UNIQUEMENT le JSON.`}];
             const cv = editingCv || cvData;
             const ac = editorAccent || undefined;
             const fn = editorFont    || undefined;
-            const upd = (patch: Partial<CVData>) => setEditingCv(prev => ({ ...(prev||cvData), ...patch }));
             const IS: React.CSSProperties = { border:"1.5px solid #e5e7eb", borderRadius:8, padding:"8px 10px", width:"100%", fontSize:12, fontFamily:"inherit", outline:"none", background:"white" };
             const tabBtn = (id: typeof editorTab, label: string) => (
               <button key={id} onClick={()=>setEditorTab(id)}
@@ -2150,6 +2196,18 @@ Retourne UNIQUEMENT le JSON.`}];
                             </div>
                           ))}
                         </div>
+
+                        {/* Certifications */}
+                        <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
+                          <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>🏅 Certifications <span style={{ fontWeight:400, color:"#9ca3af" }}>(une par ligne)</span></div>
+                          <textarea
+                            value={(cv.certifications||[]).join("\n")}
+                            onChange={e=>upd({certifications:e.target.value.split("\n").map(s=>s.trim()).filter(Boolean)})}
+                            rows={3}
+                            placeholder="AWS Certified Developer (2023)&#10;PMP Project Management (2022)"
+                            style={{ ...IS, resize:"vertical" }}
+                          />
+                        </div>
                       </div>
                     )}
 
@@ -2157,7 +2215,7 @@ Retourne UNIQUEMENT le JSON.`}];
 
                   {/* Bottom actions */}
                   <div style={{ padding:"12px 14px", borderTop:"1.5px solid #ede9fe", display:"flex", gap:8 }}>
-                    <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");setHasPaid(false);setCoverLetter(null);setLinkedinSummary(null);setExecutiveBio(null);setInterviewQuestions(null);sessionStorage.removeItem("cv_session");goStep(1);}} disabled={pdfBusy} style={{ flex:1, fontSize:12, padding:"9px", opacity:pdfBusy?0.5:1 }}>↺ Recommencer</button>
+                    <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");setHasPaid(false);setJustPaid(false);setCoverLetter(null);setLinkedinSummary(null);setExecutiveBio(null);setInterviewQuestions(null);setCurrentPlan(PLANS[1]);setPurchasedPlan(PLANS[0]);purchasedPlanRef.current=PLANS[0];setSelectedTpl(1);sessionStorage.removeItem("cv_session");goStep(1);}} disabled={pdfBusy} style={{ flex:1, fontSize:12, padding:"9px", opacity:pdfBusy?0.5:1 }}>↺ Recommencer</button>
                     <button className="btn-green" onClick={handleDownload} disabled={generating} style={{ flex:1, fontSize:12, padding:"9px" }}>
                       {hasPaid ? "🖨 PDF" : `🔒 Télécharger · ${currentPlan.price} MAD`}
                     </button>
@@ -2171,6 +2229,11 @@ Retourne UNIQUEMENT le JSON.`}];
                     <div style={{ fontSize:12, color:"#6b7280", display:"flex", alignItems:"center", gap:8 }}>
                       <span style={{ width:8, height:8, borderRadius:"50%", background:"#7c3aed", display:"inline-block", animation:"pulse 2s infinite" }}/>
                       Aperçu · <strong style={{ color:"#1e1147" }}>{TEMPLATES.find(t=>t.id===selectedTpl)?.name}</strong>
+                      {saveToast && (
+                        <span style={{ fontSize:10, color:"#059669", fontWeight:700, background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:100, padding:"2px 10px", animation:"fadeUp .3s ease both" }}>
+                          ✓ Brouillon enregistré
+                        </span>
+                      )}
                     </div>
                     <div className="cv-editor-toolbar-btns" style={{ display:"flex", gap:8 }}>
                       <button className="btn-outline" style={{ fontSize:11, padding:"5px 12px" }}
@@ -2202,8 +2265,8 @@ Retourne UNIQUEMENT le JSON.`}];
                   )}
 
                   {/* Preview — scaleWrapRef on the transform wrapper, printRef on the inner content */}
-                  <div style={{ width:"100%", display:"flex", justifyContent:"center" }}>
-                    <div ref={scaleWrapRef} style={{ transformOrigin:"top center", transform:"scale(var(--cv-scale, 0.85))", width:794 }}>
+                  <div className="cv-preview-outer" style={{ width:"100%", display:"flex", justifyContent:"center" }}>
+                    <div ref={scaleWrapRef} className="cv-scale-wrap" style={{ transformOrigin:"top center", transform:"scale(var(--cv-scale, 0.85))", width:794, flexShrink:0 }}>
                       {generating ? (
                         /* Regeneration skeleton */
                         <div style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", borderRadius:2, width:794, minHeight:1000, padding:"48px 52px", boxSizing:"border-box", display:"flex", flexDirection:"column", gap:20, position:"relative" }}>
@@ -2225,6 +2288,13 @@ Retourne UNIQUEMENT le JSON.`}];
                             <div style={{ fontSize:13, fontWeight:700, color:"#7c3aed", background:"white", padding:"6px 16px", borderRadius:100, boxShadow:"0 2px 12px rgba(124,58,237,.15)", whiteSpace:"nowrap" }}>
                               Génération en cours…
                             </div>
+                          </div>
+                        </div>
+                      ) : tplSwitching ? (
+                        <div style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", borderRadius:2, width:794, height:500, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
+                            <div style={{ width:32, height:32, border:"3px solid #ede9fe", borderTopColor:"#7c3aed", borderRadius:"50%", animation:"spin .7s linear infinite" }}/>
+                            <div style={{ fontSize:12, color:"#7c3aed", fontWeight:600 }}>Changement de modèle…</div>
                           </div>
                         </div>
                       ) : (
@@ -2278,10 +2348,16 @@ Retourne UNIQUEMENT le JSON.`}];
                           </div>
                           <pre style={{ fontSize:12, lineHeight:1.85, color:"#374151", whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0, filter:hasPaid?"none":"blur(4px)", userSelect:hasPaid?"auto":"none", pointerEvents:hasPaid?"auto":"none" }}>{coverLetter}</pre>
                           {hasPaid && (
-                            <button onClick={()=>{const b=new Blob([coverLetter],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="lettre_motivation.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
-                              style={{ marginTop:14, background:"#7c3aed", color:"white", border:"none", borderRadius:8, padding:"8px 18px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
-                              ⬇ Télécharger la lettre
-                            </button>
+                            <div style={{ display:"flex", gap:8, marginTop:14, flexWrap:"wrap" }}>
+                              <button onClick={()=>{navigator.clipboard.writeText(coverLetter);setCopied("cover");if(copiedTimer.current)clearTimeout(copiedTimer.current);copiedTimer.current=setTimeout(()=>setCopied(null),2000);}}
+                                style={{ background:copied==="cover"?"#059669":"#f5f3ff", color:copied==="cover"?"white":"#7c3aed", border:"1.5px solid #ddd6fe", borderRadius:8, padding:"7px 14px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", transition:"all .2s" }}>
+                                {copied==="cover" ? "✓ Copié !" : "📋 Copier"}
+                              </button>
+                              <button onClick={()=>{const b=new Blob([coverLetter],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="lettre_motivation.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
+                                style={{ background:"#7c3aed", color:"white", border:"none", borderRadius:8, padding:"7px 14px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                                ⬇ Télécharger
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
@@ -2296,10 +2372,16 @@ Retourne UNIQUEMENT le JSON.`}];
                           </div>
                           <p style={{ fontSize:13, lineHeight:1.8, color:"#374151", margin:0, filter:hasPaid?"none":"blur(4px)", userSelect:hasPaid?"auto":"none", pointerEvents:hasPaid?"auto":"none" }}>{linkedinSummary}</p>
                           {hasPaid && (
-                            <button onClick={()=>{const b=new Blob([linkedinSummary],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="linkedin_summary.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
-                              style={{ marginTop:12, background:"#1d4ed8", color:"white", border:"none", borderRadius:8, padding:"7px 16px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
-                              ⬇ Copier pour LinkedIn
-                            </button>
+                            <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
+                              <button onClick={()=>{navigator.clipboard.writeText(linkedinSummary);setCopied("linkedin");if(copiedTimer.current)clearTimeout(copiedTimer.current);copiedTimer.current=setTimeout(()=>setCopied(null),2000);}}
+                                style={{ background:copied==="linkedin"?"#059669":"#eff6ff", color:copied==="linkedin"?"white":"#1d4ed8", border:"1.5px solid #bfdbfe", borderRadius:8, padding:"7px 14px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", transition:"all .2s" }}>
+                                {copied==="linkedin" ? "✓ Copié !" : "📋 Copier"}
+                              </button>
+                              <button onClick={()=>{const b=new Blob([linkedinSummary],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="linkedin_summary.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
+                                style={{ background:"#1d4ed8", color:"white", border:"none", borderRadius:8, padding:"7px 14px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                                ⬇ Télécharger
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
@@ -2314,10 +2396,16 @@ Retourne UNIQUEMENT le JSON.`}];
                           </div>
                           <pre style={{ fontSize:12, lineHeight:1.85, color:"#374151", whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0, filter:hasPaid?"none":"blur(4px)", userSelect:hasPaid?"auto":"none", pointerEvents:hasPaid?"auto":"none" }}>{executiveBio}</pre>
                           {hasPaid && (
-                            <button onClick={()=>{const b=new Blob([executiveBio],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="bio_executive.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
-                              style={{ marginTop:12, background:"#92400e", color:"white", border:"none", borderRadius:8, padding:"7px 16px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
-                              ⬇ Télécharger la bio
-                            </button>
+                            <div style={{ display:"flex", gap:8, marginTop:12, flexWrap:"wrap" }}>
+                              <button onClick={()=>{navigator.clipboard.writeText(executiveBio);setCopied("bio");if(copiedTimer.current)clearTimeout(copiedTimer.current);copiedTimer.current=setTimeout(()=>setCopied(null),2000);}}
+                                style={{ background:copied==="bio"?"#059669":"#fef3c7", color:copied==="bio"?"white":"#92400e", border:"1.5px solid #fde68a", borderRadius:8, padding:"7px 14px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", transition:"all .2s" }}>
+                                {copied==="bio" ? "✓ Copié !" : "📋 Copier"}
+                              </button>
+                              <button onClick={()=>{const b=new Blob([executiveBio],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="bio_executive.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
+                                style={{ background:"#92400e", color:"white", border:"none", borderRadius:8, padding:"7px 14px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                                ⬇ Télécharger
+                              </button>
+                            </div>
                           )}
                         </div>
                       )}
