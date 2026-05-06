@@ -111,9 +111,9 @@ const CV_SECTIONS = [
 ];
 
 const PLANS: Plan[] = [
-  { name:"Starter",       price:"19",  productId: DODO_PRODUCT_IDS.starter,       tier:"starter" },
-  { name:"Professionnel", price:"35",  productId: DODO_PRODUCT_IDS.professionnel, tier:"pro"     },
-  { name:"Cadre",         price:"55",  productId: DODO_PRODUCT_IDS.cadre,         tier:"cadre"   },
+  { name:"Starter",       price:"19",  productId: "pdt_0NeCdmQE5gOZo2WER3XE2", tier:"starter" },
+  { name:"Professionnel", price:"35",  productId: "pdt_0NeCdv6Pkc5C3Z4Pnno5Q", tier:"pro"     },
+  { name:"Cadre",         price:"55",  productId: "pdt_0NeCe2Pfl1hs6WDESYmgB", tier:"cadre"   },
 ];
 
 const PLAN_FEATURES: Record<string,string[]> = {
