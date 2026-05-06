@@ -1262,53 +1262,75 @@ Retourne UNIQUEMENT le JSON.`}];
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=794, initial-scale=1">
+  <meta name="viewport" content="width=794, initial-scale=1.0, shrink-to-fit=no">
   ${fontLinks}
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { width: 794px; background: white; }
+
+    @page {
+      size: 210mm 297mm;
+      margin: 0mm;
+    }
+
+    html {
+      width: 210mm;
+      background: #f0f0f0;
+    }
+
     body {
-      width: 794px;
+      width: 794px; /* 210mm at 96dpi */
+      min-height: 1123px; /* 297mm at 96dpi */
       background: white;
+      margin: 0 auto;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
       color-adjust: exact !important;
+      font-size: 100%;
     }
-    @page {
-      size: 210mm 297mm;
-      margin: 0;
-    }
+
+    /* Page break between pages */
+    .cv-page-break { break-before: page; }
+
     @media screen {
-      /* On mobile screen: scale the 794px CV down to fit the viewport */
-      html { width: 100vw; overflow-x: hidden; }
-      body { width: 794px; transform-origin: top left; transform: scale(min(1, calc(100vw / 794px))); }
+      html { padding: 20px 0; }
+      body {
+        box-shadow: 0 4px 24px rgba(0,0,0,.18);
+        border-radius: 2px;
+      }
     }
+
     @media print {
-      html, body { width: 794px; transform: none !important; }
-      .cv-root { page-break-inside: auto; }
+      html { width: 210mm; background: white; padding: 0; }
+      body {
+        width: 210mm;
+        margin: 0;
+        box-shadow: none;
+        border-radius: 0;
+        transform: none !important;
+      }
     }
-    .cv-root { width: 794px; }
   </style>
 </head>
 <body>
-  <div class="cv-root">
-    ${node.outerHTML}
-  </div>
+  ${node.outerHTML}
   <script>
-    // Scale body to fit narrow screens while keeping print at full 794px
+    // Shrink to fit on narrow viewports (mobile preview)
     function applyScale() {
       var vw = window.innerWidth;
-      if (vw < 794) {
-        document.body.style.transform = 'scale(' + (vw / 794) + ')';
-        document.body.style.transformOrigin = 'top left';
-        document.documentElement.style.height = (document.body.scrollHeight * vw / 794) + 'px';
+      if (vw < 834) { /* 794px + some padding */
+        var scale = Math.min(1, (vw - 40) / 794);
+        document.body.style.transform = 'scale(' + scale + ')';
+        document.body.style.transformOrigin = 'top center';
+        document.documentElement.style.height = (1123 * scale + 40) + 'px';
+      } else {
+        document.body.style.transform = '';
       }
     }
     applyScale();
     window.addEventListener('resize', applyScale);
 
     document.fonts.ready.then(function () {
-      setTimeout(function () { window.print(); }, 400);
+      setTimeout(function () { window.print(); }, 500);
     });
   </script>
 </body>
@@ -2130,8 +2152,8 @@ Retourne UNIQUEMENT le JSON.`}];
                     </div>
                     <div className="cv-editor-toolbar-btns" style={{ display:"flex", gap:8 }}>
                       <button className="btn-outline" style={{ fontSize:11, padding:"5px 12px" }}
-                        onClick={()=>{ const w=window.open("","_blank"); if(!w)return; w.document.write("<html><body style='margin:0'>"); w.document.write(printRef.current?.outerHTML||""); w.document.write("</body></html>"); w.document.close(); w.print(); }}>
-                        🖨 Imprimer
+                        onClick={handleDownload}>
+                        🖨 Imprimer / PDF
                       </button>
                       <button className="btn-green" onClick={handleDownload} disabled={generating} style={{ fontSize:11, padding:"5px 14px" }}>
                         {hasPaid ? "🖨 Télécharger PDF" : `🔒 ${currentPlan.price} MAD · Télécharger`}
@@ -2187,60 +2209,96 @@ Retourne UNIQUEMENT le JSON.`}];
                       ⚠ {bonusError}
                     </div>
                   )}
-                  {coverLetter && (
-                    <div style={{ marginTop:24, maxWidth:794, width:"100%", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #ede9fe", boxShadow:"0 2px 16px rgba(124,58,237,.07)" }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, flexWrap:"wrap" }}>
-                        <span style={{ fontSize:18 }}>✉</span>
-                        <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Lettre de motivation</div>
-                        <span style={{ marginLeft:"auto", fontSize:11, background:"#f5f3ff", color:"#7c3aed", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #ddd6fe" }}>Incluse</span>
-                      </div>
-                      <pre style={{ fontSize:12, lineHeight:1.85, color:"#374151", whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0 }}>{coverLetter}</pre>
-                      <button onClick={()=>{const b=new Blob([coverLetter],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="lettre_motivation.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
-                        style={{ marginTop:14, background:"#7c3aed", color:"white", border:"none", borderRadius:8, padding:"8px 18px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
-                        ⬇ Télécharger la lettre
-                      </button>
-                    </div>
-                  )}
-                  {linkedinSummary && (
-                    <div style={{ marginTop:16, maxWidth:794, width:"100%", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #dbeafe", boxShadow:"0 2px 16px rgba(29,78,216,.05)" }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, flexWrap:"wrap" }}>
-                        <span style={{ fontSize:18 }}>💼</span>
-                        <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Résumé LinkedIn</div>
-                        <span style={{ marginLeft:"auto", fontSize:11, background:"#eff6ff", color:"#1d4ed8", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #bfdbfe" }}>Professionnel</span>
-                      </div>
-                      <p style={{ fontSize:13, lineHeight:1.8, color:"#374151", margin:0 }}>{linkedinSummary}</p>
-                      <button onClick={()=>{const b=new Blob([linkedinSummary],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="linkedin_summary.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
-                        style={{ marginTop:12, background:"#1d4ed8", color:"white", border:"none", borderRadius:8, padding:"7px 16px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
-                        ⬇ Copier pour LinkedIn
-                      </button>
-                    </div>
-                  )}
-                  {executiveBio && (
-                    <div style={{ marginTop:16, maxWidth:794, width:"100%", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #fde68a", boxShadow:"0 2px 16px rgba(146,64,14,.05)" }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12, flexWrap:"wrap" }}>
-                        <span style={{ fontSize:18 }}>👔</span>
-                        <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Bio Exécutive</div>
-                        <span style={{ marginLeft:"auto", fontSize:11, background:"#fef3c7", color:"#92400e", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #fde68a" }}>Cadre</span>
-                      </div>
-                      <pre style={{ fontSize:12, lineHeight:1.85, color:"#374151", whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0 }}>{executiveBio}</pre>
-                      <button onClick={()=>{const b=new Blob([executiveBio],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="bio_executive.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
-                        style={{ marginTop:12, background:"#92400e", color:"white", border:"none", borderRadius:8, padding:"7px 16px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
-                        ⬇ Télécharger la bio
-                      </button>
-                    </div>
-                  )}
-                  {interviewQuestions && (
-                    <div style={{ marginTop:16, maxWidth:794, width:"100%", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #ede9fe", boxShadow:"0 2px 16px rgba(124,58,237,.07)" }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14, flexWrap:"wrap" }}>
-                        <span style={{ fontSize:18 }}>🎯</span>
-                        <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Questions d'entretien IA</div>
-                        <span style={{ marginLeft:"auto", fontSize:11, background:"#f5f3ff", color:"#7c3aed", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #ddd6fe" }}>Cadre</span>
-                      </div>
-                      {interviewQuestions.map((q,i) => (
-                        <div key={i} style={{ marginBottom:14, paddingBottom:14, borderBottom:i<interviewQuestions.length-1?"1px solid #f3f4f6":"none" }}>
-                          <pre style={{ fontSize:12, lineHeight:1.8, color:"#374151", whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0 }}>{q}</pre>
+                  {/* ── BONUS CONTENT — locked until payment ── */}
+                  {(coverLetter || linkedinSummary || executiveBio || interviewQuestions) && (
+                    <div style={{ marginTop:24, maxWidth:794, width:"100%", display:"flex", flexDirection:"column", gap:12 }}>
+                      {/* Unlock banner when not paid */}
+                      {!hasPaid && (
+                        <div style={{ background:"linear-gradient(135deg,#1e1147,#3b1fa3)", borderRadius:12, padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                            <span style={{ fontSize:22 }}>🔒</span>
+                            <div>
+                              <div style={{ color:"white", fontWeight:700, fontSize:13 }}>Contenu premium généré et prêt</div>
+                              <div style={{ color:"rgba(255,255,255,.6)", fontSize:11, marginTop:2 }}>Téléchargez votre CV pour débloquer la lettre de motivation et les extras</div>
+                            </div>
+                          </div>
+                          <button onClick={handleDownload} style={{ background:"linear-gradient(135deg,#f97316,#ea580c)", color:"white", border:"none", borderRadius:8, padding:"9px 18px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap" }}>
+                            Débloquer · {currentPlan.price} MAD →
+                          </button>
                         </div>
-                      ))}
+                      )}
+
+                      {/* Cover letter */}
+                      {coverLetter && (
+                        <div style={{ position:"relative", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #ede9fe", boxShadow:"0 2px 16px rgba(124,58,237,.07)", overflow:"hidden" }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                            <span style={{ fontSize:18 }}>✉</span>
+                            <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Lettre de motivation</div>
+                            <span style={{ marginLeft:"auto", fontSize:11, background:"#f5f3ff", color:"#7c3aed", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #ddd6fe" }}>Incluse</span>
+                          </div>
+                          <pre style={{ fontSize:12, lineHeight:1.85, color:"#374151", whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0, filter:hasPaid?"none":"blur(4px)", userSelect:hasPaid?"auto":"none", pointerEvents:hasPaid?"auto":"none" }}>{coverLetter}</pre>
+                          {hasPaid && (
+                            <button onClick={()=>{const b=new Blob([coverLetter],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="lettre_motivation.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
+                              style={{ marginTop:14, background:"#7c3aed", color:"white", border:"none", borderRadius:8, padding:"8px 18px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                              ⬇ Télécharger la lettre
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* LinkedIn summary */}
+                      {linkedinSummary && (
+                        <div style={{ position:"relative", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #dbeafe", boxShadow:"0 2px 16px rgba(29,78,216,.05)", overflow:"hidden" }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+                            <span style={{ fontSize:18 }}>💼</span>
+                            <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Résumé LinkedIn</div>
+                            <span style={{ marginLeft:"auto", fontSize:11, background:"#eff6ff", color:"#1d4ed8", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #bfdbfe" }}>Professionnel</span>
+                          </div>
+                          <p style={{ fontSize:13, lineHeight:1.8, color:"#374151", margin:0, filter:hasPaid?"none":"blur(4px)", userSelect:hasPaid?"auto":"none", pointerEvents:hasPaid?"auto":"none" }}>{linkedinSummary}</p>
+                          {hasPaid && (
+                            <button onClick={()=>{const b=new Blob([linkedinSummary],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="linkedin_summary.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
+                              style={{ marginTop:12, background:"#1d4ed8", color:"white", border:"none", borderRadius:8, padding:"7px 16px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                              ⬇ Copier pour LinkedIn
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Executive bio */}
+                      {executiveBio && (
+                        <div style={{ position:"relative", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #fde68a", boxShadow:"0 2px 16px rgba(146,64,14,.05)", overflow:"hidden" }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+                            <span style={{ fontSize:18 }}>👔</span>
+                            <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Bio Exécutive</div>
+                            <span style={{ marginLeft:"auto", fontSize:11, background:"#fef3c7", color:"#92400e", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #fde68a" }}>Cadre</span>
+                          </div>
+                          <pre style={{ fontSize:12, lineHeight:1.85, color:"#374151", whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0, filter:hasPaid?"none":"blur(4px)", userSelect:hasPaid?"auto":"none", pointerEvents:hasPaid?"auto":"none" }}>{executiveBio}</pre>
+                          {hasPaid && (
+                            <button onClick={()=>{const b=new Blob([executiveBio],{type:"text/plain"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download="bio_executive.txt";setTimeout(()=>URL.revokeObjectURL(u),1000);a.click();}}
+                              style={{ marginTop:12, background:"#92400e", color:"white", border:"none", borderRadius:8, padding:"7px 16px", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+                              ⬇ Télécharger la bio
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Interview questions */}
+                      {interviewQuestions && (
+                        <div style={{ position:"relative", background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #ede9fe", boxShadow:"0 2px 16px rgba(124,58,237,.07)", overflow:"hidden" }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+                            <span style={{ fontSize:18 }}>🎯</span>
+                            <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Questions d'entretien IA</div>
+                            <span style={{ marginLeft:"auto", fontSize:11, background:"#f5f3ff", color:"#7c3aed", padding:"3px 10px", borderRadius:100, fontWeight:700, border:"1px solid #ddd6fe" }}>Cadre</span>
+                          </div>
+                          <div style={{ filter:hasPaid?"none":"blur(4px)", userSelect:hasPaid?"auto":"none", pointerEvents:hasPaid?"auto":"none" }}>
+                            {interviewQuestions.map((q,i) => (
+                              <div key={i} style={{ marginBottom:14, paddingBottom:14, borderBottom:i<interviewQuestions.length-1?"1px solid #f3f4f6":"none" }}>
+                                <pre style={{ fontSize:12, lineHeight:1.8, color:"#374151", whiteSpace:"pre-wrap", fontFamily:"inherit", margin:0 }}>{q}</pre>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
