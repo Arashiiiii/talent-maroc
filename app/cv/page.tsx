@@ -834,8 +834,9 @@ export default function CVPage() {
   const [genStep,     setGenStep]     = useState(0);
   const [cvData,      setCvData]      = useState<CVData|null>(null);
   const [genError,    setGenError]    = useState<string|null>(null);
-  const printRef      = useRef<HTMLDivElement>(null); // inner CV content
-  const scaleWrapRef  = useRef<HTMLDivElement>(null); // parent with CSS scale transform
+  const printRef        = useRef<HTMLDivElement>(null);
+  const scaleWrapRef    = useRef<HTMLDivElement>(null);
+  const [pendingDownload, setPendingDownload] = useState(false);
 
   // Bonus content generated for Pro/Cadre plans
   const [coverLetter,       setCoverLetter]       = useState<string|null>(null);
@@ -881,8 +882,62 @@ export default function CVPage() {
       setCurrentPlan(plan); setPurchasedPlan(plan); purchasedPlanRef.current = plan;
     }
     setHasPaid(true);
-    // Auto-trigger download after state settles
-    setTimeout(() => downloadPDF(), 600);
+    setPendingDownload(true); // triggers download once printRef is mounted
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Trigger download once the CV is rendered in the DOM after payment redirect
+  useEffect(() => {
+    if (pendingDownload && printRef.current) {
+      setPendingDownload(false);
+      downloadPDF();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingDownload, cvData]);
+
+  // ── SESSION PERSISTENCE ───────────────────────────────────────────────────
+  // Save editor state whenever key values change so returning to /cv restores progress
+  useEffect(() => {
+    if (step !== 5 || !cvData) return;
+    try {
+      sessionStorage.setItem("cv_session", JSON.stringify({
+        cvData:         editingCv || cvData,
+        step:           5,
+        selectedTpl,
+        editorAccent,
+        editorFont,
+        hiddenSections,
+        planTier:       currentPlan.tier,
+        hasPaid,
+        coverLetter,
+        linkedinSummary,
+        executiveBio,
+      }));
+    } catch { /* quota exceeded — ignore */ }
+  }, [step, cvData, editingCv, selectedTpl, editorAccent, editorFont, hiddenSections, hasPaid, coverLetter, linkedinSummary, executiveBio, currentPlan]);
+
+  // Restore session on mount if user navigates away and back
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("paid")) return; // handled separately
+    try {
+      const raw = sessionStorage.getItem("cv_session");
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (!s.cvData) return;
+      setCvData(s.cvData);
+      setEditingCv(s.cvData);
+      setStep(5);
+      if (s.selectedTpl)    setSelectedTpl(s.selectedTpl);
+      if (s.editorAccent)   setEditorAccent(s.editorAccent);
+      if (s.editorFont)     setEditorFont(s.editorFont);
+      if (s.hiddenSections) setHiddenSections(s.hiddenSections);
+      if (s.coverLetter)    setCoverLetter(s.coverLetter);
+      if (s.linkedinSummary) setLinkedinSummary(s.linkedinSummary);
+      if (s.executiveBio)   setExecutiveBio(s.executiveBio);
+      setHasPaid(s.hasPaid || false);
+      const plan = PLANS.find(p => p.tier === s.planTier) || PLANS[1];
+      setCurrentPlan(plan); setPurchasedPlan(plan); purchasedPlanRef.current = plan;
+    } catch { /* corrupted session — ignore */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1262,68 +1317,59 @@ Retourne UNIQUEMENT le JSON.`}];
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=794, initial-scale=1.0, shrink-to-fit=no">
+  <meta name="viewport" content="width=794, initial-scale=1.0">
   ${fontLinks}
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* ── A4 page definition ───────────────────────────────── */
     @page {
-      size: 210mm 297mm;
-      margin: 0mm;
+      size: A4 portrait;   /* 210mm × 297mm */
+      margin: 0;           /* template controls its own internal spacing */
     }
 
     html {
-      width: 210mm;
-      background: #f0f0f0;
+      background: #e8e8e8;
     }
 
     body {
-      width: 794px; /* 210mm at 96dpi */
-      min-height: 1123px; /* 297mm at 96dpi */
-      background: white;
+      /* 794px = 210mm at exactly 96 dpi — the W3C reference pixel */
+      width: 794px;
       margin: 0 auto;
+      background: white;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
       color-adjust: exact !important;
-      font-size: 100%;
     }
 
-    /* Page break between pages */
-    .cv-page-break { break-before: page; }
-
     @media screen {
-      html { padding: 20px 0; }
-      body {
-        box-shadow: 0 4px 24px rgba(0,0,0,.18);
-        border-radius: 2px;
-      }
+      html { padding: 24px 0; }
+      body { box-shadow: 0 4px 32px rgba(0,0,0,.22); }
     }
 
     @media print {
-      html { width: 210mm; background: white; padding: 0; }
+      html { background: white; padding: 0; }
       body {
-        width: 210mm;
+        width: 210mm;   /* use mm units for print so DPI differences don't matter */
         margin: 0;
         box-shadow: none;
-        border-radius: 0;
-        transform: none !important;
       }
+      /* Force template divs to respect A4 width */
+      body > div { width: 100% !important; max-width: 210mm !important; }
     }
   </style>
 </head>
 <body>
   ${node.outerHTML}
   <script>
-    // Shrink to fit on narrow viewports (mobile preview)
+    /* Shrink preview on narrow mobile screens */
     function applyScale() {
-      var vw = window.innerWidth;
-      if (vw < 834) { /* 794px + some padding */
-        var scale = Math.min(1, (vw - 40) / 794);
-        document.body.style.transform = 'scale(' + scale + ')';
+      var w = window.innerWidth, tw = 794 + 48;
+      if (w < tw) {
+        var s = (w - 16) / 794;
+        document.body.style.transform = 'scale(' + s + ')';
         document.body.style.transformOrigin = 'top center';
-        document.documentElement.style.height = (1123 * scale + 40) + 'px';
-      } else {
-        document.body.style.transform = '';
+        document.documentElement.style.minHeight = Math.ceil(document.body.scrollHeight * s + 32) + 'px';
       }
     }
     applyScale();
@@ -2135,7 +2181,7 @@ Retourne UNIQUEMENT le JSON.`}];
 
                   {/* Bottom actions */}
                   <div style={{ padding:"12px 14px", borderTop:"1.5px solid #ede9fe", display:"flex", gap:8 }}>
-                    <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");goStep(1);}} disabled={pdfBusy} style={{ flex:1, fontSize:12, padding:"9px", opacity:pdfBusy?0.5:1 }}>↺ Recommencer</button>
+                    <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");setHasPaid(false);setCoverLetter(null);setLinkedinSummary(null);setExecutiveBio(null);setInterviewQuestions(null);sessionStorage.removeItem("cv_session");goStep(1);}} disabled={pdfBusy} style={{ flex:1, fontSize:12, padding:"9px", opacity:pdfBusy?0.5:1 }}>↺ Recommencer</button>
                     <button className="btn-green" onClick={handleDownload} disabled={generating} style={{ flex:1, fontSize:12, padding:"9px" }}>
                       {hasPaid ? "🖨 PDF" : `🔒 Télécharger · ${currentPlan.price} MAD`}
                     </button>
