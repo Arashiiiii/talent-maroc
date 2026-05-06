@@ -862,13 +862,18 @@ export default function CVPage() {
     if (params.get("paid") !== "true") return;
     window.history.replaceState({}, "", "/cv");
 
-    const savedCv      = sessionStorage.getItem("dodo_cv_data");
-    const savedTpl     = sessionStorage.getItem("dodo_cv_tpl");
-    const savedAccent  = sessionStorage.getItem("dodo_cv_accent");
-    const savedFont    = sessionStorage.getItem("dodo_cv_font");
-    const savedHidden  = sessionStorage.getItem("dodo_cv_hidden");
-    const savedPlanT   = sessionStorage.getItem("dodo_cv_plan") as PlanTier | null;
-    ["dodo_cv_data","dodo_cv_tpl","dodo_cv_accent","dodo_cv_font","dodo_cv_hidden","dodo_cv_plan"]
+    const savedCv        = sessionStorage.getItem("dodo_cv_data");
+    const savedTpl       = sessionStorage.getItem("dodo_cv_tpl");
+    const savedAccent    = sessionStorage.getItem("dodo_cv_accent");
+    const savedFont      = sessionStorage.getItem("dodo_cv_font");
+    const savedHidden    = sessionStorage.getItem("dodo_cv_hidden");
+    const savedPlanT     = sessionStorage.getItem("dodo_cv_plan") as PlanTier | null;
+    const savedCover     = sessionStorage.getItem("dodo_cv_cover");
+    const savedLinkedin  = sessionStorage.getItem("dodo_cv_linkedin");
+    const savedBio       = sessionStorage.getItem("dodo_cv_bio");
+    const savedQuestions = sessionStorage.getItem("dodo_cv_questions");
+    ["dodo_cv_data","dodo_cv_tpl","dodo_cv_accent","dodo_cv_font","dodo_cv_hidden","dodo_cv_plan",
+     "dodo_cv_cover","dodo_cv_linkedin","dodo_cv_bio","dodo_cv_questions"]
       .forEach(k => sessionStorage.removeItem(k));
 
     if (savedCv) {
@@ -881,19 +886,12 @@ export default function CVPage() {
       const plan = PLANS.find(p => p.tier === savedPlanT) || PLANS[1];
       setCurrentPlan(plan); setPurchasedPlan(plan); purchasedPlanRef.current = plan;
     }
+    if (savedCover)     setCoverLetter(savedCover);
+    if (savedLinkedin)  setLinkedinSummary(savedLinkedin);
+    if (savedBio)       setExecutiveBio(savedBio);
+    if (savedQuestions) { try { setInterviewQuestions(JSON.parse(savedQuestions)); } catch { /* ignore */ } }
     setHasPaid(true);
     setJustPaid(true);
-
-    // Also restore bonus content from cv_session (saved before payment redirect)
-    try {
-      const sessionRaw = sessionStorage.getItem("cv_session");
-      if (sessionRaw) {
-        const s = JSON.parse(sessionRaw);
-        if (s.coverLetter)     setCoverLetter(s.coverLetter);
-        if (s.linkedinSummary) setLinkedinSummary(s.linkedinSummary);
-        if (s.executiveBio)    setExecutiveBio(s.executiveBio);
-      }
-    } catch { /* ignore */ }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1270,7 +1268,6 @@ Retourne UNIQUEMENT le JSON.`}];
 
   // ── DODO PAYMENT LINK REDIRECT ────────────────────────────────────────────
   const redirectToPayment = (plan: Plan) => {
-    // Save editor state so it can be restored after redirect
     const cv = editingCv || cvData;
     if (cv) sessionStorage.setItem("dodo_cv_data",    JSON.stringify(cv));
     sessionStorage.setItem("dodo_cv_plan",    plan.tier);
@@ -1278,6 +1275,11 @@ Retourne UNIQUEMENT le JSON.`}];
     sessionStorage.setItem("dodo_cv_accent",  editorAccent);
     sessionStorage.setItem("dodo_cv_font",    editorFont);
     sessionStorage.setItem("dodo_cv_hidden",  JSON.stringify(hiddenSections));
+    // Explicitly save bonus content so it survives the payment redirect
+    if (coverLetter)        sessionStorage.setItem("dodo_cv_cover",     coverLetter);
+    if (linkedinSummary)    sessionStorage.setItem("dodo_cv_linkedin",  linkedinSummary);
+    if (executiveBio)       sessionStorage.setItem("dodo_cv_bio",       executiveBio);
+    if (interviewQuestions) sessionStorage.setItem("dodo_cv_questions", JSON.stringify(interviewQuestions));
     window.location.href = DODO_CHECKOUT[plan.tier] || DODO_CHECKOUT.starter;
   };
 
@@ -1311,31 +1313,24 @@ Retourne UNIQUEMENT le JSON.`}];
       return;
     }
 
-    // Collect all Google Fonts link tags from the current page
+    // Carry Google Fonts over
     const fontLinks = Array.from(document.querySelectorAll('link[href*="fonts.googleapis"]'))
       .map(l => l.outerHTML).join("\n");
+
+    // Carry ALL <style> blocks so template CSS classes work identically
+    const pageStyles = Array.from(document.querySelectorAll("style"))
+      .map(s => `<style>${s.textContent ?? ""}</style>`).join("\n");
 
     w.document.write(`<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=794, initial-scale=1.0">
   ${fontLinks}
+  ${pageStyles}
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    /* ── A4 page definition ───────────────────────────────── */
-    @page {
-      size: A4 portrait;   /* 210mm × 297mm */
-      margin: 0;           /* template controls its own internal spacing */
-    }
-
-    html {
-      background: #e8e8e8;
-    }
-
+    @page { size: A4 portrait; margin: 0; }
+    html { background: #e8e8e8; }
     body {
-      /* 794px = 210mm at exactly 96 dpi — the W3C reference pixel */
       width: 794px;
       margin: 0 auto;
       background: white;
@@ -1343,42 +1338,21 @@ Retourne UNIQUEMENT le JSON.`}];
       print-color-adjust: exact !important;
       color-adjust: exact !important;
     }
-
     @media screen {
       html { padding: 24px 0; }
       body { box-shadow: 0 4px 32px rgba(0,0,0,.22); }
     }
-
     @media print {
-      html { background: white; padding: 0; }
-      body {
-        width: 210mm;   /* use mm units for print so DPI differences don't matter */
-        margin: 0;
-        box-shadow: none;
-      }
-      /* Force template divs to respect A4 width */
-      body > div { width: 100% !important; max-width: 210mm !important; }
+      html, body { background: white !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
+      body { width: 210mm !important; }
     }
   </style>
 </head>
 <body>
   ${node.outerHTML}
   <script>
-    /* Shrink preview on narrow mobile screens */
-    function applyScale() {
-      var w = window.innerWidth, tw = 794 + 48;
-      if (w < tw) {
-        var s = (w - 16) / 794;
-        document.body.style.transform = 'scale(' + s + ')';
-        document.body.style.transformOrigin = 'top center';
-        document.documentElement.style.minHeight = Math.ceil(document.body.scrollHeight * s + 32) + 'px';
-      }
-    }
-    applyScale();
-    window.addEventListener('resize', applyScale);
-
     document.fonts.ready.then(function () {
-      setTimeout(function () { window.print(); }, 500);
+      setTimeout(function () { window.print(); }, 600);
     });
   </script>
 </body>
