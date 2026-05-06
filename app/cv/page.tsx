@@ -1,12 +1,10 @@
 "use client";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { DodoPayments } from "dodopayments-checkout";
-
-// ── DODO PAYMENTS CONFIG ───────────────────────────────────────────────────
-const DODO_PRODUCT_IDS = {
-  starter:       "pdt_0NeCdmQE5gOZo2WER3XE2",
-  professionnel: "pdt_0NeCdv6Pkc5C3Z4Pnno5Q",
-  cadre:         "pdt_0NeCe2Pfl1hs6WDESYmgB",
+// ── DODO PAYMENT LINKS ────────────────────────────────────────────────────
+const DODO_CHECKOUT: Record<string, string> = {
+  starter:       "https://test.checkout.dodopayments.com/buy/pdt_0NeCdmQE5gOZo2WER3XE2?quantity=1&redirect_url=https%3A%2F%2Ftalentmaroc.shop%2Fsuccess%3Ftype%3Dcv",
+  pro:           "https://test.checkout.dodopayments.com/buy/pdt_0NeCdv6Pkc5C3Z4Pnno5Q?quantity=1&redirect_url=https%3A%2F%2Ftalentmaroc.shop%2Fsuccess%3Ftype%3Dcv",
+  cadre:         "https://test.checkout.dodopayments.com/buy/pdt_0NeCe2Pfl1hs6WDESYmgB?quantity=1&redirect_url=https%3A%2F%2Ftalentmaroc.shop%2Fsuccess%3Ftype%3Dcv",
 };
 
 // ── TYPES ──────────────────────────────────────────────────────────────────
@@ -824,18 +822,11 @@ export default function CVPage() {
     industry:"", level:"", experience:"", education:"", skills:"", langs:"", notes:"",
   });
 
-  // Dodo Payments state
-  const [dodoModal,      setDodoModal]      = useState(false);
-  const [dodoLoading,    setDodoLoading]    = useState(false);
-  const [dodoPolling,    setDodoPolling]    = useState(false);
-  const [dodoError,      setDodoError]      = useState<string|null>(null);
-  const [hasPaid,        setHasPaid]        = useState(false); // payment confirmed for download
+  // Payment state
+  const [hasPaid,        setHasPaid]        = useState(false);
   const [currentPlan,    setCurrentPlan]    = useState<Plan>(PLANS[1]);
   const [purchasedPlan,  setPurchasedPlan]  = useState<Plan>(PLANS[0]);
   const purchasedPlanRef  = useRef<Plan>(PLANS[0]);
-  const dodoPaymentIdRef  = useRef<string|null>(null);
-  const dodoPaymentLinkRef = useRef<string|null>(null);
-  const dodoIntervalRef   = useRef<ReturnType<typeof setInterval>|null>(null);
 
   // Generation
   const [generating,  setGenerating]  = useState(false); // AI content generation
@@ -864,36 +855,36 @@ export default function CVPage() {
 
   const GEN_STEPS = ["Lecture du CV","Extraction des données","Application du modèle","Optimisation ATS","Finalisation"];
 
-  // Initialize DodoPayments inline checkout
+  // Restore CV state after returning from Dodo payment redirect (?paid=true)
   useEffect(() => {
-    DodoPayments.Initialize({
-      mode: "test",
-      displayType: "inline",
-      onEvent: (event: any) => {
-        if (event.name === "checkout.pay_button_clicked") {
-          if (dodoPaymentIdRef.current) {
-            setDodoPolling(true);
-            startDodoPolling(dodoPaymentIdRef.current);
-          }
-        }
-        if (event.name === "checkout.error") {
-          setDodoError("Erreur de paiement. Veuillez réessayer.");
-          setDodoPolling(false);
-          stopDodoPolling();
-        }
-      },
-    });
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("paid") !== "true") return;
+    window.history.replaceState({}, "", "/cv");
+
+    const savedCv      = sessionStorage.getItem("dodo_cv_data");
+    const savedTpl     = sessionStorage.getItem("dodo_cv_tpl");
+    const savedAccent  = sessionStorage.getItem("dodo_cv_accent");
+    const savedFont    = sessionStorage.getItem("dodo_cv_font");
+    const savedHidden  = sessionStorage.getItem("dodo_cv_hidden");
+    const savedPlanT   = sessionStorage.getItem("dodo_cv_plan") as PlanTier | null;
+    ["dodo_cv_data","dodo_cv_tpl","dodo_cv_accent","dodo_cv_font","dodo_cv_hidden","dodo_cv_plan"]
+      .forEach(k => sessionStorage.removeItem(k));
+
+    if (savedCv) {
+      const cv = JSON.parse(savedCv) as CVData;
+      setCvData(cv); setEditingCv(cv); setStep(5);
+      if (savedTpl)    setSelectedTpl(Number(savedTpl));
+      if (savedAccent) setEditorAccent(savedAccent);
+      if (savedFont)   setEditorFont(savedFont);
+      if (savedHidden) setHiddenSections(JSON.parse(savedHidden));
+      const plan = PLANS.find(p => p.tier === savedPlanT) || PLANS[1];
+      setCurrentPlan(plan); setPurchasedPlan(plan); purchasedPlanRef.current = plan;
+    }
+    setHasPaid(true);
+    // Auto-trigger download after state settles
+    setTimeout(() => downloadPDF(), 600);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Open Dodo inline checkout AFTER the modal div is actually in the DOM
-  useEffect(() => {
-    if (dodoModal && dodoPaymentLinkRef.current) {
-      const url = dodoPaymentLinkRef.current;
-      dodoPaymentLinkRef.current = null; // clear so it doesn't re-trigger
-      DodoPayments.Checkout.open({ checkoutUrl: url, elementId: "dodo-cv-checkout" });
-    }
-  }, [dodoModal]);
 
   // Handle ?match= params from job detail page — pre-fill form with job context
   useEffect(()=>{
@@ -1220,59 +1211,17 @@ Retourne UNIQUEMENT le JSON.`}];
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
-  // ── DODO PAYMENTS CHECKOUT ────────────────────────────────────────────────
-  const stopDodoPolling = () => {
-    if (dodoIntervalRef.current) {
-      clearInterval(dodoIntervalRef.current);
-      dodoIntervalRef.current = null;
-    }
-  };
-
-  const startDodoPolling = (paymentId: string) => {
-    stopDodoPolling();
-    dodoIntervalRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/dodo/check-payment?payment_id=${paymentId}`);
-        const { status } = await res.json();
-        if (status === "succeeded") {
-          stopDodoPolling();
-          setDodoModal(false);
-          setDodoPolling(false);
-          setHasPaid(true);
-          // Trigger PDF download now that payment is confirmed
-          setTimeout(() => downloadPDF(), 300);
-        }
-      } catch { /* continue polling */ }
-    }, 2000);
-    setTimeout(() => { stopDodoPolling(); setDodoPolling(false); }, 600_000);
-  };
-
-  const openDodoCheckout = async (plan: Plan) => {
-    purchasedPlanRef.current = plan;
-    setDodoError(null);
-    setDodoLoading(true);
-
-    try {
-      const res = await fetch("/api/dodo/create-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId:     plan.productId,
-          customerEmail: formRef.current.email || undefined,
-          customerName:  formRef.current.name  || undefined,
-        }),
-      });
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData.error || "Impossible de créer la session de paiement.");
-      const { paymentLink, paymentId } = resData;
-      dodoPaymentIdRef.current  = paymentId;
-      dodoPaymentLinkRef.current = paymentLink; // useEffect will open checkout after div mounts
-      setDodoModal(true);
-    } catch (err: any) {
-      setDodoError(err.message);
-    } finally {
-      setDodoLoading(false);
-    }
+  // ── DODO PAYMENT LINK REDIRECT ────────────────────────────────────────────
+  const redirectToPayment = (plan: Plan) => {
+    // Save editor state so it can be restored after redirect
+    const cv = editingCv || cvData;
+    if (cv) sessionStorage.setItem("dodo_cv_data",    JSON.stringify(cv));
+    sessionStorage.setItem("dodo_cv_plan",    plan.tier);
+    sessionStorage.setItem("dodo_cv_tpl",     String(selectedTpl));
+    sessionStorage.setItem("dodo_cv_accent",  editorAccent);
+    sessionStorage.setItem("dodo_cv_font",    editorFont);
+    sessionStorage.setItem("dodo_cv_hidden",  JSON.stringify(hiddenSections));
+    window.location.href = DODO_CHECKOUT[plan.tier] || DODO_CHECKOUT.starter;
   };
 
   // ── SELECT PLAN + GENERATE (no payment yet) ──────────────────────────────
@@ -1280,17 +1229,17 @@ Retourne UNIQUEMENT le JSON.`}];
     setCurrentPlan(plan);
     purchasedPlanRef.current = plan;
     setPurchasedPlan(plan);
-    setHasPaid(false); // reset payment for new generation
+    setHasPaid(false);
     setUploadPaywall(false);
     setTimeout(() => runGeneration(triggerMode), 100);
   };
 
-  // ── PRINT TO PDF — gated: open Dodo checkout if not yet paid ─────────────
+  // ── DOWNLOAD — redirect to Dodo payment link if not yet paid ─────────────
   const handleDownload = () => {
     if (hasPaid) {
       downloadPDF();
     } else {
-      openDodoCheckout(currentPlan);
+      redirectToPayment(currentPlan);
     }
   };
 
@@ -2165,8 +2114,8 @@ Retourne UNIQUEMENT le JSON.`}];
                   {/* Bottom actions */}
                   <div style={{ padding:"12px 14px", borderTop:"1.5px solid #ede9fe", display:"flex", gap:8 }}>
                     <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");goStep(1);}} disabled={pdfBusy} style={{ flex:1, fontSize:12, padding:"9px", opacity:pdfBusy?0.5:1 }}>↺ Recommencer</button>
-                    <button className="btn-green" onClick={handleDownload} disabled={generating || dodoLoading} style={{ flex:1, fontSize:12, padding:"9px" }}>
-                      {dodoLoading ? "⏳…" : hasPaid ? "🖨 PDF" : `🔒 Télécharger · ${currentPlan.price} MAD`}
+                    <button className="btn-green" onClick={handleDownload} disabled={generating} style={{ flex:1, fontSize:12, padding:"9px" }}>
+                      {hasPaid ? "🖨 PDF" : `🔒 Télécharger · ${currentPlan.price} MAD`}
                     </button>
                   </div>
                 </div>
@@ -2184,8 +2133,8 @@ Retourne UNIQUEMENT le JSON.`}];
                         onClick={()=>{ const w=window.open("","_blank"); if(!w)return; w.document.write("<html><body style='margin:0'>"); w.document.write(printRef.current?.outerHTML||""); w.document.write("</body></html>"); w.document.close(); w.print(); }}>
                         🖨 Imprimer
                       </button>
-                      <button className="btn-green" onClick={handleDownload} disabled={generating || dodoLoading} style={{ fontSize:11, padding:"5px 14px" }}>
-                        {dodoLoading ? "⏳…" : hasPaid ? "🖨 Télécharger PDF" : `🔒 ${currentPlan.price} MAD · Télécharger`}
+                      <button className="btn-green" onClick={handleDownload} disabled={generating} style={{ fontSize:11, padding:"5px 14px" }}>
+                        {hasPaid ? "🖨 Télécharger PDF" : `🔒 ${currentPlan.price} MAD · Télécharger`}
                       </button>
                     </div>
                   </div>
@@ -2300,33 +2249,6 @@ Retourne UNIQUEMENT le JSON.`}];
             );
           })()}
 
-          {/* ─────── DODO CHECKOUT MODAL ─────── */}
-          {dodoModal && (
-            <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.6)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
-              <div style={{ background:"white", borderRadius:16, width:"min(520px,96vw)", maxHeight:"92vh", overflow:"auto", display:"flex", flexDirection:"column" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"16px 20px", borderBottom:"1px solid #f0f0f0", flexShrink:0 }}>
-                  <div>
-                    <div style={{ fontSize:15, fontWeight:700, color:"#0f172a" }}>Paiement sécurisé</div>
-                    <div style={{ fontSize:12, color:"#6b7280" }}>Plan {currentPlan.name} · {currentPlan.price} MAD</div>
-                  </div>
-                  {!dodoPolling && (
-                    <button onClick={()=>{ setDodoModal(false); DodoPayments.Checkout.close(); }} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#9ca3af", lineHeight:1 }}>×</button>
-                  )}
-                </div>
-                {/* Always in DOM — DodoPayments needs a stable container */}
-                <div id="dodo-cv-checkout" style={{ flex:1, display: dodoPolling ? "none" : "block", minHeight: dodoPolling ? 0 : 420 }}/>
-                {dodoPolling && (
-                  <div style={{ padding:48, textAlign:"center" }}>
-                    <div style={{ width:44, height:44, border:"3px solid #ede9fe", borderTopColor:"#7c3aed", borderRadius:"50%", animation:"spin .8s linear infinite", margin:"0 auto 18px" }}/>
-                    <div style={{ fontSize:14, fontWeight:700, color:"#7c3aed" }}>Confirmation du paiement…</div>
-                    <div style={{ fontSize:12, color:"#9ca3af", marginTop:8 }}>Nous confirmons votre paiement, veuillez patienter.</div>
-                  </div>
-                )}
-                {dodoError && <div style={{ padding:"12px 20px", background:"#fef2f2", color:"#dc2626", fontSize:13, borderTop:"1px solid #fecaca" }}>⚠ {dodoError}</div>}
-              </div>
-            </div>
-          )}
-
           {/* ─────── UPLOAD PAYWALL MODAL ─────── */}
           {uploadPaywall && (
             <div className="modal-bg" onClick={()=>setUploadPaywall(false)}>
@@ -2364,7 +2286,6 @@ Retourne UNIQUEMENT le JSON.`}];
                       );
                     })}
                   </div>
-                  {dodoError && <p style={{fontSize:12,color:"#dc2626",textAlign:"center",marginTop:8,marginBottom:0}}>⚠ {dodoError}</p>}
                   {genError && <p style={{fontSize:12,color:"#dc2626",textAlign:"center",marginTop:8,marginBottom:0}}>⚠ {genError}</p>}
                   <p style={{fontSize:11,color:"#9ca3af",textAlign:"center",marginTop:8}}>🔒 Paiement sécurisé via Dodo Payments · Aucune donnée bancaire stockée</p>
                 </div>

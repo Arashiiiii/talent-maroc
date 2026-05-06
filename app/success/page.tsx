@@ -11,16 +11,16 @@ function SuccessContent() {
     cv: {
       icon:     "🎉",
       title:    "Votre CV est prêt !",
-      subtitle: "Votre paiement a été confirmé. Retournez à l'éditeur pour télécharger votre CV en PDF.",
+      subtitle: "Paiement confirmé. Retournez à l'éditeur pour télécharger votre CV en PDF.",
       cta:      "Télécharger mon CV",
-      href:     "/cv",
+      href:     "/cv?paid=true",
     },
     ai: {
       icon:     "✨",
       title:    "Paiement confirmé !",
-      subtitle: "Votre outil IA a été débloqué. Retournez à votre espace candidat pour générer votre contenu.",
+      subtitle: "Votre outil IA est débloqué. Retournez à votre espace pour générer votre contenu.",
       cta:      "Accéder à mon espace",
-      href:     "/dashboard?tab=outils",
+      href:     "/dashboard?tab=outils&paid=true",
     },
     recruteur: {
       icon:     "🚀",
