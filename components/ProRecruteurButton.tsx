@@ -33,7 +33,7 @@ export default function ProRecruteurButton() {
           clearInterval(intervalRef.current!);
           setPolling(false);
           setShowForm(false);
-          window.location.href = "/employeur/dashboard?upgrade=success";
+          window.location.href = "/success?type=recruteur";
         }
       } catch { /* continue */ }
     }, 2000);
