@@ -38,9 +38,6 @@ type Step = 1|2|3|4|5;
 type Mode = "upload"|"ai";
 
 // ── A4 DIMENSIONS (px at 96dpi) ────────────────────────────────────────────
-// 210mm × 297mm = 794px × 1123px at 96dpi
-// All templates MUST render at exactly 794px wide and produce content that
-// fits within 1123px height (1 page) or 2246px (2 pages).
 const A4_W = 794;
 const A4_H = 1123;
 
@@ -129,6 +126,26 @@ const PLAN_FEATURES: Record<string,string[]> = {
   Cadre:         ["Réécriture exécutive","PDF téléchargeable","Lettre de motivation + Bio","Questions d'entretien IA","Vocabulaire C-Suite"],
 };
 
+// ── STORAGE HELPERS ────────────────────────────────────────────────────────
+function safeSetStorage(key: string, value: string, storage: Storage = sessionStorage): boolean {
+  try {
+    storage.setItem(key, value);
+    return true;
+  } catch (e) {
+    console.warn(`Storage quota exceeded for key: ${key}`);
+    return false;
+  }
+}
+
+function safeGetStorage(key: string, storage: Storage = sessionStorage): string | null {
+  try {
+    return storage.getItem(key);
+  } catch (e) {
+    console.warn(`Failed to read storage key: ${key}`);
+    return null;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // ── SHARED SECTION HELPERS ────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
@@ -185,14 +202,7 @@ function DSection({ title, children, accent="#1e293b" }: { title:string; childre
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ── CV TEMPLATE RENDERERS
-// CRITICAL SIZING RULES:
-//   • Every template renders at exactly width=794px (A4 at 96dpi)
-//   • Padding kept tight so content fills but does NOT overflow 1123px
-//   • Font sizes: name 22-26px, section titles 9-10px, body 10-11px
-//   • Line-heights: 1.4-1.6 (tight to save vertical space)
-//   • No minHeight on root — let content define height naturally
-//   • overflow:hidden on root prevents bleed past A4 boundary
+// ── CV TEMPLATE RENDERERS ─────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
 
 type TplProps = { cv: CVData; scale?: number; accent?: string; font?: string; hidden?: string[] };
@@ -201,7 +211,6 @@ type TplProps = { cv: CVData; scale?: number; accent?: string; font?: string; hi
 function TplClassique({ cv, scale=1, accent="#1a1a1a", font="'Georgia',serif", hidden=[] }: TplProps) {
   return (
     <div style={{ width:A4_W, minHeight:A4_H, background:"white", fontFamily:font, color:"#1a1a1a", padding:"28px 44px 24px", transform:`scale(${scale})`, transformOrigin:"top left", boxSizing:"border-box" }}>
-      {/* Header */}
       <div style={{ textAlign:"center", borderBottom:`2px solid ${accent}`, paddingBottom:12, marginBottom:14 }}>
         <div style={{ fontSize:24, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:4, color:accent }}>{cv.name}</div>
         <div style={{ fontSize:12, color:"#444", letterSpacing:"0.05em", marginBottom:6 }}>{cv.title}</div>
@@ -238,7 +247,6 @@ function TplClassique({ cv, scale=1, accent="#1a1a1a", font="'Georgia',serif", h
 function TplModerne({ cv, scale=1, accent="#1e3a5f", font="'Inter',sans-serif", hidden=[] }: TplProps) {
   return (
     <div style={{ width:A4_W, minHeight:A4_H, fontFamily:font, display:"flex", transform:`scale(${scale})`, transformOrigin:"top left", background:`linear-gradient(to right, ${accent} 210px, white 210px)`, boxSizing:"border-box" }}>
-      {/* Sidebar */}
       <div style={{ width:210, padding:"22px 16px", flexShrink:0, boxSizing:"border-box" }}>
         {cv.photo ? (
           <img src={cv.photo} alt={cv.name} style={{ width:68, height:68, borderRadius:"50%", objectFit:"cover", marginBottom:14, border:"3px solid rgba(255,255,255,0.2)" }}/>
@@ -269,7 +277,6 @@ function TplModerne({ cv, scale=1, accent="#1e3a5f", font="'Inter',sans-serif", 
         </SideSection>}
         {!hidden.includes("certifications") && cv.certifications && <SideSection title="Certifications" light>{cv.certifications.map((c,i)=><div key={i} style={{ fontSize:9, color:"rgba(255,255,255,0.7)", marginBottom:3, lineHeight:1.4 }}>• {c}</div>)}</SideSection>}
       </div>
-      {/* Main */}
       <div style={{ flex:1, padding:"22px 22px" }}>
         {!hidden.includes("profile") && <div style={{ fontSize:11, color:"#374151", lineHeight:1.6, marginBottom:12, paddingBottom:10, borderBottom:"1.5px solid #e5e7eb" }}>{cv.profile}</div>}
         {!hidden.includes("experience") && <MSection title="Expériences" accent={accent}>
@@ -741,9 +748,6 @@ function RenderCV({ id, cv, scale=1, accent, font, hidden=[] }: { id:number; cv:
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ── PDF PRINT ENGINE ──────────────────────────────────────────────────────
-// Strategy: open a print window, render the CV at exact A4 pixel dimensions
-// (794×1123 per page), then trigger window.print() after fonts are ready.
-// @page { size: A4 } ensures the browser maps 794px → 210mm correctly.
 // ═══════════════════════════════════════════════════════════════════════════
 function buildPrintHTML(cvHtml: string, styles: string, fontLinks: string): string {
   return `<!DOCTYPE html>
@@ -753,9 +757,6 @@ function buildPrintHTML(cvHtml: string, styles: string, fontLinks: string): stri
 ${fontLinks}
 ${styles}
 <style>
-  /* ── PRINT CALIBRATION ── */
-  /* 794px at 96dpi = 210mm. Telling the browser the page is A4 makes it
-     map 794px CSS pixels to exactly 210mm of paper width. */
   @page {
     size: 210mm 297mm;
     margin: 0;
@@ -768,13 +769,11 @@ ${styles}
     padding: 0;
     background: white;
     width: 210mm;
-    /* Force 96dpi mapping: 794px = 210mm */
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
 
-  /* Screen: show as paper sheet centered on grey */
   @media screen {
     html { background: #d0d0d0; padding: 20px 0; min-height: 100vh; }
     body { width: 210mm; margin: 0 auto; box-shadow: 0 4px 40px rgba(0,0,0,.3); }
@@ -786,9 +785,8 @@ ${styles}
     #cv-wrap { width: 210mm !important; }
   }
 
-  /* The CV container: always 794px wide, let height be natural */
   #cv-wrap {
-    width: 794px; /* = 210mm at 96dpi */
+    width: 794px;
     background: white;
     overflow: hidden;
   }
@@ -798,7 +796,6 @@ ${styles}
 <div id="cv-wrap">${cvHtml}</div>
 <script>
   document.fonts.ready.then(function() {
-    // Short delay so images/gradients paint before print dialog
     setTimeout(function() { window.print(); }, 500);
   });
 </script>
@@ -853,8 +850,6 @@ export default function CVPage() {
   const [cvData,      setCvData]      = useState<CVData|null>(null);
   const [genError,    setGenError]    = useState<string|null>(null);
 
-  // printRef points to the exact CV DOM node (no scale wrapper) so we capture
-  // clean 794px HTML for the print window.
   const printRef     = useRef<HTMLDivElement>(null);
 
   const [justPaid,     setJustPaid]     = useState(false);
@@ -871,6 +866,14 @@ export default function CVPage() {
   const [bonusLoading,       setBonusLoading]       = useState(false);
   const [bonusError,         setBonusError]         = useState<string|null>(null);
 
+  // FIXED: Initialize freeGenUsed from localStorage on mount
+  const [freeGenUsed, setFreeGenUsed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("tm_free_gen_used") === "1";
+    }
+    return false;
+  });
+
   const uploadedBase64Ref  = useRef<string|null>(null);
   const uploadedMimeRef    = useRef<string|null>(null);
   const uploadedContentRef = useRef<string>("");
@@ -886,61 +889,68 @@ export default function CVPage() {
     if (params.get("paid") !== "true") return;
     window.history.replaceState({}, "", "/cv");
 
-    const savedCv        = sessionStorage.getItem("dodo_cv_data");
-    const savedTpl       = sessionStorage.getItem("dodo_cv_tpl");
-    const savedAccent    = sessionStorage.getItem("dodo_cv_accent");
-    const savedFont      = sessionStorage.getItem("dodo_cv_font");
-    const savedHidden    = sessionStorage.getItem("dodo_cv_hidden");
-    const savedPlanT     = sessionStorage.getItem("dodo_cv_plan") as PlanTier | null;
-    const savedCover     = sessionStorage.getItem("dodo_cv_cover");
-    const savedLinkedin  = sessionStorage.getItem("dodo_cv_linkedin");
-    const savedBio       = sessionStorage.getItem("dodo_cv_bio");
-    const savedQuestions = sessionStorage.getItem("dodo_cv_questions");
-    const savedPhoto     = sessionStorage.getItem("dodo_cv_photo");
+    const savedCv        = safeGetStorage("dodo_cv_data");
+    const savedTpl       = safeGetStorage("dodo_cv_tpl");
+    const savedAccent    = safeGetStorage("dodo_cv_accent");
+    const savedFont      = safeGetStorage("dodo_cv_font");
+    const savedHidden    = safeGetStorage("dodo_cv_hidden");
+    const savedPlanT     = safeGetStorage("dodo_cv_plan") as PlanTier | null;
+    const savedCover     = safeGetStorage("dodo_cv_cover");
+    const savedLinkedin  = safeGetStorage("dodo_cv_linkedin");
+    const savedBio       = safeGetStorage("dodo_cv_bio");
+    const savedQuestions = safeGetStorage("dodo_cv_questions");
+    const savedPhoto     = safeGetStorage("dodo_cv_photo");
+    
+    // Clean up session storage
     ["dodo_cv_data","dodo_cv_tpl","dodo_cv_accent","dodo_cv_font","dodo_cv_hidden","dodo_cv_plan",
      "dodo_cv_cover","dodo_cv_linkedin","dodo_cv_bio","dodo_cv_questions","dodo_cv_photo"]
-      .forEach(k => sessionStorage.removeItem(k));
+      .forEach(k => {
+        try { sessionStorage.removeItem(k); } catch {}
+      });
 
     if (savedCv) {
-      const cv = JSON.parse(savedCv) as CVData;
-      if (savedPhoto) cv.photo = savedPhoto;
-      setCvData(cv); setEditingCv(cv); setStep(5);
-      if (savedTpl)    setSelectedTpl(Number(savedTpl));
-      if (savedAccent) setEditorAccent(savedAccent);
-      if (savedFont)   setEditorFont(savedFont);
-      if (savedHidden) setHiddenSections(JSON.parse(savedHidden));
-      const plan = PLANS.find(p => p.tier === savedPlanT) || PLANS[1];
-      setCurrentPlan(plan); setPurchasedPlan(plan); purchasedPlanRef.current = plan;
+      try {
+        const cv = JSON.parse(savedCv) as CVData;
+        if (savedPhoto) cv.photo = savedPhoto;
+        setCvData(cv); setEditingCv(cv); setStep(5);
+        if (savedTpl)    setSelectedTpl(Number(savedTpl));
+        if (savedAccent) setEditorAccent(savedAccent);
+        if (savedFont)   setEditorFont(savedFont);
+        if (savedHidden) setHiddenSections(JSON.parse(savedHidden));
+        const plan = PLANS.find(p => p.tier === savedPlanT) || PLANS[1];
+        setCurrentPlan(plan); setPurchasedPlan(plan); purchasedPlanRef.current = plan;
+      } catch (e) {
+        console.error("Failed to restore CV data:", e);
+      }
     }
     if (savedCover)     setCoverLetter(savedCover);
     if (savedLinkedin)  setLinkedinSummary(savedLinkedin);
     if (savedBio)       setExecutiveBio(savedBio);
-    if (savedQuestions) { try { setInterviewQuestions(JSON.parse(savedQuestions)); } catch { /* ignore */ } }
+    if (savedQuestions) { 
+      try { setInterviewQuestions(JSON.parse(savedQuestions)); } catch { /* ignore */ } 
+    }
     setHasPaid(true);
     setJustPaid(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── SESSION PERSISTENCE ───────────────────────────────────────────────
   useEffect(() => {
     if (step !== 5 || !cvData) return;
-    try {
-      sessionStorage.setItem("cv_session", JSON.stringify({
-        cvData: editingCv || cvData,
-        step: 5, selectedTpl, editorAccent, editorFont, hiddenSections,
-        planTier: currentPlan.tier, hasPaid,
-        coverLetter, linkedinSummary, executiveBio,
-      }));
-      setSaveToast(true);
-      if (saveToastTimer.current) clearTimeout(saveToastTimer.current);
-      saveToastTimer.current = setTimeout(() => setSaveToast(false), 1800);
-    } catch { /* quota */ }
+    safeSetStorage("cv_session", JSON.stringify({
+      cvData: editingCv || cvData,
+      step: 5, selectedTpl, editorAccent, editorFont, hiddenSections,
+      planTier: currentPlan.tier, hasPaid,
+      coverLetter, linkedinSummary, executiveBio,
+    }));
+    setSaveToast(true);
+    if (saveToastTimer.current) clearTimeout(saveToastTimer.current);
+    saveToastTimer.current = setTimeout(() => setSaveToast(false), 1800);
   }, [step, cvData, editingCv, selectedTpl, editorAccent, editorFont, hiddenSections, hasPaid, coverLetter, linkedinSummary, executiveBio, currentPlan]);
 
   useEffect(() => {
     if (wasRedirectedFromPayment.current) return;
     try {
-      const raw = sessionStorage.getItem("cv_session");
+      const raw = safeGetStorage("cv_session");
       if (!raw) return;
       const s = JSON.parse(raw);
       if (!s.cvData) return;
@@ -956,10 +966,7 @@ export default function CVPage() {
       const plan = PLANS.find(p => p.tier === s.planTier) || PLANS[1];
       setCurrentPlan(plan); setPurchasedPlan(plan); purchasedPlanRef.current = plan;
     } catch { /* corrupted session */ }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(()=>{ const used = localStorage.getItem("tm_free_gen_used") === "1"; setFreeGenUsed(used); },[]);
 
   useEffect(()=>{ uploadedBase64Ref.current  = uploadedBase64;  }, [uploadedBase64]);
   useEffect(()=>{ uploadedMimeRef.current    = uploadedMime;    }, [uploadedMime]);
@@ -972,10 +979,23 @@ export default function CVPage() {
   const handleFile = (file: File) => {
     setUploadError(null); setUploadedFile(file.name);
     if (file.name.endsWith(".pdf")) {
-      const r=new FileReader(); r.onload=e=>{setUploadedBase64((e.target?.result as string).split(",")[1]);setUploadedMime("application/pdf");setUploadedContent("");};
+      const r=new FileReader(); 
+      r.onload=e=>{
+        const result = e.target?.result as string;
+        if (result) {
+          setUploadedBase64(result.split(",")[1]);
+          setUploadedMime("application/pdf");
+          setUploadedContent("");
+        }
+      };
       r.readAsDataURL(file);
     } else {
-      const r=new FileReader(); r.onload=e=>{setUploadedContent(e.target?.result as string??"");setUploadedBase64(null);setUploadedMime(null);};
+      const r=new FileReader(); 
+      r.onload=e=>{
+        setUploadedContent(e.target?.result as string??"");
+        setUploadedBase64(null);
+        setUploadedMime(null);
+      };
       r.readAsText(file);
     }
   };
@@ -1002,9 +1022,6 @@ export default function CVPage() {
       cadre:   `Effectue une refonte exécutive : transforme chaque expérience en démonstration d'impact stratégique. Quantifie TOUS les résultats. Utilise un vocabulaire de direction.`,
     };
 
-    // ── CRITICAL: strict content volume constraints keyed to page count ──
-    // These limits exist so the rendered HTML doesn't overflow A4 bounds.
-    // Enforce them as hard rules in the prompt — NOT as soft guidance.
     const pagesTarget = preferredPagesRef.current;
     const pageConstraints = pagesTarget === 1
       ? `FORMAT OBLIGATOIRE : 1 PAGE A4 EXACTE (794 × 1123 px)
@@ -1076,10 +1093,10 @@ RÈGLES ABSOLUES :
       } else {
         let jobCtxStr = "";
         try {
-          const jc = sessionStorage.getItem("cv_job_context");
+          const jc = safeGetStorage("cv_job_context");
           if (jc) {
             const jcData = JSON.parse(jc);
-            sessionStorage.removeItem("cv_job_context");
+            try { sessionStorage.removeItem("cv_job_context"); } catch {}
             if (jcData.title) {
               jobCtxStr = `\n\nCIBLAGE : Ce CV doit être optimisé pour le poste "${jcData.title}" chez ${jcData.company} (${jcData.city}).` +
                 (jcData.desc ? `\nDescription du poste : ${jcData.desc.slice(0, 300)}` : "") +
@@ -1105,7 +1122,7 @@ Retourne UNIQUEMENT le JSON.`}];
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"claude-sonnet-4-20250514",
-          max_tokens: pagesTarget === 1 ? 1800 : 3000,  // ← FIXED: cap tokens to page target
+          max_tokens: pagesTarget === 1 ? 1800 : 3000,
           system:systemPrompt,
           messages,
         }),
@@ -1128,8 +1145,12 @@ Retourne UNIQUEMENT le JSON.`}];
       await tick(4);
 
       let parsed: CVData;
-      try { parsed = JSON.parse(clean); }
-      catch { throw new Error(`JSON invalide reçu. Début : ${clean.slice(0,120)}`); }
+      try { 
+        parsed = JSON.parse(clean); 
+      }
+      catch { 
+        throw new Error(`JSON invalide reçu. Début : ${clean.slice(0,120)}`); 
+      }
 
       if (!parsed.name && !parsed.experiences) throw new Error("CV incomplet retourné par l'IA. Réessayez.");
 
@@ -1201,24 +1222,23 @@ Retourne UNIQUEMENT le JSON.`}];
     } finally {
       setGenerating(false); setGenStep(0);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
 
   // ── DODO REDIRECT ─────────────────────────────────────────────────────
   const redirectToPayment = (plan: Plan) => {
     const cv = editingCv || cvData;
-    if (cv) sessionStorage.setItem("dodo_cv_data", JSON.stringify(cv));
-    sessionStorage.setItem("dodo_cv_plan",    plan.tier);
-    sessionStorage.setItem("dodo_cv_tpl",     String(selectedTpl));
-    sessionStorage.setItem("dodo_cv_accent",  editorAccent);
-    sessionStorage.setItem("dodo_cv_font",    editorFont);
-    sessionStorage.setItem("dodo_cv_hidden",  JSON.stringify(hiddenSections));
-    if (coverLetter)        sessionStorage.setItem("dodo_cv_cover",     coverLetter);
-    if (linkedinSummary)    sessionStorage.setItem("dodo_cv_linkedin",  linkedinSummary);
-    if (executiveBio)       sessionStorage.setItem("dodo_cv_bio",       executiveBio);
-    if (interviewQuestions) sessionStorage.setItem("dodo_cv_questions", JSON.stringify(interviewQuestions));
+    if (cv) safeSetStorage("dodo_cv_data", JSON.stringify(cv));
+    safeSetStorage("dodo_cv_plan",    plan.tier);
+    safeSetStorage("dodo_cv_tpl",     String(selectedTpl));
+    safeSetStorage("dodo_cv_accent",  editorAccent);
+    safeSetStorage("dodo_cv_font",    editorFont);
+    safeSetStorage("dodo_cv_hidden",  JSON.stringify(hiddenSections));
+    if (coverLetter)        safeSetStorage("dodo_cv_cover",     coverLetter);
+    if (linkedinSummary)    safeSetStorage("dodo_cv_linkedin",  linkedinSummary);
+    if (executiveBio)       safeSetStorage("dodo_cv_bio",       executiveBio);
+    if (interviewQuestions) safeSetStorage("dodo_cv_questions", JSON.stringify(interviewQuestions));
     const photo = (editingCv || cvData)?.photo;
-    if (photo) { try { sessionStorage.setItem("dodo_cv_photo", photo); } catch { /* quota */ } }
+    if (photo) safeSetStorage("dodo_cv_photo", photo);
     window.location.href = DODO_CHECKOUT[plan.tier] || DODO_CHECKOUT.starter;
   };
 
@@ -1232,8 +1252,6 @@ Retourne UNIQUEMENT le JSON.`}];
   };
 
   // ── PDF DOWNLOAD ──────────────────────────────────────────────────────
-  // Captures the raw 794px CV node, wraps it in a calibrated print page,
-  // and opens a popup that auto-prints. No CSS scale involved in capture.
   const downloadPDF = () => {
     const node = printRef.current;
     if (!node) return;
@@ -1245,16 +1263,12 @@ Retourne UNIQUEMENT le JSON.`}];
       return;
     }
 
-    // Collect Google Fonts link tags from current page
     const fontLinks = Array.from(document.querySelectorAll('link[href*="fonts.googleapis"]'))
       .map(l => l.outerHTML).join("\n");
 
-    // Collect ALL <style> tags from current page (React inline styles go in
-    // the outerHTML so we only need them for global CSS resets etc.)
     const pageStyles = Array.from(document.querySelectorAll("style"))
       .map(s => `<style>${s.textContent ?? ""}</style>`).join("\n");
 
-    // The CV HTML is the raw 794px node — no wrapper scaling applied
     const cvHtml = node.outerHTML;
 
     w.document.write(buildPrintHTML(cvHtml, pageStyles, fontLinks));
@@ -1296,10 +1310,6 @@ Retourne UNIQUEMENT le JSON.`}];
   };
 
   const [formValidErr, setFormValidErr] = useState<string|null>(null);
-  const [jobContext,   setJobContext]   = useState<{title:string;company:string}|null>(null);
-  const [showJobChoice,   setShowJobChoice]   = useState(false);
-  const [userCvUrl,       setUserCvUrl]       = useState<string|null>(null);
-  const [freeGenUsed,     setFreeGenUsed]     = useState(false);
 
   const handleFormContinue = () => {
     const err = validateForm();
@@ -1308,11 +1318,7 @@ Retourne UNIQUEMENT le JSON.`}];
     goStep(3);
   };
 
-  // ── COMPUTED PREVIEW SCALE ────────────────────────────────────────────
-  // The preview panel shows the CV scaled to fit the available width.
-  // We use a CSS custom property --cv-scale controlled via className,
-  // and also derive a numeric scale for the template thumbnail previews.
-  const THUMB_SCALE = 0.24; // for the 190px-wide template grid thumbnails
+  const THUMB_SCALE = 0.24;
 
   return (
     <>
@@ -1327,8 +1333,6 @@ Retourne UNIQUEMENT le JSON.`}];
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
         @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
-        /* ── Live editor layout ── */
-        /* --cv-scale controls the preview scale; adjusted by breakpoint */
         .cv-editor-wrap { --cv-scale: 0.80; }
         @media(min-width:1400px){ .cv-editor-wrap { --cv-scale: 0.92; } }
         @media(max-width:1100px){ .cv-editor-wrap { --cv-scale: 0.66; } }
@@ -1339,8 +1343,6 @@ Retourne UNIQUEMENT le JSON.`}];
           .cv-editor-toolbar { flex-direction:column; gap:6px!important; align-items:flex-start!important; }
           .cv-editor-toolbar-btns { display:flex; gap:6px; flex-wrap:wrap; }
           .cv-preview-outer { overflow:hidden; width:100%; display:flex!important; justify-content:center!important; }
-          /* After scaling, the browser still allocates space for the full 794px height.
-             margin-bottom compensates: (scale-1)*A4_H ≈ (0.43-1)*1123 = -643px */
           .cv-scale-wrap { margin-bottom:calc((var(--cv-scale) - 1) * ${A4_H}px)!important; transform-origin:top center!important; }
         }
 
@@ -1411,7 +1413,7 @@ Retourne UNIQUEMENT le JSON.`}];
             Importer un CV ou en créer un nouveau
           </h1>
           <p className="au" style={{fontSize:15,color:"#6b7280",maxWidth:500,margin:"0 auto",lineHeight:1.7,animationDelay:".14s"}}>
-            Importez votre CV existant pour l'améliorer, ou créez-en un nouveau avec l'aide de l'IA.
+            Importez votre CV existant pour l'améliorer, ou créez-en un nouveau avec l&apos;aide de l&apos;IA.
           </p>
         </div>}
 
@@ -1419,14 +1421,14 @@ Retourne UNIQUEMENT le JSON.`}];
         <div style={{maxWidth: step===5 ? "100%" : 1080, margin:"0 auto", padding: step===5 ? "0" : "36px 20px 80px"}}>
 
           {/* ─────── ENTRY POINT ─────── */}
-          {step===1 && mode==="upload" && !showJobChoice && (
+          {step===1 && mode==="upload" && (
             <div className="au">
               <div className="choice-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,maxWidth:700,margin:"0 auto"}}>
                 <button className="choice-card" onClick={()=>{ setMode("upload"); goStep(2); }}>
                   <div style={{width:52,height:52,background:"#f0fdf4",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>📂</div>
                   <div>
                     <div style={{fontSize:17,fontWeight:800,color:"#0f172a",marginBottom:6}}>Importer mon CV</div>
-                    <div style={{fontSize:13,color:"#6b7280",lineHeight:1.6}}>Importez un PDF, DOCX ou TXT. L'IA l'améliore et le met en forme dans le modèle de votre choix.</div>
+                    <div style={{fontSize:13,color:"#6b7280",lineHeight:1.6}}>Importez un PDF, DOCX ou TXT. L&apos;IA l&apos;améliore et le met en forme dans le modèle de votre choix.</div>
                   </div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
                     <span style={{fontSize:11,fontWeight:700,background:"#f0fdf4",color:"#15803d",border:"1px solid #bbf7d0",padding:"3px 10px",borderRadius:100}}>✓ Sauvegardé dans votre dashboard</span>
@@ -1437,7 +1439,7 @@ Retourne UNIQUEMENT le JSON.`}];
                   <div style={{width:52,height:52,background:"#eff6ff",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>✦</div>
                   <div>
                     <div style={{fontSize:17,fontWeight:800,color:"#0f172a",marginBottom:6}}>Créer un nouveau CV</div>
-                    <div style={{fontSize:13,color:"#6b7280",lineHeight:1.6}}>Remplissez vos informations, choisissez un modèle et laissez l'IA rédiger un CV professionnel complet.</div>
+                    <div style={{fontSize:13,color:"#6b7280",lineHeight:1.6}}>Remplissez vos informations, choisissez un modèle et laissez l&apos;IA rédiger un CV professionnel complet.</div>
                   </div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
                     <span style={{fontSize:11,fontWeight:700,background:"#eff6ff",color:"#1d4ed8",border:"1px solid #bfdbfe",padding:"3px 10px",borderRadius:100}}>✓ Modèles professionnels</span>
@@ -1503,7 +1505,7 @@ Retourne UNIQUEMENT le JSON.`}];
                     </div>
                   </div>
                   <div style={{marginTop:20}}>
-                    <label className="fl">Type d'amélioration</label>
+                    <label className="fl">Type d&apos;amélioration</label>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:9}}>
                       {[
                         {v:"Optimisation ATS",icon:"🤖",d:"Mots-clés, structure ATS"},
@@ -1557,7 +1559,7 @@ Retourne UNIQUEMENT le JSON.`}];
                         {["Informatique","Finance","Commerce","Marketing","RH","Ingénierie","Santé","Logistique","Tourisme","Juridique","Éducation","BTP","Autre"].map(o=><option key={o}>{o}</option>)}
                       </select>
                     </div>
-                    <div><label className="fl">Niveau d'expérience *</label>
+                    <div><label className="fl">Niveau d&apos;expérience *</label>
                       <select className={`fi${formValidErr&&!form.level?" req-err":""}`} value={form.level} onChange={e=>setForm(p=>({...p,level:e.target.value}))}>
                         <option value="">Sélectionnez...</option>
                         {["Débutant (0–2 ans)","Intermédiaire (2–5 ans)","Confirmé (5–10 ans)","Manager","Directeur","C-Suite"].map(o=><option key={o}>{o}</option>)}
@@ -1649,7 +1651,7 @@ Retourne UNIQUEMENT le JSON.`}];
                 <div style={{background:"#f0fdf4",border:"2px solid #16a34a",borderRadius:14,padding:"20px 22px",marginBottom:20,display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
                   <div>
                     <div style={{fontSize:13,fontWeight:800,color:"#15803d",marginBottom:3}}>🎁 1 génération gratuite disponible</div>
-                    <div style={{fontSize:12,color:"#166534",lineHeight:1.6}}>Chaque compte bénéficie d'une génération de CV gratuite.</div>
+                    <div style={{fontSize:12,color:"#166534",lineHeight:1.6}}>Chaque compte bénéficie d&apos;une génération de CV gratuite.</div>
                   </div>
                   <button className="btn-green" onClick={()=>{
                     localStorage.setItem("tm_free_gen_used","1");
@@ -1718,7 +1720,6 @@ Retourne UNIQUEMENT le JSON.`}];
                     {/* TEMPLATE TAB */}
                     {editorTab==="template" && (
                       <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                        {/* Page count + regenerate */}
                         <div style={{ background:"#f0fdf4", border:"1.5px solid #bbf7d0", borderRadius:10, padding:"12px 14px", marginBottom:4 }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#15803d", marginBottom:8 }}>📄 Format du CV</div>
                           <div style={{ display:"flex", gap:6, marginBottom:8 }}>
@@ -1758,7 +1759,7 @@ Retourne UNIQUEMENT le JSON.`}];
                     {/* COLOR TAB */}
                     {editorTab==="color" && (
                       <div>
-                        <div style={{ fontSize:11, fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:12 }}>Couleur d'accent</div>
+                        <div style={{ fontSize:11, fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:12 }}>Couleur d&apos;accent</div>
                         <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
                           {ACCENT_COLORS.map(c => (
                             <button key={c.value} onClick={()=>setEditorAccent(editorAccent===c.value?"":c.value)} title={c.name}
@@ -1817,7 +1818,6 @@ Retourne UNIQUEMENT le JSON.`}];
                       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
                         <div style={{ fontSize:11, fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.08em" }}>Modifier le contenu</div>
 
-                        {/* Photo */}
                         <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>📷 Photo de profil</div>
                           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
@@ -1841,7 +1841,6 @@ Retourne UNIQUEMENT le JSON.`}];
                           </div>
                         </div>
 
-                        {/* Personal info */}
                         <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>📋 Informations personnelles</div>
                           {([["name","Nom complet"],["title","Titre"],["email","Email"],["phone","Téléphone"],["location","Localisation"]] as [keyof CVData, string][]).map(([k,label])=>(
@@ -1852,19 +1851,16 @@ Retourne UNIQUEMENT le JSON.`}];
                           ))}
                         </div>
 
-                        {/* Profile */}
                         <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>👤 Profil</div>
                           <textarea value={cv.profile} onChange={e=>upd({profile:e.target.value})} rows={4} style={{ ...IS, resize:"vertical" }}/>
                         </div>
 
-                        {/* Skills */}
                         <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>🔧 Compétences <span style={{ fontWeight:400, color:"#9ca3af" }}>(séparées par virgule)</span></div>
                           <textarea value={cv.skills.join(", ")} onChange={e=>upd({skills:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)})} rows={3} style={{ ...IS, resize:"vertical" }}/>
                         </div>
 
-                        {/* Experience */}
                         <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>💼 Expériences</div>
                           {cv.experiences.map((e,i)=>(
@@ -1876,7 +1872,6 @@ Retourne UNIQUEMENT le JSON.`}];
                           ))}
                         </div>
 
-                        {/* Certifications */}
                         <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>🏅 Certifications <span style={{ fontWeight:400, color:"#9ca3af" }}>(une par ligne)</span></div>
                           <textarea
@@ -1889,9 +1884,8 @@ Retourne UNIQUEMENT le JSON.`}];
                     )}
                   </div>
 
-                  {/* Bottom actions */}
                   <div style={{ padding:"12px 14px", borderTop:"1.5px solid #ede9fe", display:"flex", gap:8 }}>
-                    <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");setHasPaid(false);setJustPaid(false);setCoverLetter(null);setLinkedinSummary(null);setExecutiveBio(null);setInterviewQuestions(null);setCurrentPlan(PLANS[1]);setPurchasedPlan(PLANS[0]);purchasedPlanRef.current=PLANS[0];setSelectedTpl(1);sessionStorage.removeItem("cv_session");goStep(1);}} disabled={pdfBusy} style={{ flex:1, fontSize:12, padding:"9px", opacity:pdfBusy?0.5:1 }}>↺ Recommencer</button>
+                    <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");setHasPaid(false);setJustPaid(false);setCoverLetter(null);setLinkedinSummary(null);setExecutiveBio(null);setInterviewQuestions(null);setCurrentPlan(PLANS[1]);setPurchasedPlan(PLANS[0]);purchasedPlanRef.current=PLANS[0];setSelectedTpl(1);try{sessionStorage.removeItem("cv_session");}catch{}goStep(1);}} disabled={pdfBusy} style={{ flex:1, fontSize:12, padding:"9px", opacity:pdfBusy?0.5:1 }}>↺ Recommencer</button>
                     <button className="btn-green" onClick={handleDownload} disabled={generating} style={{ flex:1, fontSize:12, padding:"9px" }}>
                       {hasPaid ? "🖨 PDF" : `🔒 ${currentPlan.price} MAD`}
                     </button>
@@ -1901,7 +1895,6 @@ Retourne UNIQUEMENT le JSON.`}];
                 {/* ── RIGHT PANEL: live preview ── */}
                 <div className="cv-editor-right" style={{ flex:1, overflowY:"auto", overflowX:"hidden", background:"#e8e5f0", borderRadius:"0 14px 14px 0", padding:"20px 24px 40px", display:"flex", flexDirection:"column", alignItems:"center" }}>
 
-                  {/* Toolbar */}
                   <div className="cv-editor-toolbar" style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", maxWidth:A4_W, marginBottom:14 }}>
                     <div style={{ fontSize:12, color:"#6b7280", display:"flex", alignItems:"center", gap:8 }}>
                       <span style={{ width:8, height:8, borderRadius:"50%", background:"#7c3aed", display:"inline-block", animation:"pulse 2s infinite" }}/>
@@ -1919,7 +1912,6 @@ Retourne UNIQUEMENT le JSON.`}];
                     </div>
                   </div>
 
-                  {/* Payment success banner */}
                   {justPaid && (
                     <div style={{ width:"100%", maxWidth:A4_W, marginBottom:14, background:"linear-gradient(135deg,#059669,#047857)", borderRadius:12, padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap", boxShadow:"0 4px 16px rgba(5,150,105,.3)" }}>
                       <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -1936,22 +1928,11 @@ Retourne UNIQUEMENT le JSON.`}];
                     </div>
                   )}
 
-                  {/*
-                   * ── PREVIEW ARCHITECTURE ──
-                   *
-                   * cv-preview-outer: clips the horizontal overflow caused by scaling
-                   * cv-scale-wrap: applies CSS transform scale() for visual preview
-                   *   └─ printRef div: raw 794px CV — THIS is what gets printed
-                   *
-                   * The printRef node is captured at 794px (no scaling) for PDF.
-                   * The CSS scale is purely visual / for the editor panel.
-                   */}
                   <div className="cv-preview-outer" style={{ width:"100%", display:"flex", justifyContent:"center", overflow:"hidden" }}>
                     <div className="cv-scale-wrap"
                       style={{ transformOrigin:"top center", transform:"scale(var(--cv-scale, 0.82))", width:A4_W, flexShrink:0,
                                marginBottom:`calc((var(--cv-scale, 0.82) - 1) * ${A4_H}px)` }}>
                       {generating ? (
-                        /* Skeleton */
                         <div style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", width:A4_W, minHeight:A4_H, padding:"48px 52px", boxSizing:"border-box", display:"flex", flexDirection:"column", gap:20, position:"relative" }}>
                           {[72, 55, 80, 55, 65].map((w, i) => (
                             <div key={i} style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -1974,11 +1955,6 @@ Retourne UNIQUEMENT le JSON.`}];
                           </div>
                         </div>
                       ) : (
-                        /*
-                         * printRef wraps the raw, unscaled 794px CV.
-                         * When we print, we capture node.outerHTML directly.
-                         * DO NOT put any transform/scale on this div or its parents.
-                         */
                         <div ref={printRef} style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", overflow:"hidden" }}>
                           <RenderCV id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
                         </div>
@@ -1988,7 +1964,6 @@ Retourne UNIQUEMENT le JSON.`}];
 
                   {genError && <div style={{ marginTop:16, background:"#fef2f2", border:"1.5px solid #fecaca", borderRadius:8, padding:"12px 16px", fontSize:13, color:"#dc2626", maxWidth:A4_W, width:"100%" }}>⚠ {genError}</div>}
 
-                  {/* Bonus content */}
                   {bonusLoading && (
                     <div style={{ marginTop:24, maxWidth:A4_W, width:"100%", background:"white", borderRadius:12, padding:"18px 20px", border:"1.5px solid #ede9fe", display:"flex", alignItems:"center", gap:12 }}>
                       <div className="spinner" style={{ width:20, height:20 }}/>
@@ -2073,7 +2048,7 @@ Retourne UNIQUEMENT le JSON.`}];
                         <div style={{ background:"white", borderRadius:12, padding:"20px 24px", border:"1.5px solid #ede9fe" }}>
                           <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
                             <span style={{ fontSize:18 }}>🎯</span>
-                            <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Questions d'entretien IA</div>
+                            <div style={{ fontSize:14, fontWeight:800, color:"#1e1147" }}>Questions d&apos;entretien IA</div>
                           </div>
                           <div style={{ filter:hasPaid?"none":"blur(4px)" }}>
                             {interviewQuestions.map((q,i) => (
@@ -2134,7 +2109,7 @@ Retourne UNIQUEMENT le JSON.`}];
               <div className="modal-box" style={{maxWidth:400,padding:"40px 32px",textAlign:"center"}}>
                 <div className="spinner" style={{margin:"0 auto 20px"}}/>
                 <div style={{fontSize:17,fontWeight:800,marginBottom:6}}>Génération en cours…</div>
-                <div style={{fontSize:13,color:"#6b7280",marginBottom:24}}>L'IA prépare votre CV professionnel.</div>
+                <div style={{fontSize:13,color:"#6b7280",marginBottom:24}}>L&apos;IA prépare votre CV professionnel.</div>
                 <div style={{textAlign:"left"}}>
                   {GEN_STEPS.map((label,i)=>(
                     <div key={i} className="gen-step" style={{color:genStep>i?"#16a34a":genStep===i?"#0f172a":"#d1d5db"}}>
