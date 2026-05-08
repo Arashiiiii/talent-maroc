@@ -7,15 +7,16 @@ export const maxDuration = 30;
 
 // ─── Extraction helpers ───────────────────────────────────────────────────────
 
+type PdfParseFn = (buf: Buffer, opts?: Record<string, unknown>) => Promise<{ text: string }>;
+
 async function extractPdf(buf: Buffer): Promise<string> {
-  // Use the internal lib path to bypass:
-  //   1. the test-file read that the package entry-point triggers at load time
-  //   2. the .default mismatch between the CJS and ESM builds
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfParse = require("pdf-parse/lib/pdf-parse.js") as (
-    buf: Buffer,
-    opts?: Record<string, unknown>,
-  ) => Promise<{ text: string }>;
+  // Cast through unknown to handle both CJS (.default) and ESM (direct export)
+  // without relying on internal package paths that differ between builds.
+  const mod = (await import("pdf-parse")) as unknown;
+  const pdfParse: PdfParseFn =
+    typeof (mod as { default?: unknown }).default === "function"
+      ? (mod as { default: PdfParseFn }).default
+      : (mod as PdfParseFn);
   const result = await pdfParse(buf);
   return result.text;
 }
