@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react";
 
 // ── DODO PAYMENT LINKS ────────────────────────────────────────────────────
 const DODO_CHECKOUT: Record<string, string> = {
@@ -22,6 +22,8 @@ interface CVData {
   languages:   { lang: string; level: string }[];
   certifications?: string[];
   photo?:      string;
+  linkedin?:   string;
+  website?:    string;
 }
 
 interface Template {
@@ -66,6 +68,8 @@ const SAMPLE: CVData = {
     { lang:"Anglais",  level:"Courant" },
   ],
   certifications: ["AWS Certified Developer (2023)","PMP Project Management (2022)"],
+  linkedin: "linkedin.com/in/youssefbenali",
+  website:  "github.com/ybenali",
 };
 
 // ── TEMPLATES REGISTRY ─────────────────────────────────────────────────────
@@ -218,6 +222,8 @@ function TplClassique({ cv, scale=1, accent="#1a1a1a", font="'Georgia',serif", h
         <div style={{ fontSize:13, color:"#444", letterSpacing:"0.04em", marginBottom:7 }}>{cv.title}</div>
         <div style={{ fontSize:11, color:"#555", display:"flex", justifyContent:"center", gap:16, flexWrap:"wrap" }}>
           <span>{cv.email}</span><span>·</span><span>{cv.phone}</span><span>·</span><span>{cv.location}</span>
+          {cv.linkedin && <><span>·</span><span>{cv.linkedin}</span></>}
+          {cv.website  && <><span>·</span><span>{cv.website}</span></>}
         </div>
       </div>
       {!hidden.includes("profile") && <Section title="Profil Professionnel" accent={accent}><p style={{ fontSize:11.5, lineHeight:1.6, color:"#333", margin:0 }}>{cv.profile}</p></Section>}
@@ -263,6 +269,8 @@ function TplModerne({ cv, scale=1, accent="#1e3a5f", font="'Inter',sans-serif", 
         <SideSection title="Contact" light>
           <div style={{ fontSize:10, color:"rgba(255,255,255,0.7)", lineHeight:2 }}>
             <div>✉ {cv.email}</div><div>📞 {cv.phone}</div><div>📍 {cv.location}</div>
+            {cv.linkedin && <div>🔗 {cv.linkedin}</div>}
+            {cv.website  && <div>🌐 {cv.website}</div>}
           </div>
         </SideSection>
         {!hidden.includes("skills") && <SideSection title="Compétences" light>
@@ -313,8 +321,10 @@ function TplMinimal({ cv, scale=1, accent="#0ea5e9", font="'Helvetica Neue',Helv
       <div style={{ marginBottom:28 }}>
         <div style={{ fontSize:30, fontWeight:300, color:"#0f172a", letterSpacing:"-0.02em", marginBottom:4 }}>{cv.name}</div>
         <div style={{ fontSize:13, color:"#64748b", marginBottom:12 }}>{cv.title}</div>
-        <div style={{ display:"flex", gap:24, fontSize:11, color:"#94a3b8" }}>
+        <div style={{ display:"flex", gap:24, fontSize:11, color:"#94a3b8", flexWrap:"wrap" }}>
           <span>{cv.email}</span><span>{cv.phone}</span><span>{cv.location}</span>
+          {cv.linkedin && <span>{cv.linkedin}</span>}
+          {cv.website  && <span>{cv.website}</span>}
         </div>
       </div>
       <div style={{ height:1.5, background:"#e2e8f0", marginBottom:24 }}/>
@@ -363,8 +373,10 @@ function TplExecutif({ cv, scale=1, accent="#d4af37", font="'Georgia',serif", hi
       <div style={{ background:"linear-gradient(135deg,#1c1410,#2d1f0e)", padding:"36px 52px 28px", borderBottom:`2px solid ${accent}` }}>
         <div style={{ fontSize:28, fontWeight:700, color:"#f5f0e8", letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:5 }}>{cv.name}</div>
         <div style={{ fontSize:13, color:accent, letterSpacing:"0.12em", textTransform:"uppercase", marginBottom:12 }}>{cv.title}</div>
-        <div style={{ display:"flex", gap:20, fontSize:11, color:"rgba(255,255,255,0.5)" }}>
+        <div style={{ display:"flex", gap:20, fontSize:11, color:"rgba(255,255,255,0.5)", flexWrap:"wrap" }}>
           <span>{cv.email}</span><span>|</span><span>{cv.phone}</span><span>|</span><span>{cv.location}</span>
+          {cv.linkedin && <><span>|</span><span>{cv.linkedin}</span></>}
+          {cv.website  && <><span>|</span><span>{cv.website}</span></>}
         </div>
       </div>
       <div style={{ padding:"28px 52px" }}>
@@ -421,6 +433,8 @@ function TplCreatif({ cv, scale=1, accent="#7c3aed", font="'Inter',sans-serif", 
             <div style={{ fontSize:14, fontWeight:600, color:accent, marginBottom:10 }}>{cv.title}</div>
             <div style={{ display:"flex", gap:18, fontSize:11, color:"#6b7280", flexWrap:"wrap" }}>
               <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
+              {cv.linkedin && <span>🔗 {cv.linkedin}</span>}
+              {cv.website  && <span>🌐 {cv.website}</span>}
             </div>
           </div>
         </div>
@@ -494,6 +508,8 @@ function TplAzurill({ cv, scale=1, accent="#0d9488", font="'Calibri','Segoe UI',
         <div style={{ fontSize:14, color:accent, fontWeight:600, marginBottom:10 }}>{cv.title}</div>
         <div style={{ display:"flex", justifyContent:"center", gap:18, fontSize:11, color:"#64748b", flexWrap:"wrap" }}>
           <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
+          {cv.linkedin && <span>🔗 {cv.linkedin}</span>}
+          {cv.website  && <span>🌐 {cv.website}</span>}
         </div>
       </div>
       <div style={{ height:4, background:`linear-gradient(90deg,${accent},${accent}99,${accent})`, borderRadius:2, marginBottom:18 }}/>
@@ -583,7 +599,7 @@ function TplBronzor({ cv, scale=1, accent="#6366f1", font="'Inter',sans-serif", 
       <div style={{ width:190, background:"#f8fafc", padding:"36px 18px", flexShrink:0 }}>
         <div style={{ marginBottom:22 }}>
           <div style={{ fontSize:9, fontWeight:800, textTransform:"uppercase", letterSpacing:"0.14em", color:accent, marginBottom:12 }}>Contact</div>
-          {[cv.email, cv.phone, cv.location].map((v,i)=>(
+          {[cv.email, cv.phone, cv.location, ...(cv.linkedin?[cv.linkedin]:[]), ...(cv.website?[cv.website]:[])].map((v,i)=>(
             <div key={i} style={{ fontSize:10, color:"#475569", marginBottom:6, lineHeight:1.6, wordBreak:"break-all" }}>{v}</div>
           ))}
         </div>
@@ -632,6 +648,8 @@ function TplDitto({ cv, scale=1, accent="#1e293b", font="'Georgia',serif", hidde
         <div style={{ fontSize:13, color:"rgba(255,255,255,0.6)", letterSpacing:"0.06em", textTransform:"uppercase", marginBottom:12 }}>{cv.title}</div>
         <div style={{ display:"flex", gap:22, fontSize:11, color:"rgba(255,255,255,0.5)", flexWrap:"wrap" }}>
           <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
+          {cv.linkedin && <span>🔗 {cv.linkedin}</span>}
+          {cv.website  && <span>🌐 {cv.website}</span>}
         </div>
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0 }}>
@@ -663,6 +681,8 @@ function TplLeafish({ cv, scale=1, accent="#16a34a", font="'Inter',sans-serif", 
             <div style={{ fontSize:14, color:accent, fontWeight:700, marginBottom:10 }}>{cv.title}</div>
             <div style={{ display:"flex", gap:18, fontSize:11, color:"#64748b", flexWrap:"wrap" }}>
               <span>✉ {cv.email}</span><span>📞 {cv.phone}</span><span>📍 {cv.location}</span>
+              {cv.linkedin && <span>🔗 {cv.linkedin}</span>}
+              {cv.website  && <span>🌐 {cv.website}</span>}
             </div>
           </div>
         </div>
@@ -753,7 +773,8 @@ function RenderCV({ id, cv, scale=1, accent, font, hidden=[] }: { id:number; cv:
 // ═══════════════════════════════════════════════════════════════════════════
 // ── PDF PRINT ENGINE ──────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
-function buildPrintHTML(cvHtml: string, styles: string, fontLinks: string): string {
+function buildPrintHTML(cvHtml: string, styles: string, fontLinks: string, zoom = 1): string {
+  const zoomRule = zoom < 0.99 ? `zoom: ${zoom.toFixed(4)};` : "";
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -763,10 +784,10 @@ ${styles}
 <style>
   @page { size: 210mm 297mm; margin: 0; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: white; width: 210mm; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
-  @media screen { html { background: #d0d0d0; padding: 20px 0; min-height: 100vh; } body { width: 210mm; margin: 0 auto; box-shadow: 0 4px 40px rgba(0,0,0,.3); } #cv-wrap { background: white; } }
-  @media print { html, body { background: white !important; } #cv-wrap { width: 210mm !important; } }
-  #cv-wrap { width: 794px; background: white; overflow: hidden; }
+  html, body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+  @media screen { html { background: #d0d0d0; padding: 20px 0; min-height: 100vh; } body { width: 210mm; margin: 0 auto; box-shadow: 0 4px 40px rgba(0,0,0,.3); } }
+  @media print { html, body { background: white !important; } }
+  #cv-wrap { width: 794px; background: white; overflow: hidden; ${zoomRule} }
 </style>
 </head>
 <body>
@@ -828,6 +849,8 @@ export default function CVPage() {
   const [genError,    setGenError]    = useState<string|null>(null);
 
   const printRef     = useRef<HTMLDivElement>(null);
+  const [cvZoom,     setCvZoom]     = useState(1);
+  const cvZoomRef                   = useRef(1);
 
   const [justPaid,     setJustPaid]     = useState(false);
   const [tplSwitching, setTplSwitching] = useState(false);
@@ -944,6 +967,19 @@ export default function CVPage() {
   useEffect(()=>{ enhanceTypeRef.current     = enhanceType;     }, [enhanceType]);
   useEffect(()=>{ formRef.current            = form;            }, [form]);
   useEffect(()=>{ photoBase64Ref.current     = photoBase64;     }, [photoBase64]);
+
+  // ── AUTO-FIT A4: measure content height and apply zoom to keep within 1 page ──
+  useLayoutEffect(() => {
+    if (step !== 5 || generating || !printRef.current) return;
+    const el = printRef.current;
+    const naturalH = el.scrollHeight;
+    const maxH = A4_H * preferredPages;
+    const z = naturalH > maxH + 4 ? Math.max(0.62, maxH / naturalH) : 1;
+    if (Math.abs(z - cvZoomRef.current) > 0.005) {
+      cvZoomRef.current = z;
+      setCvZoom(z);
+    }
+  });
 
   // ── FILE UPLOAD ───────────────────────────────────────────────────────
   const handleFile = (file: File) => {
@@ -1264,7 +1300,7 @@ IMPORTANT :
 
     const cvHtml = node.outerHTML;
 
-    w.document.write(buildPrintHTML(cvHtml, pageStyles, fontLinks));
+    w.document.write(buildPrintHTML(cvHtml, pageStyles, fontLinks, cvZoom));
     w.document.close();
   };
 
@@ -1282,6 +1318,8 @@ IMPORTANT :
   const switchTemplate = useCallback((id: number) => {
     setTplSwitching(true);
     setSelectedTpl(id);
+    cvZoomRef.current = 1;
+    setCvZoom(1);
     setTimeout(() => setTplSwitching(false), 250);
   }, []);
 
@@ -1838,7 +1876,7 @@ IMPORTANT :
 
                         <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>📋 Informations personnelles</div>
-                          {([["name","Nom complet"],["title","Titre"],["email","Email"],["phone","Téléphone"],["location","Localisation"]] as [keyof CVData, string][]).map(([k,label])=>(
+                          {([["name","Nom complet"],["title","Titre"],["email","Email"],["phone","Téléphone"],["location","Ville, Pays"],["linkedin","LinkedIn (optionnel)"],["website","Site / Portfolio (optionnel)"]] as [keyof CVData, string][]).map(([k,label])=>(
                             <div key={k} style={{ marginBottom:6 }}>
                               <label style={{ fontSize:10, color:"#6b7280", display:"block", marginBottom:2 }}>{label}</label>
                               <input value={String(cv[k]||"")} onChange={e=>upd({[k]:e.target.value})} style={IS}/>
@@ -1862,7 +1900,15 @@ IMPORTANT :
                             <div key={i} style={{ marginBottom:10, paddingBottom:10, borderBottom:i<cv.experiences.length-1?"1px solid #e5e7eb":"none" }}>
                               <input value={e.role} onChange={ev=>{const ex=[...cv.experiences];ex[i]={...ex[i],role:ev.target.value};upd({experiences:ex});}} placeholder="Intitulé du poste" style={{ ...IS, marginBottom:4 }}/>
                               <input value={e.company} onChange={ev=>{const ex=[...cv.experiences];ex[i]={...ex[i],company:ev.target.value};upd({experiences:ex});}} placeholder="Entreprise" style={{ ...IS, marginBottom:4 }}/>
-                              <input value={e.period} onChange={ev=>{const ex=[...cv.experiences];ex[i]={...ex[i],period:ev.target.value};upd({experiences:ex});}} placeholder="Période" style={IS}/>
+                              <input value={e.period} onChange={ev=>{const ex=[...cv.experiences];ex[i]={...ex[i],period:ev.target.value};upd({experiences:ex});}} placeholder="Période" style={{ ...IS, marginBottom:4 }}/>
+                              <label style={{ fontSize:10, color:"#6b7280", display:"block", marginBottom:2 }}>Points clés (un par ligne)</label>
+                              <textarea
+                                value={e.bullets.join("\n")}
+                                onChange={ev=>{const ex=[...cv.experiences];ex[i]={...ex[i],bullets:ev.target.value.split("\n").map(s=>s.trimStart()).filter(Boolean)};upd({experiences:ex});}}
+                                rows={Math.max(2, e.bullets.length)}
+                                style={{ ...IS, resize:"vertical", lineHeight:1.55 }}
+                                placeholder="Géré une équipe de 6 développeurs&#10;Déploiement AWS et CI/CD GitHub Actions"
+                              />
                             </div>
                           ))}
                         </div>
@@ -1927,7 +1973,7 @@ IMPORTANT :
                   <div className="cv-preview-outer" style={{ width:"100%", display:"flex", justifyContent:"center", overflow:"hidden" }}>
                     <div className="cv-scale-wrap"
                       style={{ transformOrigin:"top center", transform:"scale(var(--cv-scale, 0.82))", width:A4_W, flexShrink:0,
-                               marginBottom:`calc((var(--cv-scale, 0.82) - 1) * ${A4_H}px)` }}>
+                               marginBottom:`calc((var(--cv-scale, 0.82) - 1) * ${A4_H * preferredPages}px)` }}>
                       {generating ? (
                         <div style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", width:A4_W, minHeight:A4_H, padding:"48px 52px", boxSizing:"border-box", display:"flex", flexDirection:"column", gap:20, position:"relative" }}>
                           {[72, 55, 80, 55, 65].map((w, i) => (
@@ -1951,8 +1997,17 @@ IMPORTANT :
                           </div>
                         </div>
                       ) : (
-                        <div ref={printRef} style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", overflow:"hidden" }}>
-                          <RenderCV id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
+                        <div style={{ position:"relative", background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", width:A4_W, height:A4_H * preferredPages, overflow:"hidden" }}>
+                          {cvZoom < 0.97 && (
+                            <div style={{ position:"absolute", bottom:8, right:8, background:"#fef3c7", color:"#92400e", fontSize:10, fontWeight:700, padding:"3px 10px", borderRadius:100, border:"1px solid #fde68a", zIndex:10, pointerEvents:"none" }}>
+                              ↓ {Math.round(cvZoom * 100)}% — adapté A4
+                            </div>
+                          )}
+                          <div style={{ zoom: cvZoom < 0.99 ? cvZoom : undefined } as React.CSSProperties}>
+                            <div ref={printRef}>
+                              <RenderCV id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
