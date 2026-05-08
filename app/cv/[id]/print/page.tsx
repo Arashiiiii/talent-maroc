@@ -19,21 +19,22 @@ const supabase = createClient(
 );
 
 interface Props {
-  params:       { id: string };
-  searchParams: { token?: string };
+  params:       Promise<{ id: string }>;
+  searchParams: Promise<{ token?: string }>;
 }
 
 export default async function PrintPage({ params, searchParams }: Props) {
-  // Reject requests without a valid token
-  const token = searchParams.token ?? "";
-  if (!token || !(await verifyToken(token, params.id))) {
+  const { id }    = await params;
+  const { token } = await searchParams;
+
+  if (!token || !(await verifyToken(token, id))) {
     notFound();
   }
 
   const { data, error } = await supabase
     .from("cvs")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (error || !data) notFound();

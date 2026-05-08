@@ -6,13 +6,13 @@ export const maxDuration = 60;
 
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   if (!process.env.PDF_TOKEN_SECRET) {
     return NextResponse.json({ error: "PDF_TOKEN_SECRET not configured" }, { status: 500 });
   }
 
-  const cvId  = params.id;
+  const { id: cvId } = await params;
   const token = await signToken(cvId);
   const base  = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const url   = `${base}/cv/${cvId}/print?token=${encodeURIComponent(token)}`;
