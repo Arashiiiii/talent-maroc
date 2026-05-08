@@ -8,10 +8,15 @@ export const maxDuration = 30;
 // ─── Extraction helpers ───────────────────────────────────────────────────────
 
 async function extractPdf(buf: Buffer): Promise<string> {
-  // Dynamic import avoids webpack bundling the test-file read that pdf-parse
-  // performs at require() time when bundled (Next.js webpack issue).
-  const pdfParse = (await import("pdf-parse")).default;
-  const result   = await pdfParse(buf);
+  // Use the internal lib path to bypass:
+  //   1. the test-file read that the package entry-point triggers at load time
+  //   2. the .default mismatch between the CJS and ESM builds
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const pdfParse = require("pdf-parse/lib/pdf-parse.js") as (
+    buf: Buffer,
+    opts?: Record<string, unknown>,
+  ) => Promise<{ text: string }>;
+  const result = await pdfParse(buf);
   return result.text;
 }
 
