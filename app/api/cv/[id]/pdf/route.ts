@@ -35,7 +35,7 @@ export async function GET(
       margin:          { top: "0", right: "0", bottom: "0", left: "0" },
     });
 
-    return new NextResponse(pdf, {
+    return new NextResponse(new Uint8Array(pdf), {
       headers: {
         "Content-Type":        "application/pdf",
         "Content-Disposition": `attachment; filename="cv.pdf"`,
