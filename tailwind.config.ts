@@ -11,6 +11,24 @@ export default {
   theme: {
     extend: {
       colors: {
+        // ── Brand palette ──────────────────────────────────────────────────
+        // Source of truth: extracted from app/page.tsx inline styles
+        brand: {
+          violet:       "#7c3aed", // primary CTA, links, active states
+          "violet-mid": "#6d28d9", // hover violet
+          "violet-deep":"#5b21b6", // pressed / gradient end
+          ink:          "#1e1147", // near-black headings
+          orange:       "#f97316", // "NOUVEAU" badge, warm accent
+          "orange-deep":"#ea580c", // gradient end for orange badge
+          // Tints (used for backgrounds / borders)
+          "violet-50":  "#f5f3ff",
+          "violet-100": "#ede9fe",
+          "violet-200": "#ddd6fe",
+          "violet-300": "#c4b5fd",
+          // Builder-specific
+          canvas:       "#fafbfc", // builder bg (calm, Linear-esque)
+        },
+        // ── shadcn / Radix tokens (keep as-is) ───────────────────────────
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {

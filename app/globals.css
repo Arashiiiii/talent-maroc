@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Shared animation keyframes ─────────────────────────────────────── */
+@keyframes ai-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .35; }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
