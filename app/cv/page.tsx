@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 // ── DODO PAYMENT LINKS ────────────────────────────────────────────────────
 const DODO_CHECKOUT: Record<string, string> = {
@@ -773,8 +773,8 @@ function RenderCV({ id, cv, scale=1, accent, font, hidden=[] }: { id:number; cv:
 // ═══════════════════════════════════════════════════════════════════════════
 // ── PDF PRINT ENGINE ──────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
-function buildPrintHTML(cvHtml: string, styles: string, fontLinks: string, zoom = 1): string {
-  const zoomRule = zoom < 0.99 ? `zoom: ${zoom.toFixed(4)};` : "";
+function buildPrintHTML(cvHtml: string, styles: string, fontLinks: string, pages: number): string {
+  const maxH = 1123 * pages;
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -785,16 +785,24 @@ ${styles}
   @page { size: 210mm 297mm; margin: 0; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
-  @media screen { html { background: #d0d0d0; padding: 20px 0; min-height: 100vh; } body { width: 210mm; margin: 0 auto; box-shadow: 0 4px 40px rgba(0,0,0,.3); } }
+  @media screen { html { background: #d0d0d0; padding: 20px 0; min-height: 100vh; } body { width: 794px; margin: 0 auto; box-shadow: 0 4px 40px rgba(0,0,0,.3); } }
   @media print { html, body { background: white !important; } }
-  #cv-wrap { width: 794px; background: white; overflow: hidden; ${zoomRule} }
+  #cv-wrap { width: 794px; background: white; overflow: hidden; }
 </style>
 </head>
 <body>
 <div id="cv-wrap">${cvHtml}</div>
 <script>
   document.fonts.ready.then(function() {
-    setTimeout(function() { window.print(); }, 500);
+    var wrap = document.getElementById('cv-wrap');
+    var h = wrap.scrollHeight;
+    var maxH = ${maxH};
+    if (h > maxH + 4) {
+      var z = Math.max(0.62, maxH / h);
+      wrap.style.zoom = z.toFixed(4);
+      wrap.style.overflow = 'hidden';
+    }
+    setTimeout(function() { window.print(); }, 400);
   });
 </script>
 </body>
@@ -849,8 +857,6 @@ export default function CVPage() {
   const [genError,    setGenError]    = useState<string|null>(null);
 
   const printRef     = useRef<HTMLDivElement>(null);
-  const [cvZoom,     setCvZoom]     = useState(1);
-  const cvZoomRef                   = useRef(1);
 
   const [justPaid,     setJustPaid]     = useState(false);
   const [tplSwitching, setTplSwitching] = useState(false);
@@ -940,8 +946,21 @@ export default function CVPage() {
     saveToastTimer.current = setTimeout(() => setSaveToast(false), 1800);
   }, [step, cvData, editingCv, selectedTpl, editorAccent, editorFont, hiddenSections, hasPaid, coverLetter, linkedinSummary, executiveBio, currentPlan]);
 
+  const [sessionResume, setSessionResume] = useState<CVData|null>(null);
+
   useEffect(() => {
     if (wasRedirectedFromPayment.current) return;
+    try {
+      const raw = safeGetStorage("cv_session");
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (!s.cvData) return;
+      // Surface a resume banner instead of silently restoring to step 5
+      setSessionResume(s.cvData);
+    } catch {}
+  }, []);
+
+  const restoreSession = () => {
     try {
       const raw = safeGetStorage("cv_session");
       if (!raw) return;
@@ -959,7 +978,13 @@ export default function CVPage() {
       const plan = PLANS.find(p => p.tier === s.planTier) || PLANS[1];
       setCurrentPlan(plan); setPurchasedPlan(plan); purchasedPlanRef.current = plan;
     } catch {}
-  }, []);
+    setSessionResume(null);
+  };
+
+  const discardSession = () => {
+    try { sessionStorage.removeItem("cv_session"); } catch {}
+    setSessionResume(null);
+  };
 
   useEffect(()=>{ uploadedBase64Ref.current  = uploadedBase64;  }, [uploadedBase64]);
   useEffect(()=>{ uploadedMimeRef.current    = uploadedMime;    }, [uploadedMime]);
@@ -968,18 +993,6 @@ export default function CVPage() {
   useEffect(()=>{ formRef.current            = form;            }, [form]);
   useEffect(()=>{ photoBase64Ref.current     = photoBase64;     }, [photoBase64]);
 
-  // ── AUTO-FIT A4: measure content height and apply zoom to keep within 1 page ──
-  useLayoutEffect(() => {
-    if (step !== 5 || generating || !printRef.current) return;
-    const el = printRef.current;
-    const naturalH = el.scrollHeight;
-    const maxH = A4_H * preferredPages;
-    const z = naturalH > maxH + 4 ? Math.max(0.62, maxH / naturalH) : 1;
-    if (Math.abs(z - cvZoomRef.current) > 0.005) {
-      cvZoomRef.current = z;
-      setCvZoom(z);
-    }
-  });
 
   // ── FILE UPLOAD ───────────────────────────────────────────────────────
   const handleFile = (file: File) => {
@@ -1300,7 +1313,7 @@ IMPORTANT :
 
     const cvHtml = node.outerHTML;
 
-    w.document.write(buildPrintHTML(cvHtml, pageStyles, fontLinks, cvZoom));
+    w.document.write(buildPrintHTML(cvHtml, pageStyles, fontLinks, preferredPages));
     w.document.close();
   };
 
@@ -1318,8 +1331,6 @@ IMPORTANT :
   const switchTemplate = useCallback((id: number) => {
     setTplSwitching(true);
     setSelectedTpl(id);
-    cvZoomRef.current = 1;
-    setCvZoom(1);
     setTimeout(() => setTplSwitching(false), 250);
   }, []);
 
@@ -1452,6 +1463,23 @@ IMPORTANT :
 
         {/* ── MAIN ── */}
         <div style={{maxWidth: step===5 ? "100%" : 1080, margin:"0 auto", padding: step===5 ? "0" : "36px 20px 80px"}}>
+
+          {/* ─────── SESSION RESUME BANNER ─────── */}
+          {sessionResume && step===1 && (
+            <div className="au" style={{maxWidth:700,margin:"0 auto 24px",background:"linear-gradient(135deg,#f5f3ff,#ede9fe)",border:"2px solid #ddd6fe",borderRadius:14,padding:"18px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap"}}>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <span style={{fontSize:24}}>📄</span>
+                <div>
+                  <div style={{fontSize:14,fontWeight:800,color:"#1e1147"}}>CV en cours — {sessionResume.name || "Votre CV"}</div>
+                  <div style={{fontSize:12,color:"#6b7280",marginTop:2}}>Reprendre là où vous en étiez ?</div>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={discardSession} style={{background:"white",color:"#6b7280",border:"1.5px solid #e5e7eb",borderRadius:8,padding:"8px 14px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Ignorer</button>
+                <button onClick={restoreSession} className="btn-green" style={{padding:"8px 18px",fontSize:12}}>↺ Reprendre →</button>
+              </div>
+            </div>
+          )}
 
           {/* ─────── ENTRY POINT ─────── */}
           {step===1 && mode==="upload" && (
@@ -1613,6 +1641,24 @@ IMPORTANT :
                     <div style={{gridColumn:"1 / -1"}}>
                       <label className="fl">Informations complémentaires <span style={{fontWeight:400,color:"#9ca3af"}}>(optionnel)</span></label>
                       <textarea className="fi" rows={2} value={form.notes} onChange={e=>setForm(p=>({...p,notes:e.target.value}))} placeholder="Certifications, projets, liens GitHub/LinkedIn..." style={{resize:"vertical"}}/>
+                    </div>
+                    <div style={{gridColumn:"1 / -1"}}>
+                      <label className="fl">Photo de profil <span style={{fontWeight:400,color:"#9ca3af"}}>(optionnel — pour les modèles qui la supportent)</span></label>
+                      <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+                        <label style={{display:"inline-flex",alignItems:"center",gap:8,padding:"10px 18px",border:"1.5px solid #e5e7eb",borderRadius:9,cursor:"pointer",background:"white",fontSize:13,fontWeight:600,color:"#374151"}}>
+                          <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=ev=>setPhotoBase64(ev.target?.result as string);r.readAsDataURL(f);}}/>
+                          📷 Ajouter une photo
+                        </label>
+                        {photoBase64 && (
+                          <div style={{display:"flex",alignItems:"center",gap:10}}>
+                            <img src={photoBase64} alt="" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"2px solid #bbf7d0"}}/>
+                            <div>
+                              <div style={{fontSize:12,fontWeight:600,color:"#15803d"}}>✓ Photo ajoutée</div>
+                              <button onClick={()=>setPhotoBase64(null)} style={{fontSize:11,color:"#9ca3af",background:"none",border:"none",cursor:"pointer",padding:0,fontFamily:"inherit"}}>Supprimer</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1895,9 +1941,15 @@ IMPORTANT :
                         </div>
 
                         <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
-                          <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>💼 Expériences</div>
+                          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                            <div style={{ fontSize:11, fontWeight:700, color:"#374151" }}>💼 Expériences</div>
+                            <button onClick={()=>upd({experiences:[...cv.experiences,{company:"",role:"",period:"",bullets:[""]}]})}
+                              style={{ fontSize:10, fontWeight:700, color:"#7c3aed", background:"#f5f3ff", border:"1px solid #ddd6fe", borderRadius:6, padding:"3px 8px", cursor:"pointer", fontFamily:"inherit" }}>+ Ajouter</button>
+                          </div>
                           {cv.experiences.map((e,i)=>(
-                            <div key={i} style={{ marginBottom:10, paddingBottom:10, borderBottom:i<cv.experiences.length-1?"1px solid #e5e7eb":"none" }}>
+                            <div key={i} style={{ marginBottom:10, paddingBottom:10, borderBottom:i<cv.experiences.length-1?"1px solid #e5e7eb":"none", position:"relative" }}>
+                              <button onClick={()=>{const ex=cv.experiences.filter((_,j)=>j!==i);upd({experiences:ex});}}
+                                style={{ position:"absolute", top:0, right:0, background:"#fef2f2", border:"1px solid #fecaca", borderRadius:5, width:20, height:20, fontSize:11, color:"#ef4444", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"inherit", fontWeight:700 }}>×</button>
                               <input value={e.role} onChange={ev=>{const ex=[...cv.experiences];ex[i]={...ex[i],role:ev.target.value};upd({experiences:ex});}} placeholder="Intitulé du poste" style={{ ...IS, marginBottom:4 }}/>
                               <input value={e.company} onChange={ev=>{const ex=[...cv.experiences];ex[i]={...ex[i],company:ev.target.value};upd({experiences:ex});}} placeholder="Entreprise" style={{ ...IS, marginBottom:4 }}/>
                               <input value={e.period} onChange={ev=>{const ex=[...cv.experiences];ex[i]={...ex[i],period:ev.target.value};upd({experiences:ex});}} placeholder="Période" style={{ ...IS, marginBottom:4 }}/>
@@ -1914,6 +1966,41 @@ IMPORTANT :
                         </div>
 
                         <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
+                          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                            <div style={{ fontSize:11, fontWeight:700, color:"#374151" }}>🎓 Formation</div>
+                            <button onClick={()=>upd({education:[...cv.education,{school:"",degree:"",year:""}]})}
+                              style={{ fontSize:10, fontWeight:700, color:"#7c3aed", background:"#f5f3ff", border:"1px solid #ddd6fe", borderRadius:6, padding:"3px 8px", cursor:"pointer", fontFamily:"inherit" }}>+ Ajouter</button>
+                          </div>
+                          {cv.education.map((e,i)=>(
+                            <div key={i} style={{ marginBottom:8, paddingBottom:8, borderBottom:i<cv.education.length-1?"1px solid #e5e7eb":"none", position:"relative" }}>
+                              <button onClick={()=>upd({education:cv.education.filter((_,j)=>j!==i)})}
+                                style={{ position:"absolute", top:0, right:0, background:"#fef2f2", border:"1px solid #fecaca", borderRadius:5, width:20, height:20, fontSize:11, color:"#ef4444", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"inherit", fontWeight:700 }}>×</button>
+                              <input value={e.degree} onChange={ev=>{const ed=[...cv.education];ed[i]={...ed[i],degree:ev.target.value};upd({education:ed});}} placeholder="Diplôme / Titre" style={{ ...IS, marginBottom:4 }}/>
+                              <input value={e.school} onChange={ev=>{const ed=[...cv.education];ed[i]={...ed[i],school:ev.target.value};upd({education:ed});}} placeholder="École / Université" style={{ ...IS, marginBottom:4 }}/>
+                              <input value={e.year} onChange={ev=>{const ed=[...cv.education];ed[i]={...ed[i],year:ev.target.value};upd({education:ed});}} placeholder="Année (ex: 2022)" style={IS}/>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
+                          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                            <div style={{ fontSize:11, fontWeight:700, color:"#374151" }}>🌍 Langues</div>
+                            <button onClick={()=>upd({languages:[...cv.languages,{lang:"",level:"Courant"}]})}
+                              style={{ fontSize:10, fontWeight:700, color:"#7c3aed", background:"#f5f3ff", border:"1px solid #ddd6fe", borderRadius:6, padding:"3px 8px", cursor:"pointer", fontFamily:"inherit" }}>+ Ajouter</button>
+                          </div>
+                          {cv.languages.map((l,i)=>(
+                            <div key={i} style={{ display:"flex", gap:6, marginBottom:6, alignItems:"center" }}>
+                              <input value={l.lang} onChange={ev=>{const ls=[...cv.languages];ls[i]={...ls[i],lang:ev.target.value};upd({languages:ls});}} placeholder="Langue" style={{ ...IS, flex:1 }}/>
+                              <select value={l.level} onChange={ev=>{const ls=[...cv.languages];ls[i]={...ls[i],level:ev.target.value};upd({languages:ls});}} style={{ ...IS, width:120, flexShrink:0 }}>
+                                {["Natif","Courant","Avancé","Intermédiaire","Débutant"].map(lv=><option key={lv}>{lv}</option>)}
+                              </select>
+                              <button onClick={()=>upd({languages:cv.languages.filter((_,j)=>j!==i)})}
+                                style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:5, width:22, height:22, fontSize:12, color:"#ef4444", cursor:"pointer", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"inherit", fontWeight:700 }}>×</button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div style={{ background:"#f9fafb", borderRadius:10, padding:"12px" }}>
                           <div style={{ fontSize:11, fontWeight:700, color:"#374151", marginBottom:8 }}>🏅 Certifications <span style={{ fontWeight:400, color:"#9ca3af" }}>(une par ligne)</span></div>
                           <textarea
                             value={(cv.certifications||[]).join("\n")}
@@ -1925,11 +2012,14 @@ IMPORTANT :
                     )}
                   </div>
 
-                  <div style={{ padding:"12px 14px", borderTop:"1.5px solid #ede9fe", display:"flex", gap:8 }}>
-                    <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");setHasPaid(false);setJustPaid(false);setCoverLetter(null);setLinkedinSummary(null);setExecutiveBio(null);setInterviewQuestions(null);setCurrentPlan(PLANS[1]);setPurchasedPlan(PLANS[0]);purchasedPlanRef.current=PLANS[0];setSelectedTpl(1);try{sessionStorage.removeItem("cv_session");}catch{}goStep(1);}} disabled={pdfBusy} style={{ flex:1, fontSize:12, padding:"9px", opacity:pdfBusy?0.5:1 }}>↺ Recommencer</button>
-                    <button className="btn-green" onClick={handleDownload} disabled={generating} style={{ flex:1, fontSize:12, padding:"9px" }}>
-                      {hasPaid ? "🖨 PDF" : `🔒 ${currentPlan.price} MAD`}
+                  <div style={{ padding:"12px 14px", borderTop:"1.5px solid #ede9fe", display:"flex", flexDirection:"column", gap:6 }}>
+                    <button className="btn-green" onClick={handleDownload} disabled={generating} style={{ fontSize:12, padding:"9px" }}>
+                      {hasPaid ? "🖨 Télécharger PDF" : `🔒 ${currentPlan.price} MAD · Télécharger`}
                     </button>
+                    <div style={{ display:"flex", gap:6 }}>
+                      <button className="btn-outline" onClick={()=>{ goStep(mode==="ai" ? 3 : 2); }} disabled={pdfBusy} style={{ flex:1, fontSize:11, padding:"7px" }}>← Modifier</button>
+                      <button className="btn-outline" onClick={()=>{setCvData(null);setEditingCv(null);setMode("upload");setHasPaid(false);setJustPaid(false);setCoverLetter(null);setLinkedinSummary(null);setExecutiveBio(null);setInterviewQuestions(null);setCurrentPlan(PLANS[1]);setPurchasedPlan(PLANS[0]);purchasedPlanRef.current=PLANS[0];setSelectedTpl(1);try{sessionStorage.removeItem("cv_session");}catch{}goStep(1);}} disabled={pdfBusy} style={{ flex:1, fontSize:11, padding:"7px" }}>↺ Recommencer</button>
+                    </div>
                   </div>
                 </div>
 
@@ -1969,11 +2059,10 @@ IMPORTANT :
                     </div>
                   )}
 
-                  {/* FIX: cv-preview-outer overflow changed for mobile scrolling */}
-                  <div className="cv-preview-outer" style={{ width:"100%", display:"flex", justifyContent:"center", overflow:"hidden" }}>
+                  <div className="cv-preview-outer" style={{ width:"100%", display:"flex", justifyContent:"center" }}>
                     <div className="cv-scale-wrap"
                       style={{ transformOrigin:"top center", transform:"scale(var(--cv-scale, 0.82))", width:A4_W, flexShrink:0,
-                               marginBottom:`calc((var(--cv-scale, 0.82) - 1) * ${A4_H * preferredPages}px)` }}>
+                               marginBottom:`calc((var(--cv-scale, 0.82) - 1) * ${A4_H}px)` }}>
                       {generating ? (
                         <div style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", width:A4_W, minHeight:A4_H, padding:"48px 52px", boxSizing:"border-box", display:"flex", flexDirection:"column", gap:20, position:"relative" }}>
                           {[72, 55, 80, 55, 65].map((w, i) => (
@@ -1997,17 +2086,8 @@ IMPORTANT :
                           </div>
                         </div>
                       ) : (
-                        <div style={{ position:"relative", background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)", width:A4_W, height:A4_H * preferredPages, overflow:"hidden" }}>
-                          {cvZoom < 0.97 && (
-                            <div style={{ position:"absolute", bottom:8, right:8, background:"#fef3c7", color:"#92400e", fontSize:10, fontWeight:700, padding:"3px 10px", borderRadius:100, border:"1px solid #fde68a", zIndex:10, pointerEvents:"none" }}>
-                              ↓ {Math.round(cvZoom * 100)}% — adapté A4
-                            </div>
-                          )}
-                          <div style={{ zoom: cvZoom < 0.99 ? cvZoom : undefined } as React.CSSProperties}>
-                            <div ref={printRef}>
-                              <RenderCV id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
-                            </div>
-                          </div>
+                        <div ref={printRef} style={{ background:"white", boxShadow:"0 8px 40px rgba(0,0,0,.18)" }}>
+                          <RenderCV id={selectedTpl} cv={cv} accent={ac} font={fn} hidden={hiddenSections}/>
                         </div>
                       )}
                     </div>
