@@ -27,31 +27,56 @@ interface CVRow {
 
 export default function CVListPage() {
   const router = useRouter();
-  const [cvs,      setCvs]      = useState<CVRow[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [userId,   setUserId]   = useState<string | null>(null);
+  const [cvs,         setCvs]        = useState<CVRow[]>([]);
+  const [loading,     setLoading]    = useState(true);
+  const [creating,    setCreating]   = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [userId,      setUserId]     = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { router.replace("/dashboard"); return; }
+      if (!user) {
+        // Not authenticated — stop spinner and show the page anyway so the
+        // user at least sees the error when they click Create.
+        setLoading(false);
+        return;
+      }
       setUserId(user.id);
       supabase
         .from("cvs")
         .select("id, name, template, updated_at")
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false })
-        .then(({ data }) => { setCvs(data ?? []); setLoading(false); });
+        .then(({ data, error }) => {
+          if (!error) setCvs(data ?? []);
+          setLoading(false);
+        });
     });
-  }, [router]);
+  }, []);
 
   const createCV = useCallback(async () => {
-    if (!userId || creating) return;
+    if (creating) return;
+    setCreateError(null);
     setCreating(true);
+
+    // Re-fetch user at click time — covers the case where the session loaded
+    // after the initial effect ran.
+    let uid = userId;
+    if (!uid) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setCreateError("Vous devez être connecté pour créer un CV.");
+        setCreating(false);
+        return;
+      }
+      setUserId(user.id);
+      uid = user.id;
+    }
+
     const { data, error } = await supabase
       .from("cvs")
       .insert({
-        user_id:          userId,
+        user_id:          uid,
         name:             "Mon CV",
         data:             EMPTY_CV,
         template:         "corso",
@@ -66,6 +91,7 @@ export default function CVListPage() {
     if (data && !error) {
       router.push(`/cv/${data.id}`);
     } else {
+      setCreateError(error?.message ?? "Impossible de créer le CV. Vérifiez que la table cvs existe dans Supabase.");
       setCreating(false);
     }
   }, [userId, creating, router]);
@@ -117,6 +143,22 @@ export default function CVListPage() {
 
       {/* Content */}
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "40px 24px" }}>
+
+        {/* Error banner */}
+        {createError && (
+          <div style={{
+            marginBottom: 20, padding: "12px 16px", borderRadius: 8,
+            background: "#fef2f2", border: "1px solid #fecaca",
+            color: "#991b1b", fontSize: 13,
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+          }}>
+            <span>⚠ {createError}</span>
+            <button type="button" onClick={() => setCreateError(null)}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#991b1b", fontSize: 16, lineHeight: 1 }}>
+              ×
+            </button>
+          </div>
+        )}
 
         {/* Header row */}
         <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 28 }}>
