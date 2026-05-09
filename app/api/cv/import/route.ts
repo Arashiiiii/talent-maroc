@@ -2,36 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { CVDataSchema } from "../../../cv/_lib/schema";
 
-export const runtime    = "nodejs";
+export const runtime     = "nodejs";
 export const maxDuration = 30;
 
-// ─── Extraction helpers ───────────────────────────────────────────────────────
-
-type PdfParseFn = (buf: Buffer, opts?: Record<string, unknown>) => Promise<{ text: string }>;
-
-async function extractPdf(buf: Buffer): Promise<string> {
-  // Cast through unknown to handle both CJS (.default) and ESM (direct export)
-  // without relying on internal package paths that differ between builds.
-  const mod = (await import("pdf-parse")) as unknown;
-  const pdfParse: PdfParseFn =
-    typeof (mod as { default?: unknown }).default === "function"
-      ? (mod as { default: PdfParseFn }).default
-      : (mod as PdfParseFn);
-  const result = await pdfParse(buf);
-  return result.text;
-}
-
-async function extractDocx(buf: Buffer): Promise<string> {
-  const mammoth = await import("mammoth");
-  const result  = await mammoth.extractRawText({ buffer: buf });
-  return result.value;
-}
-
-// ─── Ensure every array item has an id field ─────────────────────────────────
+// ─── ID helper ───────────────────────────────────────────────────────────────
 
 function ensureIds(cv: Record<string, unknown>): void {
-  const arrays = ["experience", "education", "skills", "languages", "certifications", "projects"] as const;
-  for (const key of arrays) {
+  for (const key of ["experience", "education", "skills", "languages", "certifications", "projects"]) {
     const arr = cv[key];
     if (!Array.isArray(arr)) continue;
     for (const item of arr) {
@@ -42,10 +19,10 @@ function ensureIds(cv: Record<string, unknown>): void {
   }
 }
 
-// ─── Claude system prompt ─────────────────────────────────────────────────────
+// ─── System prompt ────────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `You are a professional CV parser.
-Extract ALL information from the CV text and return a single valid JSON object. No markdown, no explanation — JSON only.
+Extract ALL information from the CV and return a single valid JSON object. No markdown, no explanation — JSON only.
 
 Required shape (fill ALL fields; use "" for missing strings, generate random 8-char ids for array items):
 {
@@ -61,13 +38,12 @@ Required shape (fill ALL fields; use "" for missing strings, generate random 8-c
 }
 
 Rules:
-- Split the person's full name into firstName / lastName.
-- For experience bullets: write ONE achievement per bullet, starting with a strong past-tense action verb.
-- For languages dots: Native=5, Fluent=4, Advanced=3, Intermediate=2, Basic=1.
-- Omit empty arrays (leave [] instead of removing the key).
+- Split full name into firstName / lastName.
+- Experience bullets: ONE achievement per bullet, strong past-tense action verb.
+- Language dots: Native=5, Fluent=4, Advanced=3, Intermediate=2, Basic=1.
 - Return ONLY the JSON object, nothing else.`;
 
-// ─── Route handler ────────────────────────────────────────────────────────────
+// ─── Route ────────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   let formData: FormData;
@@ -82,59 +58,59 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No file field in form data" }, { status: 400 });
   }
 
-  const name = file.name.toLowerCase();
-  const type = file.type;
+  const fname = file.name.toLowerCase();
+  const ftype = file.type;
+  const buf   = Buffer.from(await file.arrayBuffer());
 
-  const buf = Buffer.from(await file.arrayBuffer());
-
-  let text: string;
-  try {
-    if (type === "application/pdf" || name.endsWith(".pdf")) {
-      text = await extractPdf(buf);
-    } else if (
-      type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-      name.endsWith(".docx")
-    ) {
-      text = await extractDocx(buf);
-    } else {
-      return NextResponse.json(
-        { error: "Unsupported file type. Upload a PDF or DOCX file." },
-        { status: 415 },
-      );
-    }
-  } catch (err) {
-    console.error("Text extraction error:", err);
-    return NextResponse.json({ error: "Could not read the file content." }, { status: 422 });
-  }
-
-  text = text.trim();
-  if (!text) {
-    return NextResponse.json(
-      { error: "The file appears to be empty or image-only. Text extraction returned nothing." },
-      { status: 422 },
-    );
-  }
-
-  // Clip to ~6 000 chars to stay inside Haiku's sweet spot
-  const clipped = text.length > 6000 ? text.slice(0, 6000) + "\n[...]" : text;
-
-  // ── Claude extraction ───────────────────────────────────────────────────────
   const client = new Anthropic();
   let raw: string;
+
   try {
-    const msg = await client.messages.create({
-      model:      "claude-haiku-4-5-20251001",
-      max_tokens: 2048,
-      system:     SYSTEM_PROMPT,
-      messages:   [{ role: "user", content: `Parse this CV:\n\n${clipped}` }],
-    });
-    raw = (msg.content[0] as { type: "text"; text: string }).text.trim();
+    // ── PDF: send as native Claude document (no text extraction needed) ────────
+    if (ftype === "application/pdf" || fname.endsWith(".pdf")) {
+      const msg = await client.messages.create({
+        model:      "claude-haiku-4-5-20251001",
+        max_tokens: 2048,
+        system:     SYSTEM_PROMPT,
+        messages: [{
+          role: "user",
+          content: [
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            { type: "document", source: { type: "base64", media_type: "application/pdf", data: buf.toString("base64") } } as any,
+            { type: "text", text: "Parse this CV and return only the JSON as instructed." },
+          ],
+        }],
+      });
+      raw = (msg.content[0] as { type: "text"; text: string }).text.trim();
+
+    // ── DOCX: extract text with mammoth, send as plain text ───────────────────
+    } else if (
+      ftype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      fname.endsWith(".docx")
+    ) {
+      const mammoth = await import("mammoth");
+      const { value: text } = await mammoth.extractRawText({ buffer: buf });
+      if (!text.trim()) {
+        return NextResponse.json({ error: "The DOCX file appears to be empty." }, { status: 422 });
+      }
+      const clipped = text.length > 6000 ? text.slice(0, 6000) + "\n[...]" : text;
+      const msg = await client.messages.create({
+        model:      "claude-haiku-4-5-20251001",
+        max_tokens: 2048,
+        system:     SYSTEM_PROMPT,
+        messages:   [{ role: "user", content: `Parse this CV:\n\n${clipped}` }],
+      });
+      raw = (msg.content[0] as { type: "text"; text: string }).text.trim();
+
+    } else {
+      return NextResponse.json({ error: "Unsupported file type. Upload a PDF or DOCX." }, { status: 415 });
+    }
   } catch (err) {
-    console.error("Claude error:", err);
+    console.error("Claude import error:", err);
     return NextResponse.json({ error: "AI extraction failed. Please try again." }, { status: 502 });
   }
 
-  // Strip markdown code fences if Claude wrapped the JSON anyway
+  // Strip markdown fences if Claude wrapped the response anyway
   const jsonStr = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
 
   let parsed: unknown;
@@ -145,7 +121,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "AI returned malformed JSON." }, { status: 500 });
   }
 
-  // Ensure every array item has an id before schema validation
   if (parsed && typeof parsed === "object") {
     ensureIds(parsed as Record<string, unknown>);
   }

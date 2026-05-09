@@ -79,26 +79,41 @@ import { useAutosave } from "./_hooks/useAutosave";
 // BuilderShell — rendered once data is loaded
 // ─────────────────────────────────────────────────────────────────────────────
 function BuilderShell({ cvId }: { cvId: string }) {
-  // Start autosaving immediately
   useAutosave(cvId);
 
-  return (
-    <div
-      style={{
-        height:        "100vh",
-        display:       "flex",
-        flexDirection: "column",
-        background:    "#fafbfc",
-        fontFamily:    "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
-        color:         "#0f172a",
-      }}
-    >
-      <Topbar cvId={cvId} />
+  const [isMobile,  setIsMobile]  = useState(false);
+  const [mobileTab, setMobileTab] = useState<"form" | "preview">("form");
 
-      <div style={{ flex: 1, display: "grid", gridTemplateColumns: "minmax(380px, 480px) 1fr", minHeight: 0 }}>
-        <CVForm />
-        <CVPreview />
-      </div>
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  return (
+    <div style={{ height: "100dvh", display: "flex", flexDirection: "column", background: "#fafbfc", fontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif", color: "#0f172a" }}>
+      <Topbar
+        cvId={cvId}
+        mobileTab={isMobile ? mobileTab : undefined}
+        onToggleMobile={isMobile ? () => setMobileTab((t) => t === "form" ? "preview" : "form") : undefined}
+      />
+
+      {/* Desktop: side-by-side grid */}
+      {!isMobile && (
+        <div style={{ flex: 1, display: "grid", gridTemplateColumns: "minmax(380px, 480px) 1fr", minHeight: 0 }}>
+          <CVForm />
+          <CVPreview />
+        </div>
+      )}
+
+      {/* Mobile: single tab */}
+      {isMobile && (
+        <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+          {mobileTab === "form"    && <CVForm />}
+          {mobileTab === "preview" && <CVPreview />}
+        </div>
+      )}
     </div>
   );
 }
