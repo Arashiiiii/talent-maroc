@@ -38,6 +38,7 @@ Required shape (fill ALL fields; use "" for missing strings, generate random 8-c
 }
 
 Rules:
+- PRESERVE THE ORIGINAL LANGUAGE of the CV. If the CV is in French, output French. Arabic → Arabic. Never translate.
 - Split full name into firstName / lastName.
 - Experience bullets: ONE achievement per bullet, strong past-tense action verb.
 - Language dots: Native=5, Fluent=4, Advanced=3, Intermediate=2, Basic=1.
