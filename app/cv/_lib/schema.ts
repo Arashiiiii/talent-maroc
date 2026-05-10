@@ -7,7 +7,7 @@ import { z } from "zod";
 export const LANGS = ["fr", "en", "ar"] as const;
 export type Lang = (typeof LANGS)[number];
 
-export const TEMPLATE_IDS = ["corso", "meridian", "aria", "dahab", "medina"] as const;
+export const TEMPLATE_IDS = ["corso", "meridian", "aria", "dahab", "medina", "vertex", "atlas", "lumen", "helix", "slate"] as const;
 export type TemplateId = (typeof TEMPLATE_IDS)[number];
 
 export const SECTION_IDS = [

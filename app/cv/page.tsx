@@ -54,9 +54,49 @@ const TEMPLATES = [
     color: "#f97316",
     layout: "creative" as const,
   },
+  {
+    id:    "vertex",
+    name:  "Vertex",
+    desc:  "Rail vertical accent, numérotation des sections, typographie éditoriale.",
+    badge: "Nouveau" as const,
+    color: "#0f172a",
+    layout: "single-rail" as const,
+  },
+  {
+    id:    "atlas",
+    name:  "Atlas",
+    desc:  "Sidebar sombre avec photo, colonne principale claire. Tous secteurs.",
+    badge: "Nouveau" as const,
+    color: "#1e293b",
+    layout: "sidebar-dark" as const,
+  },
+  {
+    id:    "lumen",
+    name:  "Lumen",
+    desc:  "Bandeau coloré en haut, corps deux colonnes. Moderne et lisible.",
+    badge: "Nouveau" as const,
+    color: "#0891b2",
+    layout: "banner-two-col" as const,
+  },
+  {
+    id:    "helix",
+    name:  "Helix",
+    desc:  "Timeline verticale pointillée, pills de dates. Impact visuel fort.",
+    badge: "Nouveau" as const,
+    color: "#7c3aed",
+    layout: "timeline" as const,
+  },
+  {
+    id:    "slate",
+    name:  "Slate",
+    desc:  "Grille Swiss ultra-propre, métadonnées monospace. Minimaliste absolu.",
+    badge: "Nouveau" as const,
+    color: "#374151",
+    layout: "monospace" as const,
+  },
 ];
 
-type Layout = typeof TEMPLATES[number]["layout"];
+type Layout = "sidebar-left" | "centered" | "label-col" | "dark-header" | "creative" | "single-rail" | "sidebar-dark" | "banner-two-col" | "timeline" | "monospace";
 
 // ─── Mini template preview ────────────────────────────────────────────────────
 
@@ -134,7 +174,93 @@ function TemplateMini({ layout, color, active }: { layout: Layout; color: string
     </div>
   );
 
-  // creative
+  // single-rail (Vertex)
+  if (layout === "single-rail") return (
+    <div style={{ height: 90, borderRadius: 6, overflow: "hidden", background: bg, border: `1.5px solid ${active ? color : "#e5e7eb"}`, display: "flex" }}>
+      <div style={{ width: 4, background: color, flexShrink: 0 }} />
+      <div style={{ flex: 1, padding: "8px 10px" }}>
+        <div style={{ height: 7, borderRadius: 2, background: color, width: "55%", marginBottom: 6 }} />
+        <div style={{ height: 3, borderRadius: 1, background: "#cbd5e1", width: "35%", marginBottom: 10 }} />
+        {[0,1,2].map((i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+            <div style={{ width: 14, height: 14, borderRadius: 2, background: `${color}22`, border: `1px solid ${color}44`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 6, height: 1.5, background: color }} />
+            </div>
+            <div style={{ height: 2, borderRadius: 1, background: "#e2e8f0", flex: 1 }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // sidebar-dark (Atlas)
+  if (layout === "sidebar-dark") return (
+    <div style={{ display: "flex", height: 90, borderRadius: 6, overflow: "hidden", border: `1.5px solid ${active ? color : "#e5e7eb"}` }}>
+      <div style={{ width: "36%", background: color === "#1e293b" ? "#1e293b" : color, padding: "8px 6px" }}>
+        <div style={{ width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,.2)", margin: "0 auto 5px" }} />
+        {lines(3, "80%", 2, 3, "rgba(255,255,255,.25)")}
+        <div style={{ height: 1, background: "rgba(255,255,255,.15)", margin: "4px 0" }} />
+        {lines(2, "70%", 2, 2, "rgba(255,255,255,.2)")}
+      </div>
+      <div style={{ flex: 1, padding: "8px 7px", background: "#fff" }}>
+        <div style={{ height: 5, borderRadius: 2, background: "#0f172a", width: "60%", marginBottom: 3 }} />
+        <div style={{ height: 2, borderRadius: 1, background: "#cbd5e1", width: "40%", marginBottom: 8 }} />
+        {lines(4, "90%")}
+      </div>
+    </div>
+  );
+
+  // banner-two-col (Lumen)
+  if (layout === "banner-two-col") return (
+    <div style={{ height: 90, borderRadius: 6, overflow: "hidden", background: bg, border: `1.5px solid ${active ? color : "#e5e7eb"}` }}>
+      <div style={{ background: `${color}22`, padding: "7px 10px", borderBottom: `2px solid ${color}` }}>
+        <div style={{ height: 5, borderRadius: 2, background: color, width: "45%", marginBottom: 3 }} />
+        <div style={{ height: 2, borderRadius: 1, background: "#94a3b8", width: "30%" }} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "60% 40%", padding: "6px 0" }}>
+        <div style={{ padding: "0 8px" }}>{lines(3, "90%", 2, 3)}</div>
+        <div style={{ padding: "0 8px", borderInlineStart: "1px solid #e5e7eb" }}>{lines(3, "85%", 2, 3)}</div>
+      </div>
+    </div>
+  );
+
+  // timeline (Helix)
+  if (layout === "timeline") return (
+    <div style={{ height: 90, borderRadius: 6, padding: "8px 10px", background: bg, border: `1.5px solid ${active ? color : "#e5e7eb"}` }}>
+      <div style={{ height: 5, borderRadius: 2, background: color, width: "50%", marginBottom: 8 }} />
+      {[0,1,2].map((i) => (
+        <div key={i} style={{ display: "flex", gap: 7, marginBottom: 5, alignItems: "flex-start" }}>
+          <div style={{ position: "relative", flexShrink: 0, width: 10 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: color, marginTop: 2 }} />
+            {i < 2 && <div style={{ width: 1.5, height: 10, background: `repeating-linear-gradient(to bottom, ${color} 0 3px, transparent 3px 6px)`, position: "absolute", left: 3, top: 10 }} />}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ height: 2.5, borderRadius: 1, background: "#1e293b", width: "70%", marginBottom: 2 }} />
+            <div style={{ height: 2, borderRadius: 1, background: "#e2e8f0", width: "50%" }} />
+          </div>
+          <div style={{ height: 12, width: 22, borderRadius: 3, background: `${color}22`, border: `1px solid ${color}44`, flexShrink: 0 }} />
+        </div>
+      ))}
+    </div>
+  );
+
+  // monospace (Slate)
+  if (layout === "monospace") return (
+    <div style={{ height: 90, borderRadius: 6, padding: "8px 10px", background: bg, border: `1.5px solid ${active ? color : "#e5e7eb"}` }}>
+      <div style={{ borderBottom: `2px solid ${color}`, paddingBottom: 6, marginBottom: 4 }}>
+        <div style={{ height: 5, borderRadius: 2, background: "#0f172a", width: "50%", marginBottom: 3 }} />
+        <div style={{ height: 2, borderRadius: 1, background: "#94a3b8", width: "35%" }} />
+      </div>
+      {[0,1,2].map((i) => (
+        <div key={i} style={{ display: "grid", gridTemplateColumns: "28px 1fr", gap: 8, padding: "3px 0", borderTop: i === 0 ? "none" : "1px solid #f1f5f9" }}>
+          <div style={{ height: 2, borderRadius: 1, background: `${color}88`, alignSelf: "center" }} />
+          <div style={{ height: 2, borderRadius: 1, background: "#e2e8f0", width: `${70 + i * 8}%` }} />
+        </div>
+      ))}
+    </div>
+  );
+
+  // creative (Medina)
   return (
     <div style={{ height: 90, borderRadius: 6, padding: "8px 10px", background: "#fffaf5", border: `1.5px solid ${active ? color : "#e5e7eb"}` }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
