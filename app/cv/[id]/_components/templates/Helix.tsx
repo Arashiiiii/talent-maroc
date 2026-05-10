@@ -127,8 +127,8 @@ export function Helix({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
             {cv.certifications.map((c, i) => (
               <div key={c.id} style={{ marginBottom: 4 }}>
                 <strong>{ie(c.name, `certifications.${i}.name`)}</strong> ·{" "}
-                {ie(c.issuer, `certifications.${i}.issuer`)} ·{" "}
-                <span style={{ color: accent }}>{ie(c.year, `certifications.${i}.year`)}</span>
+                {ie(c.issuer ?? "", `certifications.${i}.issuer`)} ·{" "}
+                <span style={{ color: accent }}>{ie(c.year ?? "", `certifications.${i}.year`)}</span>
               </div>
             ))}
           </section>

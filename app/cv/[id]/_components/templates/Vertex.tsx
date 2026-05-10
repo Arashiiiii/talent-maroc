@@ -323,10 +323,10 @@ export function Vertex({
                   {ie(c.name, `certifications.${i}.name`)}
                 </strong>
                 <span style={{ fontSize: 11, color: "#525252" }}>
-                  {ie(c.issuer, `certifications.${i}.issuer`)}
+                  {ie(c.issuer ?? "", `certifications.${i}.issuer`)}
                 </span>
                 <span style={{ flex: 1 }} />
-                <Pill>{ie(c.year, `certifications.${i}.year`)}</Pill>
+                <Pill>{ie(c.year ?? "", `certifications.${i}.year`)}</Pill>
               </div>
             ))}
           </section>
