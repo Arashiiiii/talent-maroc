@@ -24,28 +24,13 @@ export function Topbar({ cvId, mobileTab, onToggleMobile }: Props) {
   const enabled   = useCVStore((s) => s.enabled);
 
   const [scoreOpen,   setScoreOpen]   = useState(false);
-  const [downloading, setDownloading] = useState(false);
   const { fileRef, trigger, handleFile, importing } = useImport();
 
-  const downloadPDF = useCallback(async () => {
-    if (downloading) return;
-    setDownloading(true);
-    try {
-      const res = await fetch(`/api/cv/${cvId}/pdf`);
-      if (!res.ok) throw new Error(`PDF error ${res.status}`);
-      const blob = await res.blob();
-      const href = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href     = href;
-      a.download = `${cvName.replace(/[^a-zA-Z0-9\-_]/g, "_") || "cv"}.pdf`;
-      a.click();
-      URL.revokeObjectURL(href);
-    } catch {
-      alert("Erreur lors de la génération du PDF. Veuillez réessayer.");
-    } finally {
-      setDownloading(false);
-    }
-  }, [cvId, cvName, downloading]);
+  // Opens the print page with ?autoprint=1 — the browser's Save-as-PDF dialog
+  // fires automatically once fonts are ready. No server-side Playwright needed.
+  const downloadPDF = useCallback(() => {
+    window.open(`/cv/${cvId}/print?autoprint=1`, "_blank");
+  }, [cvId]);
 
   const { value: score } = useMemo(
     () => computeScore(cv, order, enabled),
@@ -212,12 +197,12 @@ export function Topbar({ cvId, mobileTab, onToggleMobile }: Props) {
       <button
         type="button"
         onClick={downloadPDF}
-        style={{ ...primary, opacity: (score < 30 || downloading) ? 0.6 : 1, cursor: (score < 30 || downloading) ? "not-allowed" : "pointer", padding: isMobile ? "6px 10px" : "7px 12px" }}
-        disabled={score < 30 || downloading}
+        style={{ ...primary, opacity: score < 30 ? 0.6 : 1, cursor: score < 30 ? "not-allowed" : "pointer", padding: isMobile ? "6px 10px" : "7px 12px" }}
+        disabled={score < 30}
         title={score < 30 ? "Atteignez 30% pour télécharger" : "Télécharger en PDF"}
       >
-        {downloading ? <span style={{ display: "inline-block", animation: "ai-spin .65s linear infinite" }}>⟳</span> : "↓"}
-        {!isMobile && <> {downloading ? "Génération…" : "Télécharger PDF"}</>}
+        ↓
+        {!isMobile && <> Télécharger PDF</>}
       </button>
 
     </div>
