@@ -48,8 +48,8 @@ export function Atlas({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
             <span>{ie(cv.profile.email, "profile.email")}</span>
             <span>{ie(cv.profile.phone, "profile.phone")}</span>
             <span>{ie(cv.profile.city, "profile.city")}</span>
-            {cv.profile.website  && <span>{ie(cv.profile.website,  "profile.website")}</span>}
-            {cv.profile.linkedin && <span>{ie(cv.profile.linkedin, "profile.linkedin")}</span>}
+            {cv.profile.website  && <span>{ie(cv.profile.website ?? "",  "profile.website")}</span>}
+            {cv.profile.linkedin && <span>{ie(cv.profile.linkedin ?? "", "profile.linkedin")}</span>}
           </div>
         </div>
 

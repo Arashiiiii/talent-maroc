@@ -170,7 +170,7 @@ export function Vertex({
                       letterSpacing: 0.6,
                     }}
                   >
-                    {ie(e.city, `experience.${i}.city`)}
+                    {ie(e.city ?? "", `experience.${i}.city`)}
                   </div>
                 )}
                 <ul
@@ -216,7 +216,7 @@ export function Vertex({
                 <span style={{ flex: 1 }} />
                 <Pill>
                   {ie(ed.start, `education.${i}.start`)} –{" "}
-                  {ie(ed.end, `education.${i}.end`)}
+                  {ie(ed.end ?? "", `education.${i}.end`)}
                 </Pill>
               </div>
             ))}
@@ -234,11 +234,11 @@ export function Vertex({
                     {ie(p.name, `projects.${i}.name`)}
                   </strong>
                   <span style={{ fontSize: 10.5, color: accent, fontWeight: 600 }}>
-                    {ie(p.role, `projects.${i}.role`)}
+                    {ie(p.role ?? "", `projects.${i}.role`)}
                   </span>
                 </div>
                 <div style={{ fontSize: 11, lineHeight: 1.6, color: "#262626" }}>
-                  {ie(p.detail, `projects.${i}.detail`, true)}
+                  {ie(p.detail ?? "", `projects.${i}.detail`, true)}
                 </div>
               </div>
             ))}
@@ -295,7 +295,7 @@ export function Vertex({
                   style={{ display: "flex", flexDirection: "column", gap: 3 }}
                 >
                   <span style={{ fontSize: 11.5, fontWeight: 600 }}>
-                    {ie(l.name, `languages.${i}.name`)}
+                    {ie(l.name ?? "", `languages.${i}.name`)}
                   </span>
                   <LangDots dots={l.dots} filled={accent} empty="#e5e5e5" />
                 </div>
@@ -477,13 +477,13 @@ export function Vertex({
             {cv.profile.website && (
               <>
                 <span>·</span>
-                <span>{ie(cv.profile.website, "profile.website")}</span>
+                <span>{ie(cv.profile.website ?? "", "profile.website")}</span>
               </>
             )}
             {cv.profile.linkedin && (
               <>
                 <span>·</span>
-                <span>{ie(cv.profile.linkedin, "profile.linkedin")}</span>
+                <span>{ie(cv.profile.linkedin ?? "", "profile.linkedin")}</span>
               </>
             )}
           </div>

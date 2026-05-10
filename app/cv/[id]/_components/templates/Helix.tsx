@@ -65,7 +65,7 @@ export function Helix({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: "#111" }}>
                   {ie(e.role, `experience.${i}.role`)} · <span style={{ color: accent }}>{ie(e.company, `experience.${i}.company`)}</span>
                 </div>
-                {e.city && <div style={{ fontSize: 10.5, color: "#6b7280" }}>{ie(e.city, `experience.${i}.city`)}</div>}
+                {e.city && <div style={{ fontSize: 10.5, color: "#6b7280" }}>{ie(e.city ?? "", `experience.${i}.city`)}</div>}
                 <ul style={{ margin: "6px 0 0", paddingInlineStart: 16, fontSize: 11, color: "#374151" }}>
                   {e.bullets.map((b, j) => <li key={j}>{ie(b, `experience.${i}.bullets.${j}`)}</li>)}
                 </ul>
@@ -84,7 +84,7 @@ export function Helix({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
                   {ie(ed.degree, `education.${i}.degree`)}
                 </div>
                 <div style={{ fontSize: 11, color: accent }}>
-                  {ie(ed.school, `education.${i}.school`)} · {ie(ed.start, `education.${i}.start`)} – {ie(ed.end, `education.${i}.end`)}
+                  {ie(ed.school, `education.${i}.school`)} · {ie(ed.start, `education.${i}.start`)} – {ie(ed.end ?? "", `education.${i}.end`)}
                 </div>
               </div>
             ))}
@@ -113,8 +113,8 @@ export function Helix({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
             <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px" }}>
               {cv.languages.map((l, i) => (
                 <span key={l.id}>
-                  <strong>{ie(l.name, `languages.${i}.name`)}</strong>{" — "}
-                  <span style={{ color: accent }}>{ie(l.level, `languages.${i}.level`)}</span>
+                  <strong>{ie(l.name ?? "", `languages.${i}.name`)}</strong>{" — "}
+                  <span style={{ color: accent }}>{ie(l.level ?? "", `languages.${i}.level`)}</span>
                 </span>
               ))}
             </div>
@@ -140,8 +140,8 @@ export function Helix({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
             {cv.projects.map((p, i) => (
               <div key={p.id} style={{ marginBottom: 8 }}>
                 <strong>{ie(p.name, `projects.${i}.name`)}</strong>{" — "}
-                <span style={{ color: accent }}>{ie(p.role, `projects.${i}.role`)}</span>
-                <div style={{ color: "#374151" }}>{ie(p.detail, `projects.${i}.detail`, true)}</div>
+                <span style={{ color: accent }}>{ie(p.role ?? "", `projects.${i}.role`)}</span>
+                <div style={{ color: "#374151" }}>{ie(p.detail ?? "", `projects.${i}.detail`, true)}</div>
               </div>
             ))}
           </section>

@@ -58,7 +58,7 @@ export function Slate({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
             <div key={ed.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
               <span><strong>{ie(ed.degree, `education.${i}.degree`)}</strong>, {ie(ed.school, `education.${i}.school`)}</span>
               <span style={{ fontFamily: MONO, fontSize: 10, color: "#6b7280" }}>
-                {ie(ed.start, `education.${i}.start`)}—{ie(ed.end, `education.${i}.end`)}
+                {ie(ed.start, `education.${i}.start`)}—{ie(ed.end ?? "", `education.${i}.end`)}
               </span>
             </div>
           ))}
@@ -76,7 +76,7 @@ export function Slate({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
         return <Row key={sec} label={t.languages}>
           {cv.languages.map((l, i) => (
             <div key={l.id}>
-              <strong>{ie(l.name, `languages.${i}.name`)}</strong>{" — "}{ie(l.level, `languages.${i}.level`)}
+              <strong>{ie(l.name ?? "", `languages.${i}.name`)}</strong>{" — "}{ie(l.level ?? "", `languages.${i}.level`)}
             </div>
           ))}
         </Row>;
@@ -93,8 +93,8 @@ export function Slate({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
         return <Row key={sec} label={t.projects}>
           {cv.projects.map((p, i) => (
             <div key={p.id} style={{ marginBottom: 8 }}>
-              <strong>{ie(p.name, `projects.${i}.name`)}</strong> — <em>{ie(p.role, `projects.${i}.role`)}</em>
-              <div style={{ color: "#374151" }}>{ie(p.detail, `projects.${i}.detail`, true)}</div>
+              <strong>{ie(p.name, `projects.${i}.name`)}</strong> — <em>{ie(p.role ?? "", `projects.${i}.role`)}</em>
+              <div style={{ color: "#374151" }}>{ie(p.detail ?? "", `projects.${i}.detail`, true)}</div>
             </div>
           ))}
         </Row>;
