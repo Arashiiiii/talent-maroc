@@ -1,22 +1,26 @@
 /**
  * Print-only route — /cv/[id]/print
  *
- * Server component. Fetches the CV using the user's session cookie (RLS
- * ensures they can only see their own CVs). Renders the template at 1:1
- * scale with no chrome.
+ * Server component. Uses the service-role key so it can always render the CV
+ * regardless of session state in the new tab. Security is handled by the
+ * builder itself — this URL is only opened programmatically from within the
+ * authenticated builder.
  *
  * ?autoprint=1  — mounts <AutoPrint> which calls window.print() once fonts
- *                 are ready, so the browser's Save-as-PDF dialog opens
- *                 automatically.
+ *                 are ready, opening the browser's Save-as-PDF dialog.
  */
 
-import { createServerClient } from "@supabase/ssr";
-import { cookies }            from "next/headers";
-import { notFound }           from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
+import { notFound }     from "next/navigation";
 import { CVDataSchema, DEFAULT_SECTION_ORDER, DEFAULT_SECTIONS_ENABLED } from "../../_lib/schema";
 import type { TemplateId, Lang, SectionId } from "../../_lib/schema";
-import { CVRender }   from "../_components/templates";
-import { AutoPrint }  from "./AutoPrint";
+import { CVRender }  from "../_components/templates";
+import { AutoPrint } from "./AutoPrint";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
 
 interface Props {
   params:       Promise<{ id: string }>;
@@ -24,21 +28,8 @@ interface Props {
 }
 
 export default async function PrintPage({ params, searchParams }: Props) {
-  const { id }         = await params;
-  const { autoprint }  = await searchParams;
-
-  // Use the user's session cookie — RLS limits access to their own CVs
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll:  () => cookieStore.getAll(),
-        setAll:  () => {},          // read-only in a Server Component
-      },
-    },
-  );
+  const { id }        = await params;
+  const { autoprint } = await searchParams;
 
   const { data, error } = await supabase
     .from("cvs")

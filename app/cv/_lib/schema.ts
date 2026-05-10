@@ -177,6 +177,11 @@ export const TEMPLATE_REGISTRY: TemplateConfig[] = [
   { id: "aria",     name: "Aria",     sub: "Minimal",             accent: "#374151", tag: "Inclus" },
   { id: "dahab",    name: "Dahab",    sub: "Exécutif",            accent: "#1e1147", tag: "Pro"    },
   { id: "medina",   name: "Medina",   sub: "Créatif",             accent: "#f97316", tag: "Pro"    },
+  { id: "vertex",   name: "Vertex",   sub: "Rail éditorial",      accent: "#0f172a", tag: "Pro"    },
+  { id: "atlas",    name: "Atlas",    sub: "Sidebar sombre",      accent: "#1e293b", tag: "Pro"    },
+  { id: "lumen",    name: "Lumen",    sub: "Bandeau + 2 colonnes",accent: "#0891b2", tag: "Pro"    },
+  { id: "helix",    name: "Helix",    sub: "Timeline",            accent: "#7c3aed", tag: "Pro"    },
+  { id: "slate",    name: "Slate",    sub: "Swiss minimaliste",   accent: "#374151", tag: "Pro"    },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
