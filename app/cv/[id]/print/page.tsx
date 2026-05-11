@@ -17,11 +17,6 @@ import type { TemplateId, Lang, SectionId } from "../../_lib/schema";
 import { CVRender }  from "../_components/templates";
 import { AutoPrint } from "./AutoPrint";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
-
 interface Props {
   params:       Promise<{ id: string }>;
   searchParams: Promise<{ autoprint?: string }>;
@@ -30,6 +25,14 @@ interface Props {
 export default async function PrintPage({ params, searchParams }: Props) {
   const { id }        = await params;
   const { autoprint } = await searchParams;
+
+  // Create the client inside the handler — not at module level — so a missing
+  // SUPABASE_SERVICE_ROLE_KEY env var doesn't throw on module load and crash
+  // unrelated routes.
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
 
   const { data, error } = await supabase
     .from("cvs")
