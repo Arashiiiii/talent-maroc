@@ -7,10 +7,45 @@ import CompanyLogo from '@/components/CompanyLogo';
 import { SaveApplyButton } from '@/components/SaveApplyButton';
 import NavbarAuth from '@/components/NavbarAuth';
 
-export const metadata = {
-  title: "Offre d'emploi | Talent Maroc",
-  description: "Consultez cette offre d'emploi et postulez directement sur Talent Maroc.",
-};
+// Dynamic metadata — each job gets its own title/description in Google
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("title, company, city, description")
+    .eq("id", id)
+    .single();
+
+  if (!job) {
+    return {
+      title: "Offre d'emploi | Talent Maroc",
+      description: "Consultez cette offre d'emploi et postulez directement sur Talent Maroc.",
+    };
+  }
+
+  const title = `${job.title}${job.company ? ` — ${job.company}` : ""}${job.city ? ` · ${job.city}` : ""}`;
+  const desc  = job.description
+    ? job.description.replace(/<[^>]+>/g, " ").slice(0, 155).trim() + "…"
+    : `Postulez à l'offre ${job.title}${job.city ? ` à ${job.city}` : ""} sur Talent Maroc.`;
+
+  const url = `https://talentmaroc.shop/jobs/${id}`;
+
+  return {
+    title,
+    description: desc,
+    alternates:  { canonical: url },
+    openGraph: {
+      title,
+      description: desc,
+      url,
+      type: "article",
+    },
+  };
+}
 
 function getSupabase() {
   return createClient(

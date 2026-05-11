@@ -7,8 +7,21 @@ import NavbarAuth from '@/components/NavbarAuth';
 import JobFunctionFilters from '@/components/JobFunctionFilters';
 
 export const metadata = {
-  title: 'Talent Maroc | Trouvez votre prochain job au Maroc',
-  description: "Recherchez parmi les dernières offres d'emploi à Casablanca, Tanger, Rabat et Agadir.",
+  title: "Offres d'Emploi au Maroc — Casablanca, Rabat, Tanger | Talent Maroc",
+  description:
+    "Trouvez votre prochain emploi au Maroc parmi des milliers d'offres actualisées. CDI, CDD, stage PFE à Casablanca, Tanger, Rabat, Marrakech et Agadir. Postulez en un clic.",
+  keywords: [
+    "offres emploi maroc", "emploi casablanca", "emploi tanger", "emploi rabat",
+    "recrutement maroc 2026", "stage PFE maroc", "CDI maroc", "chercher emploi maroc",
+    "site emploi maroc", "annonces emploi", "job maroc",
+  ],
+  alternates: { canonical: "https://talentmaroc.shop" },
+  openGraph: {
+    title:       "Offres d'Emploi au Maroc | Talent Maroc",
+    description: "Des milliers d'offres d'emploi actualisées partout au Maroc.",
+    url:         "https://talentmaroc.shop",
+    type:        "website",
+  },
 };
 
 // ── STATIC DATA ────────────────────────────────────────────────────────────
@@ -217,9 +230,48 @@ async function JobList({ searchParams }: { searchParams: any }) {
 }
 
 // ── PAGE ───────────────────────────────────────────────────────────────────
+// ── JSON-LD structured data ───────────────────────────────────────────────────
+const WEBSITE_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Talent Maroc",
+  "url": "https://talentmaroc.shop",
+  "description": "Portail emploi et recrutement au Maroc",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": { "@type": "EntryPoint", "urlTemplate": "https://talentmaroc.shop/?q={search_term_string}" },
+    "query-input": "required name=search_term_string",
+  },
+};
+
+const ORGANIZATION_JSONLD = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Talent Maroc",
+  "url": "https://talentmaroc.shop",
+  "logo": "https://talentmaroc.shop/logo.png",
+  "sameAs": ["https://www.linkedin.com/company/talentmaroc"],
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "customer support",
+    "availableLanguage": ["French", "Arabic"],
+    "areaServed": "MA",
+  },
+};
+
 export default function Index({ searchParams }: { searchParams: any }) {
   return (
     <>
+      {/* Structured data for Google */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(WEBSITE_JSONLD) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_JSONLD) }}
+      />
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
 
