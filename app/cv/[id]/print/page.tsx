@@ -1,35 +1,30 @@
 /**
- * Print-only route — /cv/[id]/print
+ * Print & Save Route — /cv/[id]/print
  *
- * Server component. Uses the service-role key so it can always render the CV
- * regardless of session state in the new tab. Security is handled by the
- * builder itself — this URL is only opened programmatically from within the
- * authenticated builder.
+ * Server component using service-role key to query Supabase securely.
  *
- * ?autoprint=1  — mounts <AutoPrint> which calls window.print() once fonts
- *                 are ready, opening the browser's Save-as-PDF dialog.
+ * Query Params:
+ * ?autoprint=1  — Opens browser print/PDF dialog
+ * ?autosave=1   — Automatically generates & downloads a .pdf file directly
  */
-"use client";
 
 import { createClient } from "@supabase/supabase-js";
 import { notFound }     from "next/navigation";
 import { CVDataSchema, DEFAULT_SECTION_ORDER, DEFAULT_SECTIONS_ENABLED } from "../../_lib/schema";
 import type { TemplateId, Lang, SectionId } from "../../_lib/schema";
-import { CVRender }  from "../_components/templates";
-import { AutoPrint } from "./AutoPrint";
+import { CVRender }    from "../_components/templates";
+import { AutoPrint }   from "./AutoPrint";
+import { AutoSavePDF } from "./AutoSavePDF";
 
 interface Props {
   params:       Promise<{ id: string }>;
-  searchParams: Promise<{ autoprint?: string }>;
+  searchParams: Promise<{ autoprint?: string; autosave?: string }>;
 }
 
 export default async function PrintPage({ params, searchParams }: Props) {
   const { id }        = await params;
-  const { autoprint } = await searchParams;
+  const { autoprint, autosave } = await searchParams;
 
-  // Create the client inside the handler — not at module level — so a missing
-  // SUPABASE_SERVICE_ROLE_KEY env var doesn't throw on module load and crash
-  // unrelated routes.
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -57,9 +52,13 @@ export default async function PrintPage({ params, searchParams }: Props) {
     ? "@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');\n"
     : "";
 
+  // Dynamic file name based on candidate name
+  const pdfFilename = `${cv.personal?.fullName?.replace(/\s+/g, "_") || "CV"}.pdf`;
+
   return (
     <>
       {autoprint === "1" && <AutoPrint />}
+      {autosave === "1"  && <AutoSavePDF filename={pdfFilename} />}
 
       <style>{`${fontImport}@page  { size: 210mm 297mm; margin: 0; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -68,16 +67,17 @@ export default async function PrintPage({ params, searchParams }: Props) {
         @media print  { .no-print { display: none !important; } }
       `}</style>
 
-      <CVRender
-        template={template}
-        cv={cv}
-        accent={accent}
-        lang={lang}
-        order={order}
-        enabled={enabled}
-        onUpdate={() => {}}
-        readOnly
-      />
+      <div id="cv-container">
+        <CVRender
+          template={template}
+          cv={cv}
+          accent={accent}
+          lang={lang}
+          order={order}
+          enabled={enabled}
+          readOnly
+        />
+      </div>
     </>
   );
 }
