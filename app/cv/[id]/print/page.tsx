@@ -82,15 +82,14 @@ export default async function PrintPage({ params, searchParams }: Props) {
       `}</style>
 
       <CVRender
-        template={template}
-        cv={cv}
-        accent={accent}
-        lang={lang}
-        order={order}
-        enabled={enabled}
-        onUpdate={() => {}}
-        readOnly
-      />
+  template={template}
+  cv={cv}
+  accent={accent}
+  lang={lang}
+  order={order}
+  enabled={enabled}
+  readOnly
+/>
     </>
   );
 }
