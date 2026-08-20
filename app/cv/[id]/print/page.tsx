@@ -1,78 +1,59 @@
+/**
+ * Print-only route — /cv/[id]/print
+ *
+ * Server component. Uses the service-role key so it can always render the CV
+ * regardless of session state in the new tab. Security is handled by the
+ * builder itself — this URL is only opened programmatically from within the
+ * authenticated builder.
+ *
+ * ?autoprint=1  — mounts <AutoPrint> which calls window.print() once fonts
+ *                 are ready, opening the browser's Save-as-PDF dialog.
+ */
 "use client";
 
-import { useEffect, useState, use } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { notFound } from "next/navigation";
+import { notFound }     from "next/navigation";
 import { CVDataSchema, DEFAULT_SECTION_ORDER, DEFAULT_SECTIONS_ENABLED } from "../../_lib/schema";
-import type { TemplateId, Lang, SectionId, CVData } from "../../_lib/schema";
-import { CVRender } from "../_components/templates";
+import type { TemplateId, Lang, SectionId } from "../../_lib/schema";
+import { CVRender }  from "../_components/templates";
 import { AutoPrint } from "./AutoPrint";
 
 interface Props {
-  params: Promise<{ id: string }>;
+  params:       Promise<{ id: string }>;
   searchParams: Promise<{ autoprint?: string }>;
 }
 
-export default function PrintPage({ params, searchParams }: Props) {
-  const { id } = use(params);
-  const { autoprint } = use(searchParams);
+export default async function PrintPage({ params, searchParams }: Props) {
+  const { id }        = await params;
+  const { autoprint } = await searchParams;
 
-  const [loading, setLoading] = useState(true);
-  const [cvData, setCvData] = useState<{
-    cv: CVData;
-    template: TemplateId;
-    accent: string;
-    lang: Lang;
-    order: SectionId[];
-    enabled: Record<SectionId, boolean>;
-  } | null>(null);
+  // Create the client inside the handler — not at module level — so a missing
+  // SUPABASE_SERVICE_ROLE_KEY env var doesn't throw on module load and crash
+  // unrelated routes.
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
 
-  useEffect(() => {
-    async function fetchCV() {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const { data, error } = await supabase
+    .from("cvs")
+    .select("*")
+    .eq("id", id)
+    .single();
 
-      if (!supabaseUrl || !anonKey) {
-        setLoading(false);
-        return;
-      }
+  if (error || !data) notFound();
 
-      const supabase = createClient(supabaseUrl, anonKey);
-      const { data, error } = await supabase
-        .from("cvs")
-        .select("*")
-        .eq("id", id)
-        .single();
+  const parsed = CVDataSchema.safeParse(data.data);
+  if (!parsed.success) notFound();
 
-      if (error || !data) {
-        setLoading(false);
-        return;
-      }
+  const cv       = parsed.data;
+  const template = (data.template as TemplateId)                          ?? "corso";
+  const accent   = data.accent                                             ?? "#7c3aed";
+  const lang     = (data.lang   as Lang)                                   ?? "fr";
+  const order    = (data.section_order    as SectionId[])                 ?? DEFAULT_SECTION_ORDER;
+  const enabled  = (data.sections_enabled as Record<SectionId, boolean>)  ?? { ...DEFAULT_SECTIONS_ENABLED };
 
-      const parsed = CVDataSchema.safeParse(data.data);
-      if (!parsed.success) {
-        setLoading(false);
-        return;
-      }
-
-      setCvData({
-        cv: parsed.data,
-        template: (data.template as TemplateId) ?? "corso",
-        accent: data.accent ?? "#7c3aed",
-        lang: (data.lang as Lang) ?? "fr",
-        order: (data.section_order as SectionId[]) ?? DEFAULT_SECTION_ORDER,
-        enabled: (data.sections_enabled as Record<SectionId, boolean>) ?? { ...DEFAULT_SECTIONS_ENABLED },
-      });
-      setLoading(false);
-    }
-
-    fetchCV();
-  }, [id]);
-
-  if (loading) return null;
-  if (!cvData) notFound();
-
-  const fontImport = cvData.lang === "ar"
+  const fontImport = lang === "ar"
     ? "@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');\n"
     : "";
 
@@ -88,12 +69,12 @@ export default function PrintPage({ params, searchParams }: Props) {
       `}</style>
 
       <CVRender
-        template={cvData.template}
-        cv={cvData.cv}
-        accent={cvData.accent}
-        lang={cvData.lang}
-        order={cvData.order}
-        enabled={cvData.enabled}
+        template={template}
+        cv={cv}
+        accent={accent}
+        lang={lang}
+        order={order}
+        enabled={enabled}
         onUpdate={() => {}}
         readOnly
       />
