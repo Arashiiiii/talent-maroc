@@ -26,21 +26,35 @@ export default async function PrintPage({ params, searchParams }: Props) {
   const { id }        = await params;
   const { autoprint } = await searchParams;
 
-  // Create the client inside the handler — not at module level — so a missing
-  // SUPABASE_SERVICE_ROLE_KEY env var doesn't throw on module load and crash
-  // unrelated routes.
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  const { data, error } = await supabase
-    .from("cvs")
-    .select("*")
-    .eq("id", id)
-    .single();
+  // Gracefully handle missing environment variables in production
+  if (!supabaseUrl || !serviceKey) {
+    console.error("[PrintPage Error] Missing Supabase environment variables.");
+    notFound();
+  }
 
-  if (error || !data) notFound();
+  let data;
+  try {
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const res = await supabase
+      .from("cvs")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (res.error || !res.data) {
+      console.error("[PrintPage Error] Supabase fetch error:", res.error);
+      notFound();
+    }
+
+    data = res.data;
+  } catch (err) {
+    console.error("[PrintPage Error] Unexpected failure:", err);
+    notFound();
+  }
 
   const parsed = CVDataSchema.safeParse(data.data);
   if (!parsed.success) notFound();
