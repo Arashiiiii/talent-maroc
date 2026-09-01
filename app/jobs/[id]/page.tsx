@@ -6,6 +6,7 @@ import { MapPin, Briefcase, Clock, ArrowLeft, ExternalLink, Building2, Globe, Za
 import CompanyLogo from '@/components/CompanyLogo';
 import { SaveApplyButton } from '@/components/SaveApplyButton';
 import NavbarAuth from '@/components/NavbarAuth';
+import { COUNTRY_FLAGS } from '@/lib/countries';
 
 // Dynamic metadata — each job gets its own title/description in Google
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -136,7 +137,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
                   <Building2 size={13} style={{ color:'#9ca3af' }}/> {job.company}
                 </span>
                 <span style={{ display:'flex', alignItems:'center', gap:4 }}>
-                  <MapPin size={13} style={{ color:'#9ca3af' }}/> {job.city}
+                  <MapPin size={13} style={{ color:'#9ca3af' }}/> {job.city}{job.country ? `, ${COUNTRY_FLAGS[job.country] || ''} ${job.country}` : ''}
                 </span>
                 <span style={{ display:'flex', alignItems:'center', gap:4 }}>
                   <Clock size={13} style={{ color:'#9ca3af' }}/> {posted}
@@ -156,7 +157,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
         {/* Meta strip */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:9, marginBottom:14 }}>
           {[
-            { icon:<MapPin size={14}/>,    color:'#16a34a', label:'Localisation', value:job.city },
+            { icon:<MapPin size={14}/>,    color:'#16a34a', label:'Localisation', value:job.country ? `${job.city}, ${COUNTRY_FLAGS[job.country] || ''} ${job.country}` : job.city },
             { icon:<Briefcase size={14}/>, color:'#2563eb', label:'Contrat',      value:job.contract_type || 'Non précisé' },
             { icon:<Clock size={14}/>,     color:'#d97706', label:'Publiée',      value:posted },
             ...(job.salary ? [{ icon:<Globe size={14}/>, color:'#7c3aed', label:'Salaire', value:job.salary }] : []),
@@ -278,6 +279,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
 
           {[
             { label:'Ville',   value:job.city },
+            ...(job.country ? [{ label:'Pays', value:`${COUNTRY_FLAGS[job.country] || ''} ${job.country}` }] : []),
             { label:'Contrat', value:job.contract_type || 'Non précisé' },
             { label:'Publiée', value:posted },
             ...(job.salary ? [{ label:'Salaire', value:job.salary }] : []),

@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { unstable_noStore as noStore } from 'next/cache';
 import { Suspense } from 'react';
-import { Search, MapPin, Briefcase, Clock, ChevronRight, Zap } from 'lucide-react';
+import { Search, MapPin, Briefcase, Clock, ChevronRight, Zap, Globe } from 'lucide-react';
 import CompanyLogo from '@/components/CompanyLogo';
 import NavbarAuth from '@/components/NavbarAuth';
 import JobFunctionFilters from '@/components/JobFunctionFilters';
+import { REGIONS, COUNTRY_FLAGS } from '@/lib/countries';
 
 export const metadata = {
   title: "Offres d'Emploi au Maroc — Casablanca, Rabat, Tanger | Talent Maroc",
@@ -84,6 +85,7 @@ async function JobList({ searchParams }: { searchParams: any }) {
   const params   = await searchParams;
   const query    = params.q || '';
   const location = params.l || '';
+  const country  = params.c || '';
   const page     = Math.max(1, parseInt(params.page || '1', 10));
   const from     = (page - 1) * PAGE_SIZE;
   const to       = from + PAGE_SIZE - 1;
@@ -96,6 +98,7 @@ async function JobList({ searchParams }: { searchParams: any }) {
   let q = supabase.from('jobs').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(from, to);
   if (query)    q = q.or(`title.ilike.%${query}%,company.ilike.%${query}%`);
   if (location) q = q.ilike('city', `%${location}%`);
+  if (country)  q = q.eq('country', country);
 
   const { data: jobs, error, count } = await q;
 
@@ -120,6 +123,7 @@ async function JobList({ searchParams }: { searchParams: any }) {
     const qs = new URLSearchParams();
     if (query)    qs.set('q', query);
     if (location) qs.set('l', location);
+    if (country)  qs.set('c', country);
     if (p > 1)    qs.set('page', String(p));
     const str = qs.toString();
     return str ? `/?${str}` : '/';
@@ -160,7 +164,11 @@ async function JobList({ searchParams }: { searchParams: any }) {
                     <span style={{ display:'flex', alignItems:'center', gap:4, fontWeight:600, color:'#374151' }}>
                       <Briefcase size={11}/> {job.company}
                     </span>
-                    {job.city && <span style={{ display:'flex', alignItems:'center', gap:4 }}><MapPin size={11}/> {job.city}</span>}
+                    {job.city && (
+                      <span style={{ display:'flex', alignItems:'center', gap:4 }}>
+                        <MapPin size={11}/> {job.city}{job.country && job.country !== 'Maroc' ? ` · ${COUNTRY_FLAGS[job.country] || ''} ${job.country}` : ''}
+                      </span>
+                    )}
                     {job.salary && <span style={{ display:'flex', alignItems:'center', gap:4, color:'#7c3aed', fontWeight:600 }}>💰 {job.salary}</span>}
                     <span style={{ display:'flex', alignItems:'center', gap:4 }}><Clock size={11}/> {posted}</span>
                   </div>
@@ -399,7 +407,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
 
             <div className="au d1" style={{ display:'inline-flex', alignItems:'center', gap:7, background:'rgba(255,255,255,0.12)', border:'1.5px solid rgba(255,255,255,0.2)', borderRadius:100, padding:'6px 16px', marginBottom:24 }}>
               <span style={{ width:7, height:7, borderRadius:'50%', background:'#a78bfa', display:'inline-block', flexShrink:0, animation:'pulse 2s ease infinite' }}/>
-              <span style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,0.9)' }}>18 400+ offres actives au Maroc</span>
+              <span style={{ fontSize:12, fontWeight:700, color:'rgba(255,255,255,0.9)' }}>18 400+ offres actives au Maroc & à l'international</span>
             </div>
 
             <h1 className="au d2" style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:'clamp(28px,5.5vw,54px)', fontWeight:900, color:'white', lineHeight:1.1, letterSpacing:'-0.02em', marginBottom:16 }}>
@@ -421,6 +429,20 @@ export default function Index({ searchParams }: { searchParams: any }) {
                 <div style={{ display:'flex', alignItems:'center', gap:9, padding:'0 16px', flex:'0 0 45px' }}>
                   <MapPin size={15} style={{ color:'#9ca3af', flexShrink:0 }}/>
                   <input name="l" type="text" placeholder="Ville" className="si" style={{ padding:'17px 0' }}/>
+                </div>
+                <div className="sdiv"/>
+                <div style={{ display:'flex', alignItems:'center', gap:9, padding:'0 16px', flex:'0 0 45px' }}>
+                  <Globe size={15} style={{ color:'#9ca3af', flexShrink:0 }}/>
+                  <select name="c" className="si" defaultValue="" style={{ padding:'17px 0', cursor:'pointer' }}>
+                    <option value="">Tous pays</option>
+                    {REGIONS.map(region => (
+                      <optgroup key={region.name} label={region.name}>
+                        {region.countries.map(c => (
+                          <option key={c.name} value={c.name}>{c.flag} {c.name}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
                 </div>
                 <button type="submit" className="sb" style={{ minHeight:56 }}><Search size={14}/> Rechercher</button>
               </div>
@@ -466,6 +488,23 @@ export default function Index({ searchParams }: { searchParams: any }) {
                   <span><span style={{ marginRight:6 }}>{CITY_META[city]?.icon}</span>{city}</span>
                   <span className="sl-count">{CITY_META[city]?.count}</span>
                 </a>
+              ))}
+            </details>
+
+            <details style={{ marginBottom:28 }}>
+              <summary style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:'0.1em', padding:'0 12px', marginBottom:10, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', listStyle:'none', userSelect:'none' }}>
+                <span>Pays</span>
+                <span className="collapse-chevron" style={{ fontSize:16 }}>▾</span>
+              </summary>
+              {REGIONS.map(region => (
+                <div key={region.name} style={{ marginBottom:6 }}>
+                  <div style={{ fontSize:10, color:'#c4b5fd', fontWeight:700, padding:'4px 12px', textTransform:'uppercase', letterSpacing:'0.06em' }}>{region.name}</div>
+                  {region.countries.map(c => (
+                    <a key={c.name} href={`/?c=${encodeURIComponent(c.name)}`} className="sl">
+                      <span>{c.flag} {c.name}</span>
+                    </a>
+                  ))}
+                </div>
               ))}
             </details>
 

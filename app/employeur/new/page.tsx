@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { REGIONS } from "@/lib/countries";
 
 function getSupabase() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
@@ -36,7 +37,7 @@ export default function NewJobPage() {
   const [err,       setErr]      = useState<string | null>(null);
   const [jobCount,  setJobCount] = useState(0);
   const [form,      setForm]     = useState({
-    title: "", company: "", city: "", sector: "",
+    title: "", company: "", country: "Maroc", city: "", sector: "",
     contract_type: "", salary: "", description: "", logo_url: "",
   });
 
@@ -69,6 +70,7 @@ export default function NewJobPage() {
     const { error } = await sb.from("jobs").insert({
       title:         form.title.trim(),
       company:       form.company.trim(),
+      country:       form.country || "Maroc",
       city:          form.city,
       sector:        form.sector        || null,
       contract_type: form.contract_type || null,
@@ -167,31 +169,47 @@ export default function NewJobPage() {
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <EF label="Ville" required>
-                  <select style={IS} value={form.city} onChange={set("city")} required>
-                    <option value="">Choisir une ville…</option>
-                    {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                <EF label="Pays" required>
+                  <select style={IS} value={form.country} onChange={set("country")} required>
+                    {REGIONS.map(region => (
+                      <optgroup key={region.name} label={region.name}>
+                        {region.countries.map(c => (
+                          <option key={c.name} value={c.name}>{c.flag} {c.name}</option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
                 </EF>
+                <EF label="Ville" required>
+                  {form.country === "Maroc" ? (
+                    <select style={IS} value={form.city} onChange={set("city")} required>
+                      <option value="">Choisir une ville…</option>
+                      {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  ) : (
+                    <input style={IS} value={form.city} onChange={set("city")} placeholder="ex: Paris, Dubaï…" required />
+                  )}
+                </EF>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 <EF label="Secteur">
                   <select style={IS} value={form.sector} onChange={set("sector")}>
                     <option value="">Choisir un secteur…</option>
                     {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </EF>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 <EF label="Type de contrat">
                   <select style={IS} value={form.contract_type} onChange={set("contract_type")}>
                     <option value="">Choisir un contrat…</option>
                     {CONTRACTS.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </EF>
-                <EF label="Salaire">
-                  <input style={IS} value={form.salary} onChange={set("salary")} placeholder="ex: 8 000 – 12 000 MAD" />
-                </EF>
               </div>
+
+              <EF label="Salaire">
+                <input style={IS} value={form.salary} onChange={set("salary")} placeholder="ex: 8 000 – 12 000 MAD" />
+              </EF>
 
               <EF label="Description du poste">
                 <textarea
