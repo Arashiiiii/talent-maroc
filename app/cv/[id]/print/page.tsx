@@ -53,7 +53,8 @@ export default async function PrintPage({ params, searchParams }: Props) {
     : "";
 
   // Dynamic file name based on candidate name
-  const pdfFilename = `${cv.personal?.fullName?.replace(/\s+/g, "_") || "CV"}.pdf`;
+  const fullName = `${cv.profile?.firstName || ""} ${cv.profile?.lastName || ""}`.trim();
+  const pdfFilename = `${fullName ? fullName.replace(/\s+/g, "_") : "CV"}.pdf`;
 
   return (
     <>
@@ -75,6 +76,7 @@ export default async function PrintPage({ params, searchParams }: Props) {
           lang={lang}
           order={order}
           enabled={enabled}
+          onUpdate={() => {}}
           readOnly
         />
       </div>
