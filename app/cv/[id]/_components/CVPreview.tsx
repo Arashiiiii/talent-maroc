@@ -37,6 +37,25 @@ export function CVPreview() {
   const [zoom, setZoom]           = useState<ZoomState>("fit");
   const [fittedZoom, setFittedZoom] = useState(0.75);
   const stageRef = useRef<HTMLDivElement>(null);
+  const pageRef  = useRef<HTMLDivElement>(null);
+
+  // ── Overflow detection: watch the page's natural (unscaled) height ───────
+  // A CSS transform doesn't affect layout size, so the observed box height
+  // is the true content height regardless of zoom — compare it to A4_H to
+  // warn the user before they end up with a 2-page PDF.
+  const [contentH, setContentH] = useState(0);
+  useLayoutEffect(() => {
+    const el = pageRef.current;
+    if (!el) return;
+    const measure = () => setContentH(el.scrollHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [template]);
+
+  const pageCount   = Math.max(1, Math.ceil(contentH / A4_H));
+  const overflowing = contentH > A4_H + 4; // small tolerance to avoid boundary flicker
 
   // ── Fit-zoom: recompute whenever the stage is resized ────────────────────
   useLayoutEffect(() => {
@@ -104,9 +123,9 @@ export function CVPreview() {
         }}
       >
         {/* A4 page */}
-        <div style={{
+        <div ref={pageRef} style={{
           background:      "#fff",
-          boxShadow:       "0 4px 16px rgba(15,23,42,.08), 0 1px 4px rgba(15,23,42,.04)",
+          boxShadow:       overflowing ? "0 0 0 2px #ef4444, 0 4px 16px rgba(15,23,42,.08)" : "0 4px 16px rgba(15,23,42,.08), 0 1px 4px rgba(15,23,42,.04)",
           transformOrigin: "top center",
           transform:       `scale(${effective})`,
           width:           A4_W,
@@ -114,6 +133,7 @@ export function CVPreview() {
           borderRadius:    2,
           flexShrink:      0,
           direction:       "ltr", // template content is always LTR until Step 11 RTL pass
+          position:        "relative",
         }}>
           <CVRender
             template={template}
@@ -124,25 +144,46 @@ export function CVPreview() {
             enabled={enabled}
             onUpdate={updatePath}
           />
+
+          {/* Page-break marker — shows exactly where content spills onto page 2 */}
+          {overflowing && (
+            <div style={{ position: "absolute", left: 0, right: 0, top: A4_H, zIndex: 5, pointerEvents: "none" }}>
+              <div style={{ borderTop: "2px dashed #ef4444" }}/>
+              <span style={{ position: "absolute", top: 6, right: 10, fontSize: 11, fontWeight: 700, color: "#dc2626", background: "#fff", padding: "3px 8px", borderRadius: 5, border: "1px solid #fecaca", whiteSpace: "nowrap" }}>
+                Fin de la page 1 — le reste passe en page 2
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Page metadata pill */}
         <div style={{
           marginTop:      `${Math.max(16, 28 * effective)}px`,
           fontSize:       10.5,
-          color:          "#94a3b8",
+          color:          overflowing ? "#dc2626" : "#94a3b8",
           display:        "flex",
           gap:            10,
           alignItems:     "center",
-          background:     "rgba(255,255,255,.92)",
+          background:     overflowing ? "#fef2f2" : "rgba(255,255,255,.92)",
           backdropFilter: "blur(8px)",
           padding:        "5px 14px",
           borderRadius:   100,
-          border:         "1px solid #e5e7eb",
+          border:         overflowing ? "1px solid #fecaca" : "1px solid #e5e7eb",
+          fontWeight:     overflowing ? 700 : 400,
         }}>
-          <span>A4 — 21 × 29,7 cm</span>
-          <span>·</span>
-          <span style={{ color: "#16a34a" }}>✓ Compatible ATS</span>
+          {overflowing ? (
+            <>
+              <span>⚠ Contenu trop long — {pageCount} pages au lieu d'1</span>
+              <span>·</span>
+              <span>Raccourcissez le texte pour tenir sur une page</span>
+            </>
+          ) : (
+            <>
+              <span>A4 — 21 × 29,7 cm</span>
+              <span>·</span>
+              <span style={{ color: "#16a34a" }}>✓ Compatible ATS</span>
+            </>
+          )}
         </div>
       </div>
     </div>
