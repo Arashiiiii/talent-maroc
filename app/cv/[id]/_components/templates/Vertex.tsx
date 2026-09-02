@@ -41,7 +41,7 @@ export function Vertex({
   const ie = (value: string, path: string, block?: boolean) => (
     <IE
       value={value}
-      onChange={(v) => onUpdate(path, v)}
+      onChange={(v) => onUpdate?.(path, v)}
       block={block}
       readOnly={readOnly}
     />

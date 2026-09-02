@@ -98,7 +98,7 @@ interface MainSectionProps {
   cv:       CVData;
   accent:   string;
   lang:     Lang;
-  onUpdate: (path: string, value: unknown) => void;
+  onUpdate?: (path: string, value: unknown) => void;
   readOnly?: boolean;
 }
 
@@ -106,7 +106,7 @@ export function MainSection({ sec, cv, accent, lang, onUpdate, readOnly }: MainS
   const t   = I18N[lang];
   const rtl = lang === "ar";
   const ie  = (p: Omit<IEProps, "onChange"> & { path: string }) => (
-    <IE {...p} onChange={(v) => onUpdate(p.path, v)} readOnly={readOnly} />
+    <IE {...p} onChange={(v) => onUpdate?.(p.path, v)} readOnly={readOnly} />
   );
 
   if (sec === "summary") return (
@@ -211,14 +211,14 @@ interface SidebarSectionProps {
   sec:      SectionId;
   cv:       CVData;
   lang:     Lang;
-  onUpdate: (path: string, value: unknown) => void;
+  onUpdate?: (path: string, value: unknown) => void;
   readOnly?: boolean;
 }
 
 export function SidebarSection({ sec, cv, lang, onUpdate, readOnly }: SidebarSectionProps) {
   const t  = I18N[lang];
   const ie = (p: Omit<IEProps, "onChange"> & { path: string }) => (
-    <IE {...p} onChange={(v) => onUpdate(p.path, v)} readOnly={readOnly} />
+    <IE {...p} onChange={(v) => onUpdate?.(p.path, v)} readOnly={readOnly} />
   );
 
   const head = (label: string) => (

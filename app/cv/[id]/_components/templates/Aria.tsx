@@ -46,7 +46,7 @@ export function Aria({ cv, accent, lang, order, enabled, onUpdate, readOnly }: T
   const visible = order.filter((s) => enabled[s] !== false);
 
   const ie = (value: string, path: string, block?: boolean) => (
-    <IE value={value} onChange={(v) => onUpdate(path, v)} block={block} readOnly={readOnly} />
+    <IE value={value} onChange={(v) => onUpdate?.(path, v)} block={block} readOnly={readOnly} />
   );
 
   const renderSection = (sec: SectionId) => {

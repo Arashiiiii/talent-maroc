@@ -19,7 +19,7 @@ export function Lumen({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
   const main    = order.filter((s) => enabled[s] !== false && MAIN.includes(s));
 
   const ie = (value: string, path: string, block?: boolean) => (
-    <IE value={value} onChange={(v) => onUpdate(path, v)} block={block} readOnly={readOnly} />
+    <IE value={value} onChange={(v) => onUpdate?.(path, v)} block={block} readOnly={readOnly} />
   );
 
   return (

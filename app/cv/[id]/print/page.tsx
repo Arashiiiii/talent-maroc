@@ -76,7 +76,6 @@ export default async function PrintPage({ params, searchParams }: Props) {
           lang={lang}
           order={order}
           enabled={enabled}
-          onUpdate={() => {}}
           readOnly
         />
       </div>

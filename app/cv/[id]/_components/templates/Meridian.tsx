@@ -15,7 +15,7 @@ export function Meridian({ cv, accent, lang, order, enabled, onUpdate, readOnly 
   const visible = order.filter((s) => enabled[s] !== false);
 
   const ie = (value: string, path: string, block?: boolean) => (
-    <IE value={value} onChange={(v) => onUpdate(path, v)} block={block} readOnly={readOnly} />
+    <IE value={value} onChange={(v) => onUpdate?.(path, v)} block={block} readOnly={readOnly} />
   );
 
   const H = ({ children }: { children: React.ReactNode }) => (

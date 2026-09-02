@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Template dispatch + shared constants.
  *
@@ -5,6 +7,10 @@
  *   - CVPreview (builder, interactive)
  *   - TplThumb (strip thumbnails, interactive, scaled)
  *   - PrintPage (server, readOnly)
+ *
+ * Marked "use client" so PrintPage (a Server Component) can render it directly:
+ * everything below builds onChange closures for InlineEditable ("use client"),
+ * and a Server Component can't pass function props across that boundary.
  */
 
 import type { CVData, SectionId, TemplateId, Lang } from "../../../_lib/schema";
@@ -29,8 +35,8 @@ export interface TemplateProps {
   lang:     Lang;
   order:    SectionId[];
   enabled:  Record<SectionId, boolean>;
-  /** Path-based update callback (mirrors store.updatePath). No-op in print. */
-  onUpdate: (path: string, value: unknown) => void;
+  /** Path-based update callback (mirrors store.updatePath). Omitted in print (readOnly). */
+  onUpdate?: (path: string, value: unknown) => void;
   /** True in the print route — disables contentEditable. */
   readOnly?: boolean;
 }

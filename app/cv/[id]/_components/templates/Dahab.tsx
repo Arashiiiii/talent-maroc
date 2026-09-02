@@ -25,7 +25,7 @@ export function Dahab({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
   );
 
   const ie = (value: string, path: string) => (
-    <IE value={value} onChange={(v) => onUpdate(path, v)} readOnly={readOnly} />
+    <IE value={value} onChange={(v) => onUpdate?.(path, v)} readOnly={readOnly} />
   );
 
   const sidebarHead = (label: string) => (
