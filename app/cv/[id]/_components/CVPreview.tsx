@@ -17,7 +17,7 @@
  * Manual zoom overrides fit; clicking "Ajuster" returns to fit mode.
  */
 
-import { useState, useLayoutEffect, useRef } from "react";
+import { useState, useLayoutEffect, useEffect, useRef } from "react";
 import { useCVStore } from "../../_store/cv-store";
 import { CVRender, A4_W, A4_H } from "./templates";
 import { TemplateStrip } from "./TemplateStrip";
@@ -36,26 +36,46 @@ export function CVPreview() {
 
   const [zoom, setZoom]           = useState<ZoomState>("fit");
   const [fittedZoom, setFittedZoom] = useState(0.75);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const pageRef  = useRef<HTMLDivElement>(null);
+  const stageRef   = useRef<HTMLDivElement>(null);
+  const pageRef    = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // ── Overflow detection: watch the page's natural (unscaled) height ───────
   // A CSS transform doesn't affect layout size, so the observed box height
   // is the true content height regardless of zoom — compare it to A4_H to
   // warn the user before they end up with a 2-page PDF.
+  //
+  // Measured element must be `contentRef` (CVRender only), NOT `pageRef`
+  // (the outer positioned box): pageRef also hosts the page-break marker
+  // overlay below, and since that marker is only rendered while
+  // `overflowing` is true, observing pageRef would include the marker's
+  // own box in the measurement — pinning the height above the threshold
+  // forever once triggered, so it could never clear back to "fits".
   const [contentH, setContentH] = useState(0);
+  const measureRef = useRef<() => void>(() => {});
   useLayoutEffect(() => {
-    const el = pageRef.current;
+    const el = contentRef.current;
     if (!el) return;
     const measure = () => setContentH(el.scrollHeight);
+    measureRef.current = measure;
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, [template]);
 
+  // Belt-and-braces re-measure: edits can land via the left-hand form (which
+  // updates `cv` without ever focusing the previewed contentEditable node),
+  // so force a fresh read after every commit instead of relying solely on
+  // the ResizeObserver picking up the resulting DOM change.
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => measureRef.current());
+    return () => cancelAnimationFrame(raf);
+  }, [cv, order, enabled, lang, template]);
+
   const pageCount   = Math.max(1, Math.ceil(contentH / A4_H));
   const overflowing = contentH > A4_H + 4; // small tolerance to avoid boundary flicker
+  const fits        = contentH > 0 && !overflowing;
 
   // ── Fit-zoom: recompute whenever the stage is resized ────────────────────
   useLayoutEffect(() => {
@@ -135,17 +155,21 @@ export function CVPreview() {
           direction:       "ltr", // template content is always LTR until Step 11 RTL pass
           position:        "relative",
         }}>
-          <CVRender
-            template={template}
-            cv={cv}
-            accent={accent}
-            lang={lang}
-            order={order}
-            enabled={enabled}
-            onUpdate={updatePath}
-          />
+          <div ref={contentRef}>
+            <CVRender
+              template={template}
+              cv={cv}
+              accent={accent}
+              lang={lang}
+              order={order}
+              enabled={enabled}
+              onUpdate={updatePath}
+            />
+          </div>
 
-          {/* Page-break marker — shows exactly where content spills onto page 2 */}
+          {/* Page-break marker — shows exactly where content spills onto page 2.
+              Rendered outside contentRef so it never contributes to its own
+              measurement (see comment above the ResizeObserver setup). */}
           {overflowing && (
             <div style={{ position: "absolute", left: 0, right: 0, top: A4_H, zIndex: 5, pointerEvents: "none" }}>
               <div style={{ borderTop: "2px dashed #ef4444" }}/>
@@ -160,22 +184,28 @@ export function CVPreview() {
         <div style={{
           marginTop:      `${Math.max(16, 28 * effective)}px`,
           fontSize:       10.5,
-          color:          overflowing ? "#dc2626" : "#94a3b8",
+          color:          overflowing ? "#dc2626" : fits ? "#16a34a" : "#94a3b8",
           display:        "flex",
           gap:            10,
           alignItems:     "center",
-          background:     overflowing ? "#fef2f2" : "rgba(255,255,255,.92)",
+          background:     overflowing ? "#fef2f2" : fits ? "#f0fdf4" : "rgba(255,255,255,.92)",
           backdropFilter: "blur(8px)",
           padding:        "5px 14px",
           borderRadius:   100,
-          border:         overflowing ? "1px solid #fecaca" : "1px solid #e5e7eb",
-          fontWeight:     overflowing ? 700 : 400,
+          border:         overflowing ? "1px solid #fecaca" : fits ? "1px solid #bbf7d0" : "1px solid #e5e7eb",
+          fontWeight:     overflowing || fits ? 700 : 400,
         }}>
           {overflowing ? (
             <>
               <span>⚠ Contenu trop long — {pageCount} pages au lieu d'1</span>
               <span>·</span>
               <span>Raccourcissez le texte pour tenir sur une page</span>
+            </>
+          ) : fits ? (
+            <>
+              <span>✓ Tient sur une page A4</span>
+              <span>·</span>
+              <span>Compatible ATS</span>
             </>
           ) : (
             <>
