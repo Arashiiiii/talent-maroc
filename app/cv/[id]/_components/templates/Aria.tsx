@@ -186,9 +186,6 @@ export function Aria({ cv, accent, lang, order, enabled, onUpdate, readOnly }: T
       {/* Header */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto", alignItems: "end", gap: 16, marginBottom: 32 }}>
         <div>
-          <div style={{ fontSize: 10, color: "#94a3b8", letterSpacing: ".18em", textTransform: "uppercase", marginBottom: 6 }}>
-            Curriculum vitae
-          </div>
           <h1 style={{ fontSize: 32, fontWeight: 300, margin: 0, letterSpacing: "-.02em", lineHeight: 1.05, color: "#0f172a" }}>
             {ie(cv.profile.firstName, "profile.firstName")}
             {" "}

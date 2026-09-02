@@ -99,10 +99,6 @@ export function Medina({ cv, accent, lang, order, enabled, onUpdate, readOnly }:
       {/* ── Hero header ──────────────────────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 24, alignItems: "center", marginBottom: 28 }}>
         <div>
-          <div style={{
-            fontSize: 10.5, fontWeight: 800, color: accent,
-            letterSpacing: ".22em", textTransform: "uppercase", marginBottom: 8,
-          }}>✦ {t.summary}</div>
           <h1 style={{ fontSize: 42, fontWeight: 900, margin: 0, letterSpacing: "-.02em", lineHeight: 1, color: "#1c1917" }}>
             {ie(cv.profile.firstName, "profile.firstName")}
           </h1>

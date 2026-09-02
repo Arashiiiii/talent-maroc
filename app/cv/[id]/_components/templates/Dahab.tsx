@@ -105,9 +105,6 @@ export function Dahab({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
             }
           </div>
           <div>
-            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".22em", textTransform: "uppercase", color: "#f97316" }}>
-              {t.executive}
-            </div>
             <h1 style={{ fontSize: 30, fontWeight: 800, margin: "4px 0 6px", letterSpacing: "-.01em" }}>
               {ie(cv.profile.firstName, "profile.firstName")}
               {" "}
