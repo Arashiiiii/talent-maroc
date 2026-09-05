@@ -53,7 +53,7 @@ export function Aria({ cv, accent, lang, order, enabled, onUpdate, readOnly }: T
     if (sec === "summary") return (
       <Row key={sec}
         left=""
-        right={<p style={{ margin: 0, fontSize: 11.5, color: "#374151" }}>{ie(cv.summary, "summary", true)}</p>}
+        right={<div style={{ margin: 0, fontSize: 11.5, color: "#374151" }}>{ie(cv.summary, "summary", true)}</div>}
       />
     );
 

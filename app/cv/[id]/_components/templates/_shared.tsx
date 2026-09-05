@@ -112,9 +112,9 @@ export function MainSection({ sec, cv, accent, lang, onUpdate, readOnly }: MainS
   if (sec === "summary") return (
     <>
       <SH title={t.summary} accent={accent} rtl={rtl} />
-      <p style={{ margin: 0, color: "#374151", fontSize: 11.5, lineHeight: 1.7 }}>
+      <div style={{ margin: 0, color: "#374151", fontSize: 11.5, lineHeight: 1.7 }}>
         {ie({ value: cv.summary, path: "summary", block: true })}
-      </p>
+      </div>
     </>
   );
 

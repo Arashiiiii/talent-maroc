@@ -46,7 +46,7 @@ export function Helix({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
         return (
           <section key={sec} style={{ marginBottom: 22 }}>
             <Title>{t.summary}</Title>
-            <p style={{ margin: 0, color: "#374151" }}>{ie(cv.summary, "summary", true)}</p>
+            <div style={{ margin: 0, color: "#374151" }}>{ie(cv.summary, "summary", true)}</div>
           </section>
         );
       case "experience":

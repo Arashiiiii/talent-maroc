@@ -32,9 +32,9 @@ export function Meridian({ cv, accent, lang, order, enabled, onUpdate, readOnly 
     if (sec === "summary") return (
       <div key={sec}>
         <H>{t.summary}</H>
-        <p style={{ textAlign: "center", fontStyle: "italic", color: "#374151", maxWidth: 560, margin: "0 auto", fontSize: 11.5 }}>
+        <div style={{ textAlign: "center", fontStyle: "italic", color: "#374151", maxWidth: 560, margin: "0 auto", fontSize: 11.5 }}>
           {ie(cv.summary, "summary", true)}
-        </p>
+        </div>
       </div>
     );
 

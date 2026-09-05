@@ -32,7 +32,7 @@ export function Slate({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
     switch (sec) {
       case "summary":
         return <Row key={sec} label={t.summary}>
-          <p style={{ margin: 0, color: "#374151" }}>{ie(cv.summary, "summary", true)}</p>
+          <div style={{ margin: 0, color: "#374151" }}>{ie(cv.summary, "summary", true)}</div>
         </Row>;
       case "experience":
         return <Row key={sec} label={t.experience}>

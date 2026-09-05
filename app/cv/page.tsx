@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import { EMPTY_CV, DEFAULT_SECTION_ORDER, DEFAULT_SECTIONS_ENABLED } from "./_lib/schema";
 import type { CVData } from "./_lib/schema";
+import CVLanding from "./_components/CVLanding";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -355,6 +356,30 @@ export default function CVListPage() {
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
+
+  // Not logged in → marketing landing page instead of a bare, empty dashboard.
+  if (!userId) {
+    return (
+      <>
+        <CVLanding onStart={() => setShowModal(true)} />
+        {showModal && (
+          <NewCVModal
+            onClose={() => setShowModal(false)}
+            onCreate={async (template, cvData) => {
+              await createCV(template, cvData);
+              setShowModal(false);
+            }}
+          />
+        )}
+        {createError && (
+          <div style={{ position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", zIndex: 9500, padding: "12px 18px", borderRadius: 10, background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", fontSize: 13, display: "flex", gap: 12, alignItems: "center", boxShadow: "0 8px 24px rgba(0,0,0,.12)" }}>
+            <span>⚠ {createError}</span>
+            <button type="button" onClick={() => setCreateError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#991b1b", fontSize: 16 }}>×</button>
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: "#fafbfc", fontFamily: "'Inter', system-ui, sans-serif" }}>
