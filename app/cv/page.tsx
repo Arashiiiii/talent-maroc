@@ -4,8 +4,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import { EMPTY_CV, DEFAULT_SECTION_ORDER, DEFAULT_SECTIONS_ENABLED } from "./_lib/schema";
-import type { CVData } from "./_lib/schema";
+import type { CVData, TemplateId } from "./_lib/schema";
+import { SAMPLE_CV, SHOWCASE_ORDER, SHOWCASE_ENABLED } from "./_lib/sample-cv";
+import { CVRender } from "./[id]/_components/templates";
 import CVLanding from "./_components/CVLanding";
+import { useTemplateEntitlements } from "./_hooks/useTemplateEntitlements";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -295,6 +298,9 @@ export default function CVListPage() {
   const [userId,      setUserId]     = useState<string | null>(null);
   const [showModal,   setShowModal]  = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [presetTemplate, setPresetTemplate] = useState<string | null>(null);
+
+  const { resumeAfterPayment } = useTemplateEntitlements();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -310,6 +316,20 @@ export default function CVListPage() {
           setLoading(false);
         });
     });
+  }, []);
+
+  // Resume the new-CV modal at the template step after returning from a
+  // template purchase made before the CV existed (no /cv/[id] to land on yet).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("paid") !== "true") return;
+    resumeAfterPayment().then((unlockedId) => {
+      window.history.replaceState({}, "", "/cv");
+      if (unlockedId) {
+        setPresetTemplate(unlockedId);
+        setShowModal(true);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const createCV = useCallback(async (template: string, cvData?: CVData): Promise<void> => {
@@ -364,10 +384,12 @@ export default function CVListPage() {
         <CVLanding onStart={() => setShowModal(true)} />
         {showModal && (
           <NewCVModal
-            onClose={() => setShowModal(false)}
+            initialTemplate={presetTemplate}
+            onClose={() => { setShowModal(false); setPresetTemplate(null); }}
             onCreate={async (template, cvData) => {
               await createCV(template, cvData);
               setShowModal(false);
+              setPresetTemplate(null);
             }}
           />
         )}
@@ -439,10 +461,12 @@ export default function CVListPage() {
 
       {showModal && (
         <NewCVModal
-          onClose={() => setShowModal(false)}
+          initialTemplate={presetTemplate}
+          onClose={() => { setShowModal(false); setPresetTemplate(null); }}
           onCreate={async (template, cvData) => {
             await createCV(template, cvData);
             setShowModal(false);
+            setPresetTemplate(null);
           }}
         />
       )}
@@ -456,20 +480,29 @@ export default function CVListPage() {
 
 type ModalStep = "choose" | "template" | "importing";
 
-function NewCVModal({ onClose, onCreate }: {
+function NewCVModal({ onClose, onCreate, initialTemplate }: {
   onClose:  () => void;
   onCreate: (template: string, cvData?: CVData) => Promise<void>;
+  initialTemplate?: string | null;
 }) {
-  const [step,     setStep]     = useState<ModalStep>("choose");
-  const [selected, setSelected] = useState("corso");
+  const [step,     setStep]     = useState<ModalStep>(initialTemplate ? "template" : "choose");
+  const [selected, setSelected] = useState(initialTemplate || "corso");
   const [busy,     setBusy]     = useState(false);
   const [error,    setError]    = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const { owned, unlocking, unlock, error: unlockError } = useTemplateEntitlements();
 
   const handleCreate = async () => {
     setBusy(true);
     await onCreate(selected);
     setBusy(false);
+  };
+
+  const selectOrUnlock = (t: (typeof TEMPLATES)[number]) => {
+    if (owned?.has(t.id as TemplateId)) { setSelected(t.id); return; }
+    if (unlocking) return;
+    unlock(t.id as TemplateId, `${window.location.origin}/cv?paid=true`);
   };
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -535,26 +568,50 @@ function NewCVModal({ onClose, onCreate }: {
             <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 14px" }}>
               {step === "importing" ? "Quel modèle utiliser pour afficher votre CV ?" : "Choisissez le style de votre CV :"}
             </p>
+            {unlockError && (
+              <div style={{ padding: "8px 12px", borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", fontSize: 12, marginBottom: 10 }}>
+                ⚠ {unlockError}
+              </div>
+            )}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-              {TEMPLATES.map((t) => (
+              {TEMPLATES.map((t) => {
+                const isOwned = owned?.has(t.id as TemplateId) ?? true; // avoid a lock flash while loading
+                const isBusy  = unlocking === t.id;
+                return (
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => setSelected(t.id)}
+                  onClick={() => selectOrUnlock(t)}
                   style={{
-                    background:   selected === t.id ? `${t.color}0d` : "#fff",
-                    border:       `2px solid ${selected === t.id ? t.color : "#e5e7eb"}`,
+                    background:   selected === t.id && isOwned ? `${t.color}0d` : "#fff",
+                    border:       `2px solid ${selected === t.id && isOwned ? t.color : "#e5e7eb"}`,
                     borderRadius: 10,
                     padding:      10,
-                    cursor:       "pointer",
+                    cursor:       isBusy ? "wait" : "pointer",
                     textAlign:    "left",
                     transition:   "border-color .15s",
+                    opacity:      isBusy ? 0.6 : 1,
                   }}
                 >
-                  <TemplateMini layout={t.layout} color={t.color} active={selected === t.id} />
+                  <div style={{ borderRadius: 6, overflow: "hidden", border: "1px solid #e5e7eb", background: "#fff", position: "relative" }}>
+                    <div style={{ width: "100%", aspectRatio: "794/1123", overflow: "hidden", position: "relative" }}>
+                      <div style={{ width: 794, position: "absolute", top: 0, left: 0, transform: "scale(.238)", transformOrigin: "top left" }}>
+                        <CVRender template={t.id as TemplateId} cv={SAMPLE_CV} accent={t.color} lang="fr" order={SHOWCASE_ORDER} enabled={SHOWCASE_ENABLED} readOnly />
+                      </div>
+                    </div>
+                    {!isOwned && (
+                      <div style={{ position: "absolute", inset: 0, background: "rgba(15,23,42,.32)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontSize: 22 }}>{isBusy ? "…" : "🔒"}</span>
+                      </div>
+                    )}
+                  </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 8 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>{t.name}</span>
-                    {t.badge && (
+                    {!isOwned ? (
+                      <span style={{ fontSize: 9.5, fontWeight: 700, padding: "1px 6px", borderRadius: 100, background: "#fef3c7", color: "#92400e" }}>
+                        🔒 Débloquer
+                      </span>
+                    ) : t.badge && (
                       <span style={{ fontSize: 9.5, fontWeight: 700, padding: "1px 6px", borderRadius: 100, background: `${t.color}18`, color: t.color }}>
                         {t.badge}
                       </span>
@@ -562,7 +619,8 @@ function NewCVModal({ onClose, onCreate }: {
                   </div>
                   <p style={{ fontSize: 10.5, color: "#64748b", margin: "3px 0 0", lineHeight: 1.4 }}>{t.desc}</p>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -576,32 +634,41 @@ function NewCVModal({ onClose, onCreate }: {
               </div>
             )}
             <input ref={fileRef} type="file" accept=".pdf,.docx" hidden onChange={handleImportFile} />
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={busy}
-              style={{
-                width:        "100%",
-                padding:      "14px",
-                borderRadius: 10,
-                border:       "2px dashed #c4b5fd",
-                background:   busy ? "#f5f3ff" : "#faf9ff",
-                color:        "#7c3aed",
-                fontSize:     13,
-                fontWeight:   600,
-                cursor:       busy ? "wait" : "pointer",
-                fontFamily:   "inherit",
-                display:      "flex",
-                alignItems:   "center",
-                justifyContent: "center",
-                gap:          8,
-              }}
-            >
-              {busy
-                ? <><span style={{ animation: "spin .65s linear infinite", display: "inline-block" }}>⟳</span> Analyse en cours…</>
-                : <>↑ Sélectionner un fichier PDF ou DOCX</>
-              }
-            </button>
+            {(() => {
+              const selectedOwned = owned?.has(selected as TemplateId) ?? false;
+              const disabled = busy || !selectedOwned;
+              return (
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={disabled}
+                  title={!selectedOwned ? "Débloquez le modèle choisi pour continuer" : undefined}
+                  style={{
+                    width:        "100%",
+                    padding:      "14px",
+                    borderRadius: 10,
+                    border:       "2px dashed #c4b5fd",
+                    background:   disabled ? "#f5f3ff" : "#faf9ff",
+                    color:        "#7c3aed",
+                    fontSize:     13,
+                    fontWeight:   600,
+                    cursor:       disabled ? (busy ? "wait" : "not-allowed") : "pointer",
+                    fontFamily:   "inherit",
+                    display:      "flex",
+                    alignItems:   "center",
+                    justifyContent: "center",
+                    gap:          8,
+                  }}
+                >
+                  {busy
+                    ? <><span style={{ animation: "spin .65s linear infinite", display: "inline-block" }}>⟳</span> Analyse en cours…</>
+                    : !selectedOwned
+                      ? <>🔒 Débloquez le modèle « {TEMPLATES.find((t) => t.id === selected)?.name} » pour continuer</>
+                      : <>↑ Sélectionner un fichier PDF ou DOCX</>
+                  }
+                </button>
+              );
+            })()}
             <p style={{ fontSize: 11.5, color: "#94a3b8", textAlign: "center", margin: "8px 0 0" }}>
               L'IA extrait automatiquement vos informations et les structure dans le modèle choisi.
             </p>
@@ -618,16 +685,21 @@ function NewCVModal({ onClose, onCreate }: {
             {step === "choose" ? "Annuler" : "← Retour"}
           </button>
 
-          {step === "template" && (
-            <button
-              type="button"
-              onClick={handleCreate}
-              disabled={busy}
-              style={{ padding: "8px 22px", borderRadius: 8, border: "none", background: busy ? "#a78bfa" : "#7c3aed", color: "#fff", fontSize: 13, fontWeight: 600, cursor: busy ? "wait" : "pointer", fontFamily: "inherit" }}
-            >
-              {busy ? "Création…" : "Créer avec ce modèle →"}
-            </button>
-          )}
+          {step === "template" && (() => {
+            const selectedOwned = owned?.has(selected as TemplateId) ?? false;
+            const disabled = busy || !selectedOwned;
+            return (
+              <button
+                type="button"
+                onClick={handleCreate}
+                disabled={disabled}
+                title={!selectedOwned ? "Débloquez ce modèle pour continuer" : undefined}
+                style={{ padding: "8px 22px", borderRadius: 8, border: "none", background: disabled ? "#c4b5fd" : "#7c3aed", color: "#fff", fontSize: 13, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", fontFamily: "inherit" }}
+              >
+                {busy ? "Création…" : !selectedOwned ? "🔒 Modèle non débloqué" : "Créer avec ce modèle →"}
+              </button>
+            );
+          })()}
 
           {step === "importing" && (
             <span style={{ fontSize: 12, color: "#94a3b8" }}>Sélectionnez un fichier pour continuer</span>

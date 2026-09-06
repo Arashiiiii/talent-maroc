@@ -168,13 +168,14 @@ export interface TemplateConfig {
   sub:    string;
   /** Default accent colour for this template. */
   accent: string;
-  tag:    "Inclus" | "Pro";
+  /** All 10 templates are individually paid, one-time unlocks — see cv_template_purchases. */
+  tag:    "Pro";
 }
 
 export const TEMPLATE_REGISTRY: TemplateConfig[] = [
-  { id: "corso",    name: "Corso",    sub: "Sidebar moderne",     accent: "#7c3aed", tag: "Inclus" },
-  { id: "meridian", name: "Meridian", sub: "Classique éditorial", accent: "#0f172a", tag: "Inclus" },
-  { id: "aria",     name: "Aria",     sub: "Minimal",             accent: "#374151", tag: "Inclus" },
+  { id: "corso",    name: "Corso",    sub: "Sidebar moderne",     accent: "#7c3aed", tag: "Pro" },
+  { id: "meridian", name: "Meridian", sub: "Classique éditorial", accent: "#0f172a", tag: "Pro" },
+  { id: "aria",     name: "Aria",     sub: "Minimal",             accent: "#374151", tag: "Pro" },
   { id: "dahab",    name: "Dahab",    sub: "Exécutif",            accent: "#1e1147", tag: "Pro"    },
   { id: "medina",   name: "Medina",   sub: "Créatif",             accent: "#f97316", tag: "Pro"    },
   { id: "vertex",   name: "Vertex",   sub: "Rail éditorial",      accent: "#0f172a", tag: "Pro"    },

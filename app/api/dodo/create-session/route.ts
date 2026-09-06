@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 // Switch between test and live based on env
 const DODO_MODE = process.env.DODO_MODE || "live"; // set DODO_MODE=test in Vercel to use sandbox
@@ -16,22 +17,45 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Identify the buyer server-side from their session token — never trust a
+  // client-supplied user id, since it ends up in payment metadata and is
+  // used later (by the webhook) to grant entitlements to that account.
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  }
+  const token = authHeader.slice(7);
+
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) {
+    return NextResponse.json({ error: "SUPABASE_SERVICE_ROLE_KEY manquant" }, { status: 500 });
+  }
+  const adminSb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+  const { data: { user }, error: authErr } = await adminSb.auth.getUser(token);
+  if (!user || authErr) {
+    return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  }
+
   try {
-    const { productId, customerEmail, customerName } = await req.json();
+    const { productId, metadata, returnUrl } = await req.json();
 
     if (!productId) {
       return NextResponse.json({ error: "productId requis" }, { status: 400 });
     }
 
-    const body = {
+    const body: Record<string, unknown> = {
       product_cart: [{ product_id: productId, quantity: 1 }],
       customer: {
-        email: customerEmail || "client@talentmaroc.shop",
-        name:  customerName  || "Client TalentMaroc",
+        email: user.email || "client@talentmaroc.shop",
+        name:  (user.user_metadata?.full_name as string | undefined) || "Client TalentMaroc",
       },
       billing: { country: "MA" },
       payment_link: true,
+      // user_id is set from the verified session, overriding anything a
+      // caller might pass in `metadata`, so it can't be spoofed.
+      metadata: { ...(metadata ?? {}), user_id: user.id },
     };
+    if (returnUrl) body.return_url = returnUrl;
 
     const res = await fetch(`${DODO_BASE}/payments`, {
       method: "POST",

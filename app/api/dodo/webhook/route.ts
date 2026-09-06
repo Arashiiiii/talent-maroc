@@ -34,7 +34,31 @@ export async function POST(req: NextRequest) {
     if (payload.type === "payment.succeeded") {
       const payment = payload.data;
       console.log("Payment succeeded:", payment.payment_id);
-      // Add any server-side logic here (e.g., unlock feature, send email)
+
+      // CV template unlock — grant permanent access to the purchased template.
+      const metadata = payment.metadata ?? {};
+      if (metadata.purpose === "cv_template" && metadata.template_id && metadata.user_id) {
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!serviceKey) {
+          console.error("Cannot grant cv_template entitlement: SUPABASE_SERVICE_ROLE_KEY missing");
+        } else {
+          const { createClient } = await import("@supabase/supabase-js");
+          const adminSb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
+          const { error: upsertErr } = await adminSb.from("cv_template_purchases").upsert(
+            {
+              user_id:         metadata.user_id,
+              template_id:     metadata.template_id,
+              dodo_payment_id: payment.payment_id,
+            },
+            { onConflict: "user_id,template_id" },
+          );
+          if (upsertErr) {
+            console.error("Failed to grant cv_template entitlement:", upsertErr.message);
+          } else {
+            console.log(`Granted template "${metadata.template_id}" to user ${metadata.user_id}`);
+          }
+        }
+      }
     }
 
     return NextResponse.json({ received: true });
