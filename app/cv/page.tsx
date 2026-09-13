@@ -320,12 +320,21 @@ export default function CVListPage() {
     let uid = userId;
     if (!uid) {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setCreateError("Vous devez être connecté pour créer un CV.");
-        return;
+      if (user) {
+        uid = user.id;
+      } else {
+        // No account needed to start a CV — sign in anonymously so RLS and
+        // the download entitlement still have a real user_id to key off of.
+        // The session persists like any other, so returning later (even
+        // without ever creating a password) keeps their CVs.
+        const { data: anon, error: anonErr } = await supabase.auth.signInAnonymously();
+        if (anonErr || !anon.user) {
+          setCreateError("Impossible de démarrer une session. Réessayez.");
+          return;
+        }
+        uid = anon.user.id;
       }
-      setUserId(user.id);
-      uid = user.id;
+      setUserId(uid);
     }
 
     const { data, error } = await supabase

@@ -210,7 +210,7 @@ export default function CVLanding({ onStart }: { onStart: () => void }) {
             </p>
             <div style={{ display: "flex", gap: 10, marginTop: 28, flexWrap: "wrap" }}>
               <button onClick={onStart} className="cvlp-primary" style={{ fontSize: 14.5, fontWeight: 700, color: "#fff", background: TOK.violet, padding: "13px 22px", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 8, boxShadow: "0 8px 24px -8px rgba(124,58,237,.5)", transition: ".15s" }}>
-                Créer mon compte gratuit <ChevronRight size={16} />
+                Créer mon CV — gratuit <ChevronRight size={16} />
               </button>
               <a href="#modeles" className="cvlp-secondary" style={{ fontSize: 14.5, fontWeight: 600, color: TOK.body, background: "#fff", padding: "13px 20px", borderRadius: 10, border: `1.5px solid ${TOK.line}`, textDecoration: "none", transition: ".15s" }}>
                 Voir les 10 modèles
@@ -380,23 +380,23 @@ export default function CVLanding({ onStart }: { onStart: () => void }) {
         <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 24px" }}>
           <div style={{ textAlign: "center", marginBottom: 40, maxWidth: 560, marginInline: "auto" }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: TOK.violet, letterSpacing: ".14em", textTransform: "uppercase", marginBottom: 14 }}>Tarifs</div>
-            <h2 style={{ fontSize: "clamp(24px,3vw,32px)", fontWeight: 800, letterSpacing: "-.025em", margin: 0 }}>Compte gratuit. Chaque modèle, un achat unique.</h2>
-            <p style={{ fontSize: 15, lineHeight: 1.6, color: TOK.body, marginTop: 14 }}>Créez votre compte et remplissez votre CV gratuitement. Débloquez le modèle qui vous plaît pour l'exporter en PDF — payez une fois, gardez-le pour toujours. Pas d'abonnement.</p>
+            <h2 style={{ fontSize: "clamp(24px,3vw,32px)", fontWeight: 800, letterSpacing: "-.025em", margin: 0 }}>Sans compte pour commencer. Chaque modèle, un achat unique.</h2>
+            <p style={{ fontSize: 15, lineHeight: 1.6, color: TOK.body, marginTop: 14 }}>Remplissez votre CV gratuitement, sans créer de compte. Débloquez le modèle qui vous plaît pour l'exporter en PDF — payez une fois, gardez-le pour toujours. Pas d'abonnement.</p>
           </div>
           <div className="cvlp-price-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, alignItems: "stretch" }}>
             <div style={{ background: "#fff", border: `1px solid ${TOK.line}`, borderRadius: 15, padding: "28px 26px 26px", display: "flex", flexDirection: "column" }}>
-              <span style={{ display: "inline-flex", fontSize: 9.5, fontWeight: 700, padding: "3px 10px", borderRadius: 100, background: "#f3f4f6", color: "#374151", marginBottom: 12, width: "fit-content" }}>Compte gratuit</span>
+              <span style={{ display: "inline-flex", fontSize: 9.5, fontWeight: 700, padding: "3px 10px", borderRadius: 100, background: "#f3f4f6", color: "#374151", marginBottom: 12, width: "fit-content" }}>Sans compte</span>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: TOK.ink }}>Pour construire un CV solide</div>
               <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginTop: 20 }}>
                 <span style={{ fontSize: 38, fontWeight: 800, letterSpacing: "-.03em" }}>0</span><span style={{ fontSize: 13.5, color: TOK.muted, fontWeight: 500 }}>MAD</span>
               </div>
               <div style={{ fontSize: 12, color: TOK.faint, marginTop: 7 }}>Pour toujours · Aucune carte requise</div>
               <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 9, flex: 1 }}>
-                {["Aperçu des 10 modèles sur vos vraies données", "Édition en direct sur l'aperçu", "Français, anglais et arabe", "Score de complétude", "Chaque modèle : achat unique pour l'export PDF"].map((f) => (
+                {["Aucun compte requis pour commencer", "Aperçu des 10 modèles sur vos vraies données", "Édition en direct sur l'aperçu", "Français, anglais et arabe", "Chaque modèle : achat unique pour l'export PDF"].map((f) => (
                   <div key={f} style={{ display: "flex", gap: 9, fontSize: 13, color: TOK.body, alignItems: "flex-start" }}><Check size={14} color={TOK.success} style={{ marginTop: 2, flexShrink: 0 }} />{f}</div>
                 ))}
               </div>
-              <Link href="/auth/login" style={{ marginTop: 22, padding: 12, borderRadius: 9, border: `1px solid ${TOK.line}`, background: "#fff", color: TOK.ink, fontSize: 14, fontWeight: 600, textAlign: "center", textDecoration: "none" }}>Créer un compte gratuit</Link>
+              <button onClick={onStart} className="cvlp-secondary" style={{ marginTop: 22, padding: 12, borderRadius: 9, border: `1px solid ${TOK.line}`, background: "#fff", color: TOK.ink, fontSize: 14, fontWeight: 600, textAlign: "center", cursor: "pointer", fontFamily: "inherit" }}>Créer mon CV</button>
             </div>
             <div style={{ background: "linear-gradient(160deg,#f5f3ff 0%,#ede9fe 100%)", border: `1.5px solid ${TOK.violet}`, borderRadius: 15, padding: "28px 26px 26px", position: "relative", boxShadow: "0 1px 3px rgba(124,58,237,.16), 0 20px 50px -20px rgba(124,58,237,.4)", display: "flex", flexDirection: "column" }}>
               <span style={{ position: "absolute", top: -10, left: 26, background: TOK.violet, color: "#fff", fontSize: 9.5, fontWeight: 700, padding: "4px 10px", borderRadius: 100, letterSpacing: ".08em", textTransform: "uppercase" }}>✦ CV par IA</span>
@@ -429,6 +429,7 @@ export default function CVLanding({ onStart }: { onStart: () => void }) {
           <SecHead eyebrow="Questions" title="Ce qu'on nous demande le plus." />
           <div>
             {[
+              ["Dois-je créer un compte pour commencer ?", "Non. Cliquez sur « Créer mon CV » et commencez directement — aucune adresse e-mail ni mot de passe requis. Votre travail est sauvegardé automatiquement ; vous pourrez créer un mot de passe plus tard si vous voulez y accéder depuis un autre appareil."],
               ["Mon CV sera-t-il lisible par les logiciels de tri (ATS) ?", "Nos dix modèles utilisent du texte réel et une structure simple à une ou deux colonnes — pas de tableaux complexes ni de texte encodé en image, ce qui est la principale cause de perte d'information lors d'un scan automatique."],
               ["L'IA invente-t-elle des choses sur mon parcours ?", "Non. Elle ne fait que reformuler ce que vous avez écrit : verbe d'action en tête, formulation naturelle. S'il n'y a pas de chiffre dans votre phrase, elle n'en invente pas — elle vous suggère d'en ajouter un."],
               ["Puis-je faire un CV en arabe ?", "Oui. Les titres de section sont traduits et certains modèles adaptent leur mise en page pour l'arabe."],
@@ -452,9 +453,9 @@ export default function CVLanding({ onStart }: { onStart: () => void }) {
       <section style={{ padding: "96px 0 100px", textAlign: "center", position: "relative", overflow: "hidden", borderBottom: `1.5px solid ${TOK.line}` }}>
         <div style={{ position: "absolute", bottom: -300, left: "50%", transform: "translateX(-50%)", width: 900, height: 520, background: "radial-gradient(ellipse at center, rgba(124,58,237,.13) 0%, rgba(124,58,237,0) 68%)", pointerEvents: "none" }} />
         <h2 style={{ position: "relative", fontSize: "clamp(26px,3.6vw,40px)", fontWeight: 800, letterSpacing: "-.03em", margin: 0, lineHeight: 1.1 }}>Votre prochain poste<br />commence par une page.</h2>
-        <p style={{ position: "relative", fontSize: 16, color: TOK.body, marginTop: 18, maxWidth: 440, marginInline: "auto" }}>Compte gratuit, sans carte bancaire. Un CV complet en douze minutes.</p>
+        <p style={{ position: "relative", fontSize: 16, color: TOK.body, marginTop: 18, maxWidth: 440, marginInline: "auto" }}>Sans compte, sans carte bancaire. Un CV complet en douze minutes.</p>
         <div style={{ position: "relative", display: "flex", gap: 10, justifyContent: "center", marginTop: 30, flexWrap: "wrap" }}>
-          <button onClick={onStart} className="cvlp-primary" style={{ fontSize: 14.5, fontWeight: 700, color: "#fff", background: TOK.violet, padding: "13px 22px", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 8, boxShadow: "0 8px 24px -8px rgba(124,58,237,.5)", transition: ".15s" }}>Créer mon compte <ChevronRight size={16} /></button>
+          <button onClick={onStart} className="cvlp-primary" style={{ fontSize: 14.5, fontWeight: 700, color: "#fff", background: TOK.violet, padding: "13px 22px", borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 8, boxShadow: "0 8px 24px -8px rgba(124,58,237,.5)", transition: ".15s" }}>Créer mon CV <ChevronRight size={16} /></button>
           <a href="#modeles" className="cvlp-secondary" style={{ fontSize: 14.5, fontWeight: 600, color: TOK.body, background: "#fff", padding: "13px 20px", borderRadius: 10, border: `1.5px solid ${TOK.line}`, textDecoration: "none", transition: ".15s" }}>Parcourir les modèles</a>
         </div>
       </section>
