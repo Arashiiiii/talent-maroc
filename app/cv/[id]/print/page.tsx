@@ -38,6 +38,31 @@ export default async function PrintPage({ params, searchParams }: Props) {
 
   if (error || !data) notFound();
 
+  // The template is free to use in the builder — only the export is a paid,
+  // per-template unlock. Enforce it here (not just in the topbar button) so
+  // navigating straight to this URL can't skip payment.
+  const { data: entitlement } = await supabase
+    .from("cv_template_purchases")
+    .select("id")
+    .eq("user_id", data.user_id)
+    .eq("template_id", data.template)
+    .maybeSingle();
+
+  if (!entitlement) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui, sans-serif", padding: 24, textAlign: "center" }}>
+        <div>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 8 }}>Ce modèle n'est pas encore débloqué</h1>
+          <p style={{ fontSize: 14, color: "#64748b", marginBottom: 20 }}>Retournez à l'éditeur et cliquez sur « Télécharger PDF » pour débloquer ce modèle (achat unique, valable pour toujours).</p>
+          <a href={`/cv/${id}`} style={{ display: "inline-block", padding: "10px 20px", borderRadius: 8, background: "#7c3aed", color: "#fff", fontWeight: 600, fontSize: 14, textDecoration: "none" }}>
+            Retour à l'éditeur
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   const parsed = CVDataSchema.safeParse(data.data);
   if (!parsed.success) notFound();
 

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useCVStore } from "../../_store/cv-store";
 import { computeScore } from "../../_lib/score";
@@ -7,6 +7,7 @@ import { ScoreRing }    from "./ScoreRing";
 import { ScorePopover } from "./ScorePopover";
 import { LangToggle }   from "./LangToggle";
 import { useImport }    from "../_hooks/useImport";
+import { useTemplateEntitlements } from "../../_hooks/useTemplateEntitlements";
 
 interface Props {
   cvId:            string;
@@ -22,15 +23,44 @@ export function Topbar({ cvId, mobileTab, onToggleMobile }: Props) {
   const cv        = useCVStore((s) => s.cv);
   const order     = useCVStore((s) => s.order);
   const enabled   = useCVStore((s) => s.enabled);
+  const template  = useCVStore((s) => s.template);
 
   const [scoreOpen,   setScoreOpen]   = useState(false);
   const { fileRef, trigger, handleFile, importing } = useImport();
 
+  // The template itself is free to pick and edit with — only the PDF
+  // download is a paid, permanent unlock (per template, per account).
+  const { owned, unlocking, unlock, resumeAfterPayment } = useTemplateEntitlements();
+  const [justUnlocked, setJustUnlocked] = useState(false);
+
   // Opens the print page with ?autoprint=1 — the browser's Save-as-PDF dialog
   // fires automatically once fonts are ready. No server-side Playwright needed.
-  const downloadPDF = useCallback(() => {
+  const openPrintTab = useCallback(() => {
     window.open(`/cv/${cvId}/print?autoprint=1`, "_blank");
   }, [cvId]);
+
+  const templateOwned = owned?.has(template) ?? false;
+
+  const downloadPDF = useCallback(() => {
+    if (templateOwned) { openPrintTab(); return; }
+    if (unlocking) return;
+    unlock(template, `${window.location.origin}/cv/${cvId}?paid=true`);
+  }, [templateOwned, unlocking, unlock, template, cvId, openPrintTab]);
+
+  // Resume after returning from Dodo checkout. `window.open` right after an
+  // async redirect (no direct click gesture) is unreliable with popup
+  // blockers, so we surface a "ready — click to download" state instead of
+  // silently trying to pop a new tab.
+  const resumed = useRef(false);
+  useEffect(() => {
+    if (resumed.current) return;
+    resumed.current = true;
+    if (new URLSearchParams(window.location.search).get("paid") !== "true") return;
+    resumeAfterPayment().then((unlockedId) => {
+      window.history.replaceState({}, "", `/cv/${cvId}`);
+      if (unlockedId) setJustUnlocked(true);
+    });
+  }, [cvId, resumeAfterPayment]);
 
   const { value: score } = useMemo(
     () => computeScore(cv, order, enabled),
@@ -193,17 +223,24 @@ export function Topbar({ cvId, mobileTab, onToggleMobile }: Props) {
         </>
       )}
 
-      {/* ── Download PDF (always visible) ────────────────────────────────── */}
+      {/* ── Download PDF (always visible) — free to edit, paid to export ──── */}
       <button
         type="button"
         onClick={downloadPDF}
-        style={{ ...primary, opacity: score < 30 ? 0.6 : 1, cursor: score < 30 ? "not-allowed" : "pointer", padding: isMobile ? "6px 10px" : "7px 12px" }}
-        disabled={score < 30}
-        title={score < 30 ? "Atteignez 30% pour télécharger" : "Télécharger en PDF"}
+        style={{ ...primary, opacity: (score < 30 || !!unlocking) ? 0.6 : 1, cursor: (score < 30 || !!unlocking) ? "not-allowed" : "pointer", padding: isMobile ? "6px 10px" : "7px 12px" }}
+        disabled={score < 30 || !!unlocking}
+        title={score < 30 ? "Atteignez 30% pour télécharger" : !templateOwned ? "Ce modèle nécessite un achat unique pour l'export PDF" : "Télécharger en PDF"}
       >
-        ↓
-        {!isMobile && <> Télécharger PDF</>}
+        {unlocking ? "…" : templateOwned ? "↓" : "🔒"}
+        {!isMobile && <> {unlocking ? "Redirection…" : templateOwned ? "Télécharger PDF" : "Débloquer & télécharger"}</>}
       </button>
+
+      {justUnlocked && (
+        <div style={{ position: "absolute", top: "100%", right: 20, marginTop: 8, padding: "8px 14px", borderRadius: 8, background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", fontSize: 12, fontWeight: 600, boxShadow: "0 4px 12px rgba(0,0,0,.08)", display: "flex", alignItems: "center", gap: 8, zIndex: 10 }}>
+          ✓ Modèle débloqué — cliquez sur « Télécharger PDF »
+          <button type="button" onClick={() => setJustUnlocked(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#166534", fontSize: 13, padding: 0 }}>×</button>
+        </div>
+      )}
 
     </div>
   );
