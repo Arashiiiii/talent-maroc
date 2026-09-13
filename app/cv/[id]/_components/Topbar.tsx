@@ -30,7 +30,7 @@ export function Topbar({ cvId, mobileTab, onToggleMobile }: Props) {
 
   // The template itself is free to pick and edit with — only the PDF
   // download is a paid, permanent unlock (per template, per account).
-  const { owned, unlocking, unlock, resumeAfterPayment } = useTemplateEntitlements();
+  const { owned, unlocking, unlock, resumeAfterPayment, error: unlockError } = useTemplateEntitlements();
   const [justUnlocked, setJustUnlocked] = useState(false);
 
   // Opens the print page with ?autoprint=1 — the browser's Save-as-PDF dialog
@@ -239,6 +239,12 @@ export function Topbar({ cvId, mobileTab, onToggleMobile }: Props) {
         <div style={{ position: "absolute", top: "100%", right: 20, marginTop: 8, padding: "8px 14px", borderRadius: 8, background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#166534", fontSize: 12, fontWeight: 600, boxShadow: "0 4px 12px rgba(0,0,0,.08)", display: "flex", alignItems: "center", gap: 8, zIndex: 10 }}>
           ✓ Modèle débloqué — cliquez sur « Télécharger PDF »
           <button type="button" onClick={() => setJustUnlocked(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#166534", fontSize: 13, padding: 0 }}>×</button>
+        </div>
+      )}
+
+      {unlockError && (
+        <div style={{ position: "absolute", top: "100%", right: 20, marginTop: 8, padding: "8px 14px", borderRadius: 8, background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", fontSize: 12, fontWeight: 600, boxShadow: "0 4px 12px rgba(0,0,0,.08)", display: "flex", alignItems: "center", gap: 8, zIndex: 10, maxWidth: 340 }}>
+          ⚠ {unlockError}
         </div>
       )}
 
