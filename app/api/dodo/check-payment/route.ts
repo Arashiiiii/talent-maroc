@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const res = await fetch(`${DODO_BASE}/payments/${paymentId}`, {
-      headers: { "Authorization": `Bearer ${process.env.DODO_API_KEY}` },
+      headers: { "Authorization": `Bearer ${process.env.DODO_PAYMENTS_API_KEY}` },
     });
 
     if (!res.ok) {

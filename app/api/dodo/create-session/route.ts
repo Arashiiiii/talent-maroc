@@ -8,11 +8,11 @@ const DODO_BASE = DODO_MODE === "test"
   : "https://live.dodopayments.com";
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.DODO_API_KEY;
+  const apiKey = process.env.DODO_PAYMENTS_API_KEY;
 
   if (!apiKey) {
     return NextResponse.json(
-      { error: "DODO_API_KEY manquant dans les variables d'environnement Vercel" },
+      { error: "DODO_PAYMENTS_API_KEY manquant dans les variables d'environnement Vercel" },
       { status: 500 }
     );
   }
