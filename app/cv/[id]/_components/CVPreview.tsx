@@ -22,8 +22,35 @@ import { useCVStore } from "../../_store/cv-store";
 import { CVRender, A4_W, A4_H } from "./templates";
 import { TemplateStrip } from "./TemplateStrip";
 import { ZoomControls }  from "./ZoomControls";
+import { useTemplateEntitlements } from "../../_hooks/useTemplateEntitlements";
 
 type ZoomState = number | "fit";
+
+// Note on scope: no web page can actually block a screenshot (OS/phone
+// level, always possible) or a determined person reading devtools/view-
+// source — don't rely on this for hard security. What it does do: make an
+// idle screenshot/copy-paste unusable as a real CV (watermark baked into
+// the rendered page itself) and raise the bar against a casual "select-all,
+// copy the finished CV" without breaking the ability to actually edit it.
+function LockedPreviewWatermark() {
+  const rows = Array.from({ length: 14 });
+  const cols = Array.from({ length: 6 });
+  return (
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 50 }}>
+      <div style={{ position: "absolute", inset: "-50%", transform: "rotate(-32deg)", display: "flex", flexDirection: "column", gap: 46, justifyContent: "center", alignItems: "center" }}>
+        {rows.map((_, row) => (
+          <div key={row} style={{ display: "flex", gap: 60, whiteSpace: "nowrap" }}>
+            {cols.map((_, col) => (
+              <span key={col} style={{ fontSize: 22, fontWeight: 800, color: "rgba(124,58,237,.10)", letterSpacing: 2 }}>
+                APERÇU — NON DÉBLOQUÉ
+              </span>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function CVPreview() {
   const template   = useCVStore((s) => s.template);
@@ -33,6 +60,12 @@ export function CVPreview() {
   const enabled    = useCVStore((s) => s.enabled);
   const cv         = useCVStore((s) => s.cv);
   const updatePath = useCVStore((s) => s.updatePath);
+
+  // The template is free to edit with — the download is the paid unlock.
+  // Until it's unlocked, deter casual copy/screenshot of the finished
+  // design (see LockedPreviewWatermark for what this can and can't do).
+  const { owned } = useTemplateEntitlements();
+  const templateOwned = owned?.has(template) ?? false;
 
   const [zoom, setZoom]           = useState<ZoomState>("fit");
   const [fittedZoom, setFittedZoom] = useState(0.75);
@@ -143,18 +176,22 @@ export function CVPreview() {
         }}
       >
         {/* A4 page */}
-        <div ref={pageRef} style={{
-          background:      "#fff",
-          boxShadow:       overflowing ? "0 0 0 2px #ef4444, 0 4px 16px rgba(15,23,42,.08)" : "0 4px 16px rgba(15,23,42,.08), 0 1px 4px rgba(15,23,42,.04)",
-          transformOrigin: "top center",
-          transform:       `scale(${effective})`,
-          width:           A4_W,
-          marginBottom:    pageMarginBottom,
-          borderRadius:    2,
-          flexShrink:      0,
-          direction:       "ltr", // template content is always LTR until Step 11 RTL pass
-          position:        "relative",
-        }}>
+        <div
+          ref={pageRef}
+          className={!templateOwned ? "cv-locked-preview" : undefined}
+          onContextMenu={!templateOwned ? (e) => e.preventDefault() : undefined}
+          style={{
+            background:      "#fff",
+            boxShadow:       overflowing ? "0 0 0 2px #ef4444, 0 4px 16px rgba(15,23,42,.08)" : "0 4px 16px rgba(15,23,42,.08), 0 1px 4px rgba(15,23,42,.04)",
+            transformOrigin: "top center",
+            transform:       `scale(${effective})`,
+            width:           A4_W,
+            marginBottom:    pageMarginBottom,
+            borderRadius:    2,
+            flexShrink:      0,
+            direction:       "ltr", // template content is always LTR until Step 11 RTL pass
+            position:        "relative",
+          }}>
           <div ref={contentRef}>
             <CVRender
               template={template}
@@ -178,7 +215,21 @@ export function CVPreview() {
               </span>
             </div>
           )}
+
+          {!templateOwned && <LockedPreviewWatermark />}
         </div>
+
+        {!templateOwned && (
+          <style>{`
+            /* Scoped to this page only: text stays selectable/editable while
+               a field is focused (typing must keep working), but you can't
+               drag-select the whole finished CV at once while just browsing. */
+            .cv-locked-preview [contenteditable]:not(:focus) {
+              user-select: none;
+              -webkit-user-select: none;
+            }
+          `}</style>
+        )}
 
         {/* Page metadata pill */}
         <div style={{

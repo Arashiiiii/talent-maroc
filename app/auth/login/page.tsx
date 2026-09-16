@@ -44,9 +44,12 @@ export default function AuthLoginPage() {
     setRedirectTo(r);
     setFromJob(r.startsWith("/jobs/"));
 
-    // Already logged in → go to correct dashboard based on role
+    // Already logged in → go to correct dashboard based on role.
+    // An anonymous CV-builder session doesn't count as "already logged in"
+    // here — a guest arriving at this page wants to create/sign into a real
+    // account, not get bounced away.
     getSB().auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
+      if (!user || user.is_anonymous) return;
       const role = user.user_metadata?.role;
       if (role === "employer") {
         window.location.href = "/employeur/dashboard";
@@ -59,7 +62,7 @@ export default function AuthLoginPage() {
     const { data: { subscription } } = getSB().auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN") {
         getSB().auth.getUser().then(({ data: { user } }) => {
-          if (!user) return;
+          if (!user || user.is_anonymous) return;
           const role = user.user_metadata?.role;
           window.location.href = role === "employer" ? "/employeur/dashboard" : r;
         });

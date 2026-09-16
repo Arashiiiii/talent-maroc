@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     // Use admin client to verify the JWT — works with any Supabase key format
     const adminSb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
     const { data: { user }, error: authErr } = await adminSb.auth.getUser(token);
-    if (!user || authErr) {
+    if (!user || authErr || user.is_anonymous) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 

@@ -157,7 +157,9 @@ export default function EmployeurDashboard() {
     });
 
     sb.auth.getSession().then(({ data: { session } }) => {
-      if (!session) { window.location.href="/employeur"; return; }
+      // Anonymous (CV-builder guest) sessions are not real accounts and
+      // must never reach the recruiter dashboard.
+      if (!session || session.user.is_anonymous) { window.location.href="/employeur"; return; }
       const user = session.user;
       // Role guard: candidates use their own dashboard
       if (user.user_metadata?.role === "candidate") {

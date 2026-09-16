@@ -16,9 +16,13 @@ export default function NavbarAuth() {
 
   useEffect(() => {
     const sb = getSupabase();
-    sb.auth.getUser().then(({ data: { user } }) => setUser(user ?? null));
+    // A guest building a CV signs in anonymously behind the scenes — that's
+    // a real Supabase session but not a real account, so it must not show
+    // the logged-in nav (profile menu, dashboard links, etc.) anywhere else.
+    sb.auth.getUser().then(({ data: { user } }) => setUser(user && !user.is_anonymous ? user : null));
     const { data: { subscription } } = sb.auth.onAuthStateChange((_e, session) => {
-      setUser(session?.user ?? null);
+      const u = session?.user;
+      setUser(u && !u.is_anonymous ? u : null);
     });
     return () => subscription.unsubscribe();
   }, []);

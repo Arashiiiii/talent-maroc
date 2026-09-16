@@ -37,7 +37,10 @@ export default function EmployeurPage() {
 
   useEffect(() => {
     getSB().auth.getUser().then(({ data: { user } }) => {
-      if (user) {
+      // An anonymous CV-builder session is not a real account — treat it
+      // like no session at all here, so it doesn't get routed into the
+      // employer dashboard.
+      if (user && !user.is_anonymous) {
         const role = user.user_metadata?.role;
         if (role === "candidate") {
           // Candidate trying to access employer space — show prompt

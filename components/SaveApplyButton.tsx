@@ -55,7 +55,9 @@ export function SaveApplyButton({ job }: { job: any }) {
   React.useEffect(() => {
     const sb = getSB();
     sb.auth.getSession().then(({ data: { session } }: any) => {
-      if (session) {
+      // Anonymous (CV-builder guest) sessions must not be treated as a
+      // signed-in candidate here — they still need to log in to apply.
+      if (session && !session.user.is_anonymous) {
         setUser(session.user);
         setToken(session.access_token);
 

@@ -44,7 +44,8 @@ export default function NewJobPage() {
   useEffect(() => {
     const sb = getSupabase();
     sb.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) { window.location.href = "/employeur"; return; }
+      // Anonymous (CV-builder guest) sessions must not be able to post jobs.
+      if (!user || user.is_anonymous) { window.location.href = "/employeur"; return; }
       setUser(user);
       // Count current active jobs for limit enforcement
       const { count } = await sb

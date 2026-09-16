@@ -15,7 +15,9 @@ async function getUserFromRequest(req: NextRequest): Promise<{ user: any; sb: an
     const token = authHeader.slice(7);
     const sb = createAuthClient(token);
     const { data: { user }, error } = await sb.auth.getUser();
-    if (user && !error) return { user, sb };
+    // Anonymous (CV-builder guest) sessions must not be able to save/apply
+    // to jobs — that requires a real account.
+    if (user && !error && !user.is_anonymous) return { user, sb };
   }
 
   try {
@@ -28,7 +30,7 @@ async function getUserFromRequest(req: NextRequest): Promise<{ user: any; sb: an
       { cookies: { getAll: () => cookieStore.getAll(), setAll: () => {} } }
     );
     const { data: { user } } = await sb.auth.getUser();
-    if (user) return { user, sb };
+    if (user && !user.is_anonymous) return { user, sb };
   } catch { /* ignore */ }
 
   return null;

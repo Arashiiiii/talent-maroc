@@ -477,9 +477,12 @@ function NewCVModal({ onClose, onCreate }: {
   const [error,    setError]    = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleCreate = async () => {
+  // Clicking a template creates the CV immediately — no separate confirm
+  // step needed for the "start from scratch" flow.
+  const handleCreateWithTemplate = async (templateId: string) => {
+    setSelected(templateId);
     setBusy(true);
-    await onCreate(selected);
+    await onCreate(templateId);
     setBusy(false);
   };
 
@@ -547,27 +550,37 @@ function NewCVModal({ onClose, onCreate }: {
               {step === "importing" ? "Quel modèle utiliser pour afficher votre CV ?" : "Choisissez le style de votre CV :"}
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-              {TEMPLATES.map((t) => (
+              {TEMPLATES.map((t) => {
+                const isCreatingThis = busy && selected === t.id && step === "template";
+                return (
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => setSelected(t.id)}
+                  onClick={() => (step === "importing" ? setSelected(t.id) : handleCreateWithTemplate(t.id))}
+                  disabled={busy}
                   style={{
                     background:   selected === t.id ? `${t.color}0d` : "#fff",
                     border:       `2px solid ${selected === t.id ? t.color : "#e5e7eb"}`,
                     borderRadius: 10,
                     padding:      10,
-                    cursor:       "pointer",
+                    cursor:       busy ? "wait" : "pointer",
                     textAlign:    "left",
                     transition:   "border-color .15s",
+                    opacity:      busy && selected !== t.id ? 0.5 : 1,
+                    position:     "relative",
                   }}
                 >
-                  <div style={{ borderRadius: 6, overflow: "hidden", border: "1px solid #e5e7eb", background: "#fff" }}>
+                  <div style={{ borderRadius: 6, overflow: "hidden", border: "1px solid #e5e7eb", background: "#fff", position: "relative" }}>
                     <div style={{ width: "100%", aspectRatio: "794/1123", overflow: "hidden", position: "relative" }}>
                       <div style={{ width: 794, position: "absolute", top: 0, left: 0, transform: "scale(.238)", transformOrigin: "top left" }}>
                         <CVRender template={t.id as TemplateId} cv={SAMPLE_CV} accent={t.color} lang="fr" order={SHOWCASE_ORDER} enabled={SHOWCASE_ENABLED} readOnly />
                       </div>
                     </div>
+                    {isCreatingThis && (
+                      <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,.85)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontSize: 20, animation: "spin .65s linear infinite", display: "inline-block", color: t.color }}>⟳</span>
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 8 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>{t.name}</span>
@@ -579,7 +592,8 @@ function NewCVModal({ onClose, onCreate }: {
                   </div>
                   <p style={{ fontSize: 10.5, color: "#64748b", margin: "3px 0 0", lineHeight: 1.4 }}>{t.desc}</p>
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -630,20 +644,16 @@ function NewCVModal({ onClose, onCreate }: {
           <button
             type="button"
             onClick={step === "choose" ? onClose : () => setStep("choose")}
-            style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", color: "#475569", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+            disabled={busy}
+            style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff", color: "#475569", fontSize: 13, fontWeight: 600, cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.5 : 1, fontFamily: "inherit" }}
           >
             {step === "choose" ? "Annuler" : "← Retour"}
           </button>
 
           {step === "template" && (
-            <button
-              type="button"
-              onClick={handleCreate}
-              disabled={busy}
-              style={{ padding: "8px 22px", borderRadius: 8, border: "none", background: busy ? "#a78bfa" : "#7c3aed", color: "#fff", fontSize: 13, fontWeight: 600, cursor: busy ? "wait" : "pointer", fontFamily: "inherit" }}
-            >
-              {busy ? "Création…" : "Créer avec ce modèle →"}
-            </button>
+            <span style={{ fontSize: 12, color: "#94a3b8" }}>
+              {busy ? "Création en cours…" : "Cliquez sur un modèle pour créer votre CV"}
+            </span>
           )}
 
           {step === "importing" && (

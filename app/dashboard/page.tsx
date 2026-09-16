@@ -124,7 +124,8 @@ export default function DashboardPage() {
     });
 
     sb.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { window.location.href = "/auth/login?redirect=/dashboard"; return; }
+      // Anonymous (CV-builder guest) sessions are not real accounts.
+      if (!user || user.is_anonymous) { window.location.href = "/auth/login?redirect=/dashboard"; return; }
       if (user.user_metadata?.role === "employer") {
         window.location.href = "/employeur/dashboard"; return;
       }
