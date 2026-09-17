@@ -155,6 +155,13 @@ export default function CVLanding({ onStart }: { onStart: () => void }) {
     <div style={{ background: TOK.bg, fontFamily: "'Plus Jakarta Sans',sans-serif", color: TOK.ink }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Cairo:wght@600;700&display=swap');
+        /* Grid items default to min-width:auto, so a wide child can force a
+           column wider than its track even with flex-wrap on the content
+           inside — this is what let hero/pricing/footer text get clipped by
+           section overflow:hidden on narrow screens instead of wrapping. */
+        .cvlp-hero-inner > *, .cvlp-ats-inner > *, .cvlp-price-grid > *,
+        .cvlp-feat-grid > *, .cvlp-flow-row > *, .cvlp-foot-inner > *,
+        .cvlp-tpl-row > * { min-width: 0; }
         .cvlp-navlink:hover { background:${TOK.lineSoft}; color:${TOK.violetDeep}; }
         .cvlp-primary:hover { background:${TOK.violet600}; transform:translateY(-1px); }
         .cvlp-secondary:hover { border-color:#ddd6fe; background:${TOK.bgAlt}; }
@@ -171,23 +178,29 @@ export default function CVLanding({ onStart }: { onStart: () => void }) {
           .cvlp-ats-inner{ grid-template-columns:1fr!important; gap:32px!important }
           .cvlp-foot-inner{ grid-template-columns:1fr 1fr!important }
         }
-        @media(max-width:640px){ .cvlp-stats{ flex-wrap:wrap } .cvlp-stats>div{ flex:1 1 40%!important } }
+        @media(max-width:640px){
+          .cvlp-stats{ flex-wrap:wrap } .cvlp-stats>div{ flex:1 1 40%!important }
+          .hide-sm{ display:none!important }
+          .cvlp-logo{ height:56px!important; margin:0!important }
+          .cvlp-chip{ display:none!important }
+          .cvlp-hero-visual{ padding:0 12px 20px!important }
+        }
       `}</style>
 
       {/* ══ NAV ═══════════════════════════════════════════════════════════ */}
       <nav style={{ position: "sticky", top: 0, zIndex: 60, background: "rgba(255,255,255,.9)", backdropFilter: "blur(16px)", borderBottom: `1.5px solid ${TOK.line}` }}>
         <div style={{ maxWidth: MAXW, margin: "0 auto", padding: "0 24px", height: 62, display: "flex", alignItems: "center", gap: 24 }}>
-          <Link href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
-            <img src="/logo.png" alt="TalentMaroc" style={{ height: 90, width: "auto", objectFit: "contain", margin: "-18px 0" }} />
+          <Link href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none", flexShrink: 0 }}>
+            <img src="/logo.png" alt="TalentMaroc" className="cvlp-logo" style={{ height: 90, width: "auto", objectFit: "contain", margin: "-18px 0" }} />
           </Link>
-          <div style={{ display: "flex", gap: 2 }} className="hide-sm">
+          <div style={{ display: "flex", gap: 2, minWidth: 0 }} className="hide-sm">
             {[["Modèles", "#modeles"], ["Fonctionnalités", "#features"], ["ATS", "#ats"], ["Tarifs", "#tarifs"], ["Offres d'emploi", "/"]].map(([l, h]) => (
-              <a key={l} href={h} className="cvlp-navlink" style={{ fontSize: 13, fontWeight: 600, color: TOK.muted, padding: "7px 12px", borderRadius: 8, textDecoration: "none", transition: ".15s" }}>{l}</a>
+              <a key={l} href={h} className="cvlp-navlink" style={{ fontSize: 13, fontWeight: 600, color: TOK.muted, padding: "7px 12px", borderRadius: 8, textDecoration: "none", transition: ".15s", whiteSpace: "nowrap" }}>{l}</a>
             ))}
           </div>
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-            <Link href="/auth/login" style={{ fontSize: 13, fontWeight: 600, color: TOK.body, padding: "8px 12px", borderRadius: 8, textDecoration: "none" }}>Connexion</Link>
-            <button onClick={onStart} className="cvlp-primary" style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: TOK.violet, padding: "9px 16px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6, transition: ".15s", boxShadow: "0 2px 8px rgba(124,58,237,.3)" }}>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <Link href="/auth/login" className="hide-sm" style={{ fontSize: 13, fontWeight: 600, color: TOK.body, padding: "8px 12px", borderRadius: 8, textDecoration: "none", whiteSpace: "nowrap" }}>Connexion</Link>
+            <button onClick={onStart} className="cvlp-primary" style={{ fontSize: 13, fontWeight: 700, color: "#fff", background: TOK.violet, padding: "9px 16px", borderRadius: 9, border: "none", cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6, transition: ".15s", boxShadow: "0 2px 8px rgba(124,58,237,.3)", whiteSpace: "nowrap", flexShrink: 0 }}>
               Créer mon CV
             </button>
           </div>
@@ -224,17 +237,17 @@ export default function CVLanding({ onStart }: { onStart: () => void }) {
           </div>
 
           <div className="cvlp-hero-visual" style={{ position: "relative", height: 480, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-            <div style={{ position: "relative", width: 340, transform: "perspective(1600px) rotateY(-9deg) rotateX(2deg) rotate(1deg)" }}>
-              <div style={{ position: "absolute", top: 22, left: -40, width: 794 * 0.43, opacity: 0.55, zIndex: -1, boxShadow: "0 16px 40px -12px rgba(15,23,42,.16)", borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ position: "relative", width: "min(340px, 100%)", transform: "perspective(1600px) rotateY(-9deg) rotateX(2deg) rotate(1deg)" }}>
+              <div className="cvlp-chip" style={{ position: "absolute", top: 22, left: -40, width: 794 * 0.43, opacity: 0.55, zIndex: -1, boxShadow: "0 16px 40px -12px rgba(15,23,42,.16)", borderRadius: 3, overflow: "hidden" }}>
                 <TplPreview template="meridian" accent="#1e3a5f" scale={0.43} />
               </div>
               <div style={{ boxShadow: "0 1px 2px rgba(15,23,42,.06), 0 24px 48px -12px rgba(15,23,42,.22), 0 48px 100px -30px rgba(124,58,237,.28)", borderRadius: 3, overflow: "hidden" }}>
                 <TplPreview template="corso" accent={TOK.violet} scale={0.5} />
               </div>
-              <div style={{ position: "absolute", top: 40, left: -78, background: "rgba(255,255,255,.96)", backdropFilter: "blur(12px)", border: `1px solid ${TOK.line}`, borderRadius: 10, padding: "8px 12px", fontSize: 11.5, fontWeight: 600, boxShadow: "0 8px 24px -6px rgba(15,23,42,.16)", display: "flex", alignItems: "center", gap: 6 }}>
+              <div className="cvlp-chip" style={{ position: "absolute", top: 40, left: -78, background: "rgba(255,255,255,.96)", backdropFilter: "blur(12px)", border: `1px solid ${TOK.line}`, borderRadius: 10, padding: "8px 12px", fontSize: 11.5, fontWeight: 600, boxShadow: "0 8px 24px -6px rgba(15,23,42,.16)", display: "flex", alignItems: "center", gap: 6 }}>
                 <Sparkles size={13} color={TOK.violet} /> Réécrit par l'IA
               </div>
-              <div style={{ position: "absolute", bottom: 70, left: -64, background: "rgba(255,255,255,.96)", backdropFilter: "blur(12px)", border: `1px solid ${TOK.line}`, borderRadius: 10, padding: "8px 12px", fontSize: 11.5, fontWeight: 600, boxShadow: "0 8px 24px -6px rgba(15,23,42,.16)", display: "flex", alignItems: "center", gap: 6 }}>
+              <div className="cvlp-chip" style={{ position: "absolute", bottom: 70, left: -64, background: "rgba(255,255,255,.96)", backdropFilter: "blur(12px)", border: `1px solid ${TOK.line}`, borderRadius: 10, padding: "8px 12px", fontSize: 11.5, fontWeight: 600, boxShadow: "0 8px 24px -6px rgba(15,23,42,.16)", display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: TOK.success }} /> Compatible ATS
               </div>
             </div>

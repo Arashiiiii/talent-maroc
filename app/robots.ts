@@ -5,11 +5,11 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/cv-ouvrier", "/pricing", "/employeur", "/jobs/"],
+        allow: ["/", "/cv", "/cv-ouvrier", "/pricing", "/employeur", "/jobs/"],
         disallow: [
           "/auth/",
           "/dashboard/",
-          "/cv/",          // builder is behind auth
+          "/cv/*",         // per-user CV builder/print pages are private; only the /cv landing page is public
           "/protected/",
           "/api/",
           "/success",

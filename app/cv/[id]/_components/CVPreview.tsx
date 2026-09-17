@@ -151,15 +151,25 @@ export function CVPreview() {
     <div style={{ flex: 1, height: "100%", overflow: "hidden", display: "flex", flexDirection: "column", background: "#f3f4f6" }}>
 
       {/* ── Template strip + accent + zoom ───────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+      {/* On narrow screens the strip needs its own full-width row — sharing
+          one row with the zoom controls left only ~1 template thumbnail
+          visible before the next one got cut off mid-name. */}
+      <div className="cv-preview-toprow" style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
         <div style={{ flex: 1, overflow: "hidden" }}>
           <TemplateStrip />
         </div>
         {/* Zoom controls live next to the strip so they're always visible */}
-        <div style={{ padding: "0 14px", borderLeft: "1px solid #e5e7eb", background: "#fff", height: "100%", display: "flex", alignItems: "center", borderBottom: "1px solid #e5e7eb" }}>
+        <div className="cv-preview-zoomcell" style={{ padding: "0 14px", borderLeft: "1px solid #e5e7eb", background: "#fff", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", borderBottom: "1px solid #e5e7eb" }}>
           <ZoomControls zoom={effective} isAutoFit={isAutoFit} onAdjust={adjustZoom} onToggleFit={toggleFit} />
         </div>
       </div>
+      <style>{`
+        @media (max-width: 768px) {
+          .cv-preview-toprow { flex-direction: column; align-items: stretch; }
+          .cv-preview-toprow > div:first-child { flex: none !important; width: 100%; }
+          .cv-preview-zoomcell { border-left: none !important; border-top: 1px solid #e5e7eb; padding: 6px 14px !important; }
+        }
+      `}</style>
 
       {/* ── Stage ────────────────────────────────────────────────────────── */}
       <div

@@ -6,6 +6,7 @@ const BASE = "https://talentmaroc.shop";
 // Static pages — ordered by SEO priority
 const STATIC_PAGES: MetadataRoute.Sitemap = [
   { url: BASE,                   lastModified: new Date(), changeFrequency: "daily",   priority: 1.0 },
+  { url: `${BASE}/cv`,           lastModified: new Date(), changeFrequency: "weekly",  priority: 0.9 },
   { url: `${BASE}/cv-ouvrier`,   lastModified: new Date(), changeFrequency: "weekly",  priority: 0.9 },
   { url: `${BASE}/pricing`,      lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
   { url: `${BASE}/employeur`,    lastModified: new Date(), changeFrequency: "weekly",  priority: 0.6 },
