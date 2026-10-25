@@ -5,14 +5,15 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/cv", "/cv-ouvrier", "/pricing", "/employeur", "/jobs/"],
+        allow: ["/"],
         disallow: [
           "/auth/",
-          "/dashboard/",
-          "/cv/*",         // per-user CV builder/print pages are private; only the /cv landing page is public
+          "/dashboard",
+          "/cv/",          // per-user CV editor/print pages are private; the /cv landing stays crawlable
           "/protected/",
           "/api/",
           "/success",
+          "/employeur/dashboard",
         ],
       },
     ],

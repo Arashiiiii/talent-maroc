@@ -186,11 +186,11 @@ export function Aria({ cv, accent, lang, order, enabled, onUpdate, readOnly }: T
       {/* Header */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto", alignItems: "end", gap: 16, marginBottom: 32 }}>
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 300, margin: 0, letterSpacing: "-.02em", lineHeight: 1.05, color: "#0f172a" }}>
+          <div role="heading" aria-level={1} style={{ fontSize: 32, fontWeight: 300, margin: 0, letterSpacing: "-.02em", lineHeight: 1.05, color: "#0f172a" }}>
             {ie(cv.profile.firstName, "profile.firstName")}
             {" "}
             <span style={{ fontWeight: 600 }}>{ie(cv.profile.lastName, "profile.lastName")}</span>
-          </h1>
+          </div>
           <div style={{ fontSize: 13, color: "#475569", marginTop: 5 }}>
             {ie(cv.profile.title, "profile.title")}
           </div>

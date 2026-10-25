@@ -428,7 +428,7 @@ export function Vertex({
             )}
 
             <div style={{ minWidth: 0 }}>
-              <h1
+              <div role="heading" aria-level={1}
                 style={{
                   margin: 0,
                   fontSize: 56,
@@ -439,8 +439,8 @@ export function Vertex({
                 }}
               >
                 {ie(cv.profile.firstName, "profile.firstName")}
-              </h1>
-              <h1
+              </div>
+              <div role="heading" aria-level={1}
                 style={{
                   margin: 0,
                   fontSize: 56,
@@ -452,7 +452,7 @@ export function Vertex({
                 }}
               >
                 {ie(cv.profile.lastName, "profile.lastName")}
-              </h1>
+              </div>
             </div>
           </div>
 

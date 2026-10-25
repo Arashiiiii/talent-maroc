@@ -117,9 +117,9 @@ export function Slate({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
           <div style={{ fontFamily: MONO, fontSize: 10, color: accent, textTransform: "uppercase", letterSpacing: 2 }}>
             ⎯ {ie(cv.profile.title, "profile.title")}
           </div>
-          <h1 style={{ margin: "8px 0 0", fontSize: 38, fontWeight: 700, letterSpacing: -0.5 }}>
+          <div role="heading" aria-level={1} style={{ margin: "8px 0 0", fontSize: 38, fontWeight: 700, letterSpacing: -0.5 }}>
             {ie(cv.profile.firstName, "profile.firstName")} {ie(cv.profile.lastName, "profile.lastName")}
-          </h1>
+          </div>
           <div style={{ marginTop: 10, fontFamily: MONO, fontSize: 10, color: "#6b7280" }}>
             {ie(cv.profile.email, "profile.email")} / {ie(cv.profile.phone, "profile.phone")} / {ie(cv.profile.city, "profile.city")}
           </div>

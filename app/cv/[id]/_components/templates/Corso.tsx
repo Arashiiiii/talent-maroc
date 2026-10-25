@@ -80,11 +80,11 @@ export function Corso({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
       <div style={{ padding: "40px 34px 36px", background: "#fff" }}>
         {/* Name / Title */}
         <div style={{ borderBottom: `2px solid ${accent}`, paddingBottom: 14, marginBottom: 6 }}>
-          <h1 style={{ fontSize: 30, fontWeight: 800, margin: 0, letterSpacing: "-.01em", lineHeight: 1.05 }}>
+          <div role="heading" aria-level={1} style={{ fontSize: 30, fontWeight: 800, margin: 0, letterSpacing: "-.01em", lineHeight: 1.05 }}>
             {ie(cv.profile.firstName, "profile.firstName")}
             {" "}
             <span style={{ color: accent }}>{ie(cv.profile.lastName, "profile.lastName")}</span>
-          </h1>
+          </div>
           <div style={{ fontSize: 13, color: "#475569", marginTop: 6, fontWeight: 500 }}>
             {ie(cv.profile.title, "profile.title")}
           </div>

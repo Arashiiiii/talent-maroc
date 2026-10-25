@@ -43,9 +43,9 @@ export function Lumen({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
             : initials(cv)}
         </div>
         <div style={{ minWidth: 0 }}>
-          <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800, color: "#0f172a" }}>
+          <div role="heading" aria-level={1} style={{ margin: 0, fontSize: 32, fontWeight: 800, color: "#0f172a" }}>
             {ie(cv.profile.firstName, "profile.firstName")} {ie(cv.profile.lastName, "profile.lastName")}
-          </h1>
+          </div>
           <div style={{ marginTop: 4, fontSize: 13, color: accent, fontWeight: 600 }}>
             {ie(cv.profile.title, "profile.title")}
           </div>

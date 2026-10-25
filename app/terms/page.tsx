@@ -195,10 +195,10 @@ export default function TermsPage() {
           </a>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <a href="https://talentmaroc.shop"           style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontSize: 14, fontWeight: 500, padding: "6px 14px", borderRadius: 6 }}>Emplois</a>
-            <a href="https://talentmaroc.shop/employers" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontSize: 14, fontWeight: 500, padding: "6px 14px", borderRadius: 6 }}>Recruteurs</a>
+            <a href="/employeur" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontSize: 14, fontWeight: 500, padding: "6px 14px", borderRadius: 6 }}>Recruteurs</a>
             <a href="/cv"                                style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontSize: 14, fontWeight: 500, padding: "6px 14px", borderRadius: 6 }}>Mon CV</a>
             <a href="https://talentmaroc.shop/auth/login" style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontSize: 14, fontWeight: 500, padding: "6px 14px", borderRadius: 6 }}>Connexion</a>
-            <a href="https://talentmaroc.shop/employers"  style={{ background: "#1a56db", color: "white", textDecoration: "none", padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, marginLeft: 4 }}>Publier</a>
+            <a href="/employeur"  style={{ background: "#1a56db", color: "white", textDecoration: "none", padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, marginLeft: 4 }}>Publier</a>
           </div>
         </nav>
 

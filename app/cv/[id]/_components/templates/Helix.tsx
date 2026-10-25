@@ -178,9 +178,9 @@ export function Helix({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
             : initials(cv)}
         </div>
         <div style={{ flex: 1 }}>
-          <h1 style={{ margin: 0, fontSize: 30, fontWeight: 800 }}>
+          <div role="heading" aria-level={1} style={{ margin: 0, fontSize: 30, fontWeight: 800 }}>
             {ie(cv.profile.firstName, "profile.firstName")} {ie(cv.profile.lastName, "profile.lastName")}
-          </h1>
+          </div>
           <div style={{ fontSize: 12, color: accent, fontWeight: 600, marginTop: 2 }}>
             {ie(cv.profile.title, "profile.title")}
           </div>

@@ -6,6 +6,7 @@ import CompanyLogo from '@/components/CompanyLogo';
 import NavbarAuth from '@/components/NavbarAuth';
 import JobFunctionFilters from '@/components/JobFunctionFilters';
 import { REGIONS, COUNTRY_FLAGS } from '@/lib/countries';
+import { citySlugFor } from '@/lib/seo';
 
 export const metadata = {
   title: "Offres d'Emploi au Maroc — Casablanca, Rabat, Tanger | Talent Maroc",
@@ -484,7 +485,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
                 <span className="collapse-chevron" style={{ fontSize:16 }}>▾</span>
               </summary>
               {CITIES.map(city => (
-                <a key={city} href={`/?l=${city}`} className="sl">
+                <a key={city} href={`/emploi/${citySlugFor(city)}`} className="sl">
                   <span><span style={{ marginRight:6 }}>{CITY_META[city]?.icon}</span>{city}</span>
                   <span className="sl-count">{CITY_META[city]?.count}</span>
                 </a>
@@ -573,7 +574,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(120px,100%),1fr))', gap:8 }}>
             {CITIES.map(city=>(
-              <a key={city} href={`/?l=${city}`} className="cc">
+              <a key={city} href={`/emploi/${citySlugFor(city)}`} className="cc">
                 <div style={{ fontSize:'clamp(18px,4vw,24px)', marginBottom:6 }}>{CITY_META[city]?.icon}</div>
                 <div style={{ fontFamily:"'Plus Jakarta Sans',sans-serif", fontSize:'clamp(11px,2.5vw,13px)', fontWeight:700, color:'#0f172a', marginBottom:2 }}>{city}</div>
                 <div style={{ fontSize:'clamp(10px,2vw,11px)', color:'#9ca3af', fontWeight:500 }}>{CITY_META[city]?.count} offres</div>
@@ -648,7 +649,7 @@ export default function Index({ searchParams }: { searchParams: any }) {
         {/* ══ FOOTER ════════════════════════════════════════════════════ */}
         <footer style={{ background:'#1e1147', padding:'48px 24px 28px' }}>
           <div style={{ maxWidth:1060, margin:'0 auto' }}>
-            <div className="footer-grid" style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr', gap:24, marginBottom:36 }}>
+            <div className="footer-grid" style={{ display:'grid', gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr', gap:24, marginBottom:36 }}>
               <div>
                 <div style={{ marginBottom:14 }}>
                   <img src="/logo.png" alt="TalentMaroc" style={{ height:80, width:"auto", filter:"brightness(0) invert(1)", opacity:0.85 }} />
@@ -656,9 +657,10 @@ export default function Index({ searchParams }: { searchParams: any }) {
                 <p style={{ fontSize:13, color:'rgba(255,255,255,0.4)', lineHeight:1.7, maxWidth:200 }}>La plateforme de référence pour l'emploi au Maroc.</p>
               </div>
               {[
-                { title:'Candidats',  links:[['Chercher un emploi','/'],['Créer mon CV','/cv'],['Connexion','/auth/login']] },
-                { title:'Recruteurs', links:[['Publier une offre','/employers/new'],['Dashboard','/employers'],['Tarifs','/pricing']] },
-                { title:'Légal',      links:[['Confidentialité','#'],['CGU','/terms'],['Contact','mailto:contact@talentmaroc.shop']] },
+                { title:'Candidats',  links:[['Chercher un emploi','/'],['Créer mon CV','/cv'],['Conseils CV','/conseils-cv'],['CV stage PFE','/conseils-cv/cv-stage-pfe'],['Connexion','/auth/login']] },
+                { title:'Emploi par ville', links:[['Emploi Casablanca','/emploi/casablanca'],['Emploi Rabat','/emploi/rabat'],['Emploi Tanger','/emploi/tanger'],['Emploi Marrakech','/emploi/marrakech'],['Toutes les villes','/emploi']] },
+                { title:'Recruteurs', links:[['Publier une offre','/employeur/new'],['Espace recruteur','/employeur'],['Tarifs','/pricing']] },
+                { title:'Légal',      links:[['Confidentialité','/privacy'],['CGU','/terms'],['Contact','mailto:contact@talentmaroc.shop']] },
               ].map(col=>(
                 <div key={col.title}>
                   <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.4)', marginBottom:12, textTransform:'uppercase', letterSpacing:'0.1em' }}>{col.title}</div>

@@ -144,7 +144,7 @@ function CheckDot() {
 // ═════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═════════════════════════════════════════════════════════════════════════
-export default function CVLanding({ onStart }: { onStart: () => void }) {
+export default function CVLanding({ onStart, children }: { onStart: () => void; children?: React.ReactNode }) {
   const [selTpl, setSelTpl] = useState<TemplateId>("corso");
   const [accents, setAccents] = useState<Record<TemplateId, string>>(() => Object.fromEntries(TEMPLATES.map((t) => [t.id, t.accent])) as Record<TemplateId, string>);
   const [faqOpen, setFaqOpen] = useState(0);
@@ -472,6 +472,9 @@ export default function CVLanding({ onStart }: { onStart: () => void }) {
           <a href="#modeles" className="cvlp-secondary" style={{ fontSize: 14.5, fontWeight: 600, color: TOK.body, background: "#fff", padding: "13px 20px", borderRadius: 10, border: `1.5px solid ${TOK.line}`, textDecoration: "none", transition: ".15s" }}>Parcourir les modèles</a>
         </div>
       </section>
+
+      {/* Server-rendered SEO content (FAQ, guides) injected by app/cv/page.tsx */}
+      {children}
 
       {/* ══ FOOTER ═══════════════════════════════════════════════════════ */}
       <footer style={{ background: TOK.violetInk, padding: "48px 24px 24px" }}>

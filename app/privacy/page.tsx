@@ -318,12 +318,12 @@ export default function PrivacyPage() {
             <div style={{ display:"flex", gap:2 }}>
               <a href="/"           className="nl">Emplois</a>
               <a href="/cv"         className="nl">Mon CV</a>
-              <a href="/employers"  className="nl">Recruteurs</a>
+              <a href="/employeur"  className="nl">Recruteurs</a>
             </div>
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             <a href="/auth/login"    className="nl">Connexion</a>
-            <a href="/employers/new" style={{ display:"inline-flex", alignItems:"center", gap:6, background:"#16a34a", color:"white", padding:"8px 16px", borderRadius:9, fontSize:13, fontWeight:700, textDecoration:"none" }}>Publier</a>
+            <a href="/employeur/new" style={{ display:"inline-flex", alignItems:"center", gap:6, background:"#16a34a", color:"white", padding:"8px 16px", borderRadius:9, fontSize:13, fontWeight:700, textDecoration:"none" }}>Publier</a>
           </div>
         </nav>
 

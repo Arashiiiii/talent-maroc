@@ -99,12 +99,12 @@ export function Medina({ cv, accent, lang, order, enabled, onUpdate, readOnly }:
       {/* ── Hero header ──────────────────────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 24, alignItems: "center", marginBottom: 28 }}>
         <div>
-          <h1 style={{ fontSize: 42, fontWeight: 900, margin: 0, letterSpacing: "-.02em", lineHeight: 1, color: "#1c1917" }}>
+          <div role="heading" aria-level={1} style={{ fontSize: 42, fontWeight: 900, margin: 0, letterSpacing: "-.02em", lineHeight: 1, color: "#1c1917" }}>
             {ie(cv.profile.firstName, "profile.firstName")}
-          </h1>
-          <h1 style={{ fontSize: 42, fontWeight: 900, margin: 0, letterSpacing: "-.02em", lineHeight: 1, color: accent }}>
+          </div>
+          <div role="heading" aria-level={1} style={{ fontSize: 42, fontWeight: 900, margin: 0, letterSpacing: "-.02em", lineHeight: 1, color: accent }}>
             {ie(cv.profile.lastName, "profile.lastName")}
-          </h1>
+          </div>
           <div style={{ fontSize: 14, color: "#57534e", marginTop: 8, fontWeight: 500 }}>
             {ie(cv.profile.title, "profile.title")}
           </div>

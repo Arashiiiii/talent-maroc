@@ -62,10 +62,10 @@ export function Atlas({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
 
       {/* Main */}
       <div style={{ padding: "44px 40px" }}>
-        <h1 style={{ margin: 0, fontSize: 36, fontWeight: 800, letterSpacing: -0.5 }}>
+        <div role="heading" aria-level={1} style={{ margin: 0, fontSize: 36, fontWeight: 800, letterSpacing: -0.5 }}>
           {ie(cv.profile.firstName, "profile.firstName")}{" "}
           <span style={{ color: accent }}>{ie(cv.profile.lastName, "profile.lastName")}</span>
-        </h1>
+        </div>
         <div style={{
           marginTop: 4, fontSize: 13, color: "#475569", letterSpacing: 1, textTransform: "uppercase", fontWeight: 600,
         }}>

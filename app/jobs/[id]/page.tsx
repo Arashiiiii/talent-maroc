@@ -7,6 +7,7 @@ import CompanyLogo from '@/components/CompanyLogo';
 import { SaveApplyButton } from '@/components/SaveApplyButton';
 import NavbarAuth from '@/components/NavbarAuth';
 import { COUNTRY_FLAGS } from '@/lib/countries';
+import { jsonLd, buildJobPosting, breadcrumb, isJobExpired, citySlugFor, getCity, SITE_URL } from '@/lib/seo';
 
 // Dynamic metadata — each job gets its own title/description in Google
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -17,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   );
   const { data: job } = await supabase
     .from("jobs")
-    .select("title, company, city, description")
+    .select("title, company, city, description, created_at")
     .eq("id", id)
     .single();
 
@@ -34,11 +35,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     : `Postulez à l'offre ${job.title}${job.city ? ` à ${job.city}` : ""} sur Talent Maroc.`;
 
   const url = `https://talentmaroc.shop/jobs/${id}`;
+  // Expired jobs stay reachable for visitors but leave the index.
+  const expired = job.created_at ? isJobExpired(job as { created_at: string }) : false;
 
   return {
-    title,
+    title: `${title} | Offre d'emploi`,
     description: desc,
     alternates:  { canonical: url },
+    robots:      expired ? { index: false, follow: true } : undefined,
     openGraph: {
       title,
       description: desc,
@@ -117,9 +121,23 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
     .limit(3);
 
   const posted = job.posted_at || new Date(job.created_at).toLocaleDateString('fr-FR');
+  const citySlug = citySlugFor(job.city);
+  const cityPage = citySlug ? getCity(citySlug) : undefined;
+  const schema: object[] = [
+    breadcrumb([
+      { name: 'Emplois', url: SITE_URL },
+      ...(cityPage ? [{ name: `Emploi ${cityPage.name}`, url: `${SITE_URL}/emploi/${cityPage.slug}` }] : []),
+      { name: job.title, url: `${SITE_URL}/jobs/${job.id}` },
+    ]),
+  ];
+  // Google for Jobs: only advertise postings that are still live.
+  if (!isJobExpired(job) && job.description) {
+    schema.push(buildJobPosting(job, formatDescription(job.description)));
+  }
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(schema) }} />
       {/* ── LEFT: content ─────────────────────────────────────────── */}
       <div style={{ flex:1, minWidth:0 }}>
 
@@ -210,14 +228,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
 
         {/* CV match banner — visible on all screen sizes */}
         {(() => {
-          const params = new URLSearchParams();
-          params.set("job_title",    job.title);
-          params.set("job_company",  job.company);
-          params.set("job_city",     job.city || "");
-          if (job.sector)        params.set("job_sector",   job.sector);
-          if (job.contract_type) params.set("job_contract", job.contract_type);
-          if (job.description)   params.set("job_desc",     job.description.slice(0, 600));
-          const cvUrl = `/cv?match=${encodeURIComponent(params.toString())}`;
+          const cvUrl = `/cv?job=${job.id}`;
           return (
             <div style={{ background:'linear-gradient(135deg,#0f172a,#1e3a5f)', borderRadius:13, padding:'20px 22px', marginTop:14, display:'flex', alignItems:'center', justifyContent:'space-between', gap:16, flexWrap:'wrap' }}>
               <div>
@@ -232,7 +243,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
                   L'IA adapte votre CV au profil exact demandé par {job.company}.
                 </div>
               </div>
-              <a href={cvUrl}
+              <a href={cvUrl} rel="nofollow"
                 style={{ display:'inline-flex', alignItems:'center', gap:7, background:'linear-gradient(135deg,#7c3aed,#5b21b6)', color:'white', padding:'11px 20px', borderRadius:9, fontSize:13, fontWeight:700, textDecoration:'none', whiteSpace:'nowrap', flexShrink:0, boxShadow:'0 4px 16px rgba(124,58,237,.35)' }}>
                 ✦ Créer mon CV pour ce poste →
               </a>
@@ -262,6 +273,11 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
                 </a>
               ))}
             </div>
+            {cityPage && (
+              <a href={`/emploi/${cityPage.slug}`} style={{ display:'inline-block', marginTop:12, fontSize:13, fontWeight:700, color:'#7c3aed', textDecoration:'none' }}>
+                Toutes les offres d&apos;emploi à {cityPage.name} →
+              </a>
+            )}
           </div>
         )}
       </div>
@@ -293,14 +309,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
 
         {/* CV match card */}
         {(() => {
-          const params = new URLSearchParams();
-          params.set("job_title",    job.title);
-          params.set("job_company",  job.company);
-          params.set("job_city",     job.city || "");
-          if (job.sector)        params.set("job_sector",   job.sector);
-          if (job.contract_type) params.set("job_contract", job.contract_type);
-          if (job.description)   params.set("job_desc",     job.description.slice(0, 600));
-          const cvUrl = `/cv?match=${encodeURIComponent(params.toString())}`;
+          const cvUrl = `/cv?job=${job.id}`;
           return (
             <div style={{ background:'linear-gradient(135deg,#0f172a,#1e3a5f)', borderRadius:14, padding:'18px', overflow:'hidden', position:'relative' }}>
               <div style={{ position:'absolute', top:-20, right:-20, width:80, height:80, background:'rgba(124,58,237,.15)', borderRadius:'50%' }}/>
@@ -316,7 +325,7 @@ async function JobDetail({ params }: { params: Promise<{ id: string }> }) {
                 <p style={{ fontSize:11, color:'rgba(255,255,255,.55)', lineHeight:1.6, marginBottom:14 }}>
                   L'IA crée un CV optimisé spécifiquement pour <strong style={{ color:'rgba(255,255,255,.8)' }}>{job.title}</strong> chez {job.company}.
                 </p>
-                <a href={cvUrl}
+                <a href={cvUrl} rel="nofollow"
                   style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:7, background:'linear-gradient(135deg,#7c3aed,#5b21b6)', color:'white', padding:'10px 14px', borderRadius:9, fontSize:12, fontWeight:700, textDecoration:'none', textAlign:'center', transition:'all .18s', boxShadow:'0 4px 12px rgba(124,58,237,.35)' }}>
                   ✦ Créer mon CV pour ce poste
                 </a>

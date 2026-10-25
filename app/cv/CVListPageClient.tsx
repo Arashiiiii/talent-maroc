@@ -288,15 +288,46 @@ interface CVRow {
   updated_at: string;
 }
 
+// ─── Target-job banner (arrival from a job page) ─────────────────────────────
+
+interface TargetJob { id: string; title: string; company: string | null }
+
+function TargetJobBanner({ job, onStart }: { job: TargetJob; onStart: () => void }) {
+  return (
+    <div style={{ position: "sticky", top: 0, zIndex: 50, background: "linear-gradient(135deg,#0f172a,#3b1d80)", color: "#fff", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "center", gap: 14, flexWrap: "wrap", fontSize: 14, fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <span>
+        🎯 Préparez votre CV pour <strong>{job.title}</strong>{job.company ? <> chez <strong>{job.company}</strong></> : null}
+      </span>
+      <button type="button" onClick={onStart} style={{ background: "#a78bfa", color: "#1e1147", border: "none", borderRadius: 8, padding: "7px 14px", fontWeight: 800, fontSize: 13, cursor: "pointer" }}>
+        Commencer mon CV →
+      </button>
+      <a href={`/jobs/${job.id}`} style={{ color: "rgba(255,255,255,.65)", fontSize: 12 }}>Revoir l&apos;offre</a>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function CVListPage() {
+export default function CVListPage({ seo }: { seo?: React.ReactNode }) {
   const router = useRouter();
   const [cvs,         setCvs]        = useState<CVRow[]>([]);
   const [loading,     setLoading]    = useState(true);
   const [userId,      setUserId]     = useState<string | null>(null);
   const [showModal,   setShowModal]  = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [targetJob,   setTargetJob]  = useState<TargetJob | null>(null);
+
+  // Arriving from a job page (/cv?job=<id>): show which offer the CV is for.
+  useEffect(() => {
+    const jobId = new URLSearchParams(window.location.search).get("job");
+    if (!jobId) return;
+    supabase.from("jobs").select("id, title, company").eq("id", jobId).single()
+      .then(({ data }) => {
+        if (!data) return;
+        setTargetJob(data as TargetJob);
+        try { sessionStorage.setItem("tm_target_job", JSON.stringify(data)); } catch {}
+      });
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -361,18 +392,14 @@ export default function CVListPage() {
     }
   }, [userId, router]);
 
-  if (loading) return (
-    <div style={{ display: "flex", height: "100vh", alignItems: "center", justifyContent: "center", background: "#fafbfc" }}>
-      <div style={{ width: 28, height: 28, borderRadius: "50%", border: "3px solid #e5e7eb", borderTopColor: "#7c3aed", animation: "spin .7s linear infinite" }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-
-  // Not logged in → marketing landing page instead of a bare, empty dashboard.
-  if (!userId) {
+  // Not logged in (or auth still resolving) → marketing landing page.
+  // Rendering the landing while `loading` matters for SEO: the server HTML
+  // used to be a lone spinner, so crawlers saw an empty /cv page.
+  if (loading || !userId) {
     return (
       <>
-        <CVLanding onStart={() => setShowModal(true)} />
+        {targetJob && <TargetJobBanner job={targetJob} onStart={() => setShowModal(true)} />}
+        <CVLanding onStart={() => setShowModal(true)}>{seo}</CVLanding>
         {showModal && (
           <NewCVModal
             onClose={() => setShowModal(false)}
@@ -394,6 +421,7 @@ export default function CVListPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#fafbfc", fontFamily: "'Inter', system-ui, sans-serif" }}>
+      {targetJob && <TargetJobBanner job={targetJob} onStart={() => setShowModal(true)} />}
 
       {/* Topbar */}
       <div style={{ background: "#fff", borderBottom: "1px solid #e5e7eb", padding: "0 28px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>

@@ -150,11 +150,11 @@ export function Meridian({ cv, accent, lang, order, enabled, onUpdate, readOnly 
     }}>
       {/* Header */}
       <div style={{ textAlign: "center", borderBottom: `1px solid ${accent}`, paddingBottom: 18, marginBottom: 22 }}>
-        <h1 style={{ fontSize: 34, fontWeight: 400, margin: 0, letterSpacing: ".06em", textTransform: "uppercase" }}>
+        <div role="heading" aria-level={1} style={{ fontSize: 34, fontWeight: 400, margin: 0, letterSpacing: ".06em", textTransform: "uppercase" }}>
           {ie(cv.profile.firstName, "profile.firstName")}
           {" "}
           {ie(cv.profile.lastName,  "profile.lastName")}
-        </h1>
+        </div>
         <div style={{ fontSize: 12, color: accent, fontStyle: "italic", marginTop: 6, letterSpacing: ".04em" }}>
           {ie(cv.profile.title, "profile.title")}
         </div>

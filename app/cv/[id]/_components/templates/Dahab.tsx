@@ -105,11 +105,11 @@ export function Dahab({ cv, accent, lang, order, enabled, onUpdate, readOnly }: 
             }
           </div>
           <div>
-            <h1 style={{ fontSize: 30, fontWeight: 800, margin: "4px 0 6px", letterSpacing: "-.01em" }}>
+            <div role="heading" aria-level={1} style={{ fontSize: 30, fontWeight: 800, margin: "4px 0 6px", letterSpacing: "-.01em" }}>
               {ie(cv.profile.firstName, "profile.firstName")}
               {" "}
               {ie(cv.profile.lastName,  "profile.lastName")}
-            </h1>
+            </div>
             <div style={{ fontSize: 13, opacity: 0.9 }}>
               {ie(cv.profile.title, "profile.title")}
             </div>

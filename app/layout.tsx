@@ -1,5 +1,6 @@
 import { Geist, Inter } from "next/font/google";
 import "./globals.css";
+import { jsonLd } from "@/lib/seo";
 
 const geistSans = Geist({ display: "swap", subsets: ["latin"] });
 const inter     = Inter({ display: "swap", subsets: ["latin"], variable: "--font-inter" });
@@ -35,7 +36,8 @@ export const metadata = {
 
   // ── Canonical & alternates ───────────────────────────────────────────────
   alternates: {
-    canonical: SITE_URL,
+    // No site-wide canonical here: it would be inherited by every page that
+    // forgets to set its own and point them all at the homepage.
     languages: { "fr-MA": SITE_URL },
   },
 
@@ -47,14 +49,8 @@ export const metadata = {
     siteName:    SITE_NAME,
     title:       DEFAULT_TITLE,
     description: DEFAULT_DESC,
-    images: [
-      {
-        url:    "/og-image.jpg",
-        width:  1200,
-        height: 630,
-        alt:    "Talent Maroc — Emploi & CV Professionnel au Maroc",
-      },
-    ],
+    // Image comes from app/opengraph-image.png (file convention) — the old
+    // explicit "/og-image.jpg" did not exist and 404'd on every share.
   },
 
   // ── Twitter / X ──────────────────────────────────────────────────────────
@@ -62,22 +58,23 @@ export const metadata = {
     card:        "summary_large_image",
     title:       DEFAULT_TITLE,
     description: DEFAULT_DESC,
-    images:      ["/og-image.jpg"],
     creator:     "@talentmaroc",
     site:        "@talentmaroc",
   },
 
-  // ── Verification (add once you have the codes) ───────────────────────────
-  // verification: {
-  //   google: "YOUR_GOOGLE_SEARCH_CONSOLE_TOKEN",
-  //   yandex: "YOUR_YANDEX_TOKEN",
-  // },
+  // ── Verification — set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION / NEXT_PUBLIC_BING_SITE_VERIFICATION in Vercel
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    other:  process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION }
+      : undefined,
+  },
 
   // ── Icons ────────────────────────────────────────────────────────────────
+  // apple-touch-icon.png / favicon-16x16.png were referenced but never existed.
   icons: {
-    icon:        "/favicon.ico",
-    apple:       "/apple-touch-icon.png",
-    shortcut:    "/favicon-16x16.png",
+    icon:  "/favicon.ico",
+    apple: "/logo.png",
   },
 
   // ── Crawl directives ────────────────────────────────────────────────────
@@ -94,10 +91,38 @@ export const metadata = {
   },
 };
 
+const SITE_SCHEMA = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": `${SITE_URL}/#org`,
+    name: SITE_NAME,
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo.png`,
+    email: "contact@talentmaroc.shop",
+    areaServed: "MA",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${SITE_URL}/#website`,
+    name: SITE_NAME,
+    url: SITE_URL,
+    inLanguage: "fr-MA",
+    publisher: { "@id": `${SITE_URL}/#org` },
+    potentialAction: {
+      "@type": "SearchAction",
+      target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/?q={search_term_string}` },
+      "query-input": "required name=search_term_string",
+    },
+  },
+];
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr" className={`${geistSans.className} ${inter.variable}`} suppressHydrationWarning>
       <body className="bg-background text-foreground min-h-screen">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(SITE_SCHEMA) }} />
         {children}
       </body>
     </html>
